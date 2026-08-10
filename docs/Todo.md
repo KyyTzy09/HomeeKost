@@ -1,6 +1,6 @@
 # Todo Fullstack - Sistem Pengelolaan Kos Bude Frisda (HomeeKost)
 
-Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Rendering (SSR) berbasis **TanStack Start + Vite + React 19 + Tailwind CSS v4 + Prisma + PostgreSQL + Open-WA Gateway (Docker)**.
+Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Rendering (SSR) berbasis **TanStack Start + Vite + React 19 + Tailwind CSS v4 + Prisma + PostgreSQL + OpenWA Gateway (`rmyndharis/OpenWA`)**.
 
 ## Legend
 - 🔴 P0 Critical path, MVP blocker
@@ -13,8 +13,8 @@ Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Render
 ## Phase 0: Environment, Design System & Docker Foundation (Minggu 1)
 ### 0.1 Environment Variables & Config
 - [x] 🔴 Verifikasi & audit file konfigurasi project: `package.json`, `vite.config.ts`, `tsr.config.json`, `biome.json`, dan `tsconfig.json`
-- [ ] 🔴 Buat file `.env.example` dan persiapkan environment variables: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `OPEN_WA_API_URL`, `OPEN_WA_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `APP_URL`
-- [ ] 🔴 Setup Docker Compose file (`docker-compose.yml`) untuk 3 kontainer: App (TanStack Start), Database (PostgreSQL 16), dan WA Gateway (`openwa/wa-automate`)
+- [x] 🔴 Buat file `.env.example` dan `.env.local` dengan environment variables: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `OPEN_WA_API_URL`, `OPEN_WA_API_KEY`, `OPEN_WA_SESSION_ID`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `APP_URL`
+- [x] 🔴 Setup Docker Compose file (`docker-compose.yml`) untuk 3 kontainer: App (TanStack Start), Database (PostgreSQL 16), dan WA Gateway (`ghcr.io/rmyndharis/openwa:latest`, port 2785)
 
 ### 0.2 Design System & Styling Setup (Sesuai `Design.md` & `HomeeKost_Dashboard_v2(1).html`)
 - [x] 🔴 Buat dokumen spesifikasi desain `Design.md` dan salinannya di `docs/Design.md`
@@ -23,7 +23,7 @@ Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Render
   - `--cream`: `#faf9f5` | `--white`: `#ffffff` | `--text`: `#252925` | `--muted`: `#737873`
   - `--border`: `#e4e9e4` | `--green`: `#5f896d` | `--amber`: `#b18a4b` | `--red`: `#b66b68`
   - `--shadow`: `0 2px 12px rgba(48, 65, 53, 0.055)`
-- [ ] 🔴 Import Google Font `Inter` pada `src/routes/__root.tsx` dan pastikan kelas komponen (`.hk-btn`, `.hk-card`, `.hk-badge`, `.ai-insight-box`) terpakai konsisten
+- [x] 🔴 Import Google Font `Inter` pada `src/routes/__root.tsx` dan pastikan kelas komponen (`.hk-btn`, `.hk-card`, `.hk-badge`, `.ai-insight-box`) terpakai konsisten
 
 ---
 
@@ -76,20 +76,21 @@ Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Render
 ### 3.3 Halaman Penyewa & Engagement UI (`src/routes/penyewa/index.tsx`)
 - [ ] 🔴 Tabel Data Penyewa (Nama, Kamar, WA `628xxx`, No KTP, Tanggal Lahir, Jatuh Tempo, Status)
 - [ ] 🔴 Modal Form Tenant (Auto-format WA `628...`, input tanggal lahir, auto-assign kamar)
-- [ ] 🟡 Tab / Modal **"Pengumuman Kos Sederhana"**: Form buat pengumuman (Info kerja bakti, acara, perbaikan) & tombol Broadcast via Open-WA
+- [ ] 🟡 Tab / Modal **"Pengumuman Kos Sederhana"**: Form buat pengumuman (Info kerja bakti, acara, perbaikan) & tombol Broadcast via OpenWA
 
 ---
 
-## Phase 4: Epic 2 - Open-WA Gateway & Invoice Engine (Minggu 3)
-### 4.1 Open-WA Integration Service
-- [ ] 🔴 Setup Open-WA Client Helper di `src/lib/open-wa-client.ts`:
-  - Function `sendTextMessage(to: string, message: string)` memanggil REST API `POST http://open-wa:8080/api/sendText` dengan header `X-API-Key`
-  - Health check endpoint verification (`GET http://open-wa:8080/health`)
+## Phase 4: Epic 2 - OpenWA Gateway (`rmyndharis/OpenWA`) & Invoice Engine (Minggu 3)
+### 4.1 OpenWA Integration Service
+- [ ] 🔴 Setup OpenWA Client Helper di `src/lib/open-wa-client.ts`:
+  - Check status sesi: `GET http://open-wa:2785/api/sessions/{sessionId}`
+  - Dapatkan QR Code jika belum diautentikasi: `GET http://open-wa:2785/api/sessions/{sessionId}/qr`
+  - Function `sendTextMessage(to: string, message: string)` memanggil REST API `POST http://open-wa:2785/api/sessions/{sessionId}/messages/send-text` dengan header `X-API-Key` dan payload `{"chatId": "628xxx@c.us", "text": message}`
 
 ### 4.2 Invoice PDF & WhatsApp Dispatcher (`src/routes/invoice/index.tsx`)
 - [ ] 🔴 Invoice Split View Layout (Daftar Invoice di kiri, Live PDF preview di kanan)
-- [ ] 🔴 Action Button **"Kirim WA Invoice (Automated via Open-WA)"**:
-  - Pemicu pengiriman pesan & link invoice otomatis ke WhatsApp penyewa melalui REST API Open-WA
+- [ ] 🔴 Action Button **"Kirim WA Invoice (Automated via OpenWA REST API)"**:
+  - Pemicu pengiriman pesan & link invoice otomatis ke WhatsApp penyewa via OpenWA `POST /api/sessions/{sessionId}/messages/send-text`
 - [ ] 🟡 Action Button **"Kirim WA (Manual Redirect `wa.me/`)"** sebagai opsi cadangan (fallback)
 - [ ] 🔴 Action **"Konfirmasi Pembayaran Manual"** (*Verify Paid*) -> Catat otomatis ke Pemasukan
 
@@ -98,8 +99,8 @@ Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Render
 ## Phase 5: Epic 3 - Daily Cron & Automated Reminders (Minggu 4)
 ### 5.1 Daily Cron Scheduler (08:00 WIB)
 - [ ] 🔴 Endpoint `/api/cron/daily-tasks`:
-  - **Pemeriksaan Tanggal Jatuh Tempo**: Kueri sewa H-3, H-0, H+1 Overdue -> Auto-update status `OVERDUE` -> Kirim WA reminder otomatis via Open-WA REST API
-  - **Pengingat Ulang Tahun (Birthday Reminder)**: Kueri penyewa aktif yang ulang tahun hari ini -> Kirim ucapan ulang tahun otomatis via Open-WA REST API
+  - **Pemeriksaan Tanggal Jatuh Tempo**: Kueri sewa H-3, H-0, H+1 Overdue -> Auto-update status `OVERDUE` -> Kirim WA reminder otomatis via OpenWA REST API `send-text`
+  - **Pengingat Ulang Tahun (Birthday Reminder)**: Kueri penyewa aktif yang ulang tahun hari ini -> Kirim ucapan ulang tahun otomatis via OpenWA REST API `send-text`
   - Simpan catatan pengiriman ke `NotificationLog`
 
 ### 5.2 Dashboard Widget Integration
@@ -144,6 +145,6 @@ Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Render
 ## Phase 9: Deployment via Docker Compose ke VPS (4GB RAM) (Minggu 5)
 ### 9.1 Containerization & Testing
 - [ ] 🔴 Buat `Dockerfile` untuk aplikasi TanStack Start Monolith
-- [ ] 🔴 Verifikasi file `docker-compose.yml` (App, PostgreSQL 16, Open-WA)
+- [ ] 🔴 Verifikasi file `docker-compose.yml` (App, PostgreSQL 16, OpenWA `ghcr.io/rmyndharis/openwa:latest`)
 - [ ] 🔴 Menjalankan & verifikasi pengujian end-to-end pada lingkungan Docker lokal
 - [ ] 🔴 Script deployment PM2 / Docker Compose di VPS Linux 4GB RAM (2 vCPU, 60GB SSD)
