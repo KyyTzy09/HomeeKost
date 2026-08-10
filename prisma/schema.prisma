@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -7,8 +7,218 @@ datasource db {
   provider = "postgresql"
 }
 
-model Todo {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
+// ------------------------------------------------------
+// Enums
+// ------------------------------------------------------
+
+enum RoomStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ContractStatus {
+  ACTIVE
+  TERMINATED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ComplaintCategory {
+  PLUMBING
+  ELECTRICAL
+  AC
+  FURNITURE
+  OTHER
+}
+
+enum ComplaintStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum ExpenseCategory {
+  UTILITIES
+  INTERNET
+  MAINTENANCE
+  SALARY
+  OTHER
+}
+
+enum AnnouncementCategory {
+  KERJA_BAKTI
+  MAINTENANCE
+  ACARA
+  UMUM
+}
+
+// ------------------------------------------------------
+// User & Role Models (Multi-Role Readiness)
+// ------------------------------------------------------
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "ADMIN", "TENANT", "STAFF"
+  description String?
+  createdAt   DateTime @default(now())
+
+  users User[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ------------------------------------------------------
+// Property & Tenant Models
+// ------------------------------------------------------
+
+model Room {
+  id           String     @id @default(uuid())
+  roomNumber   String     @unique // e.g. "A-101"
+  type         String     // e.g. "Standard", "Deluxe"
+  monthlyPrice Decimal    @db.Decimal(12, 2)
+  facilities   String?
+  status       RoomStatus @default(VACANT)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  contracts  RentalContract[]
+  complaints Complaint[]
+}
+
+model Tenant {
+  id                 String       @id @default(uuid())
+  name               String
+  whatsappNumber     String       // Format: "628xxx"
+  identityCardNumber String       // No KTP
+  birthDate          DateTime?
+  status             TenantStatus @default(ACTIVE)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  contracts RentalContract[]
+}
+
+model RentalContract {
+  id         String         @id @default(uuid())
+  tenantId   String
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roomId     String
+  room       Room           @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  startDate  DateTime
+  dueDateDay Int            // Monthly due day (1-31)
+  status     ContractStatus @default(ACTIVE)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  invoices Invoice[]
+}
+
+// ------------------------------------------------------
+// Financial & Invoicing Models
+// ------------------------------------------------------
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique // e.g. "INV/202609/0001"
+  contractId    String
+  contract      RentalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  periodMonth   Int
+  periodYear    Int
+  amount        Decimal       @db.Decimal(12, 2)
+  dueDate       DateTime
+  status        InvoiceStatus @default(PENDING)
+  paidAt        DateTime?
+  pdfUrl        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Expense {
+  id              String          @id @default(uuid())
+  category        ExpenseCategory @default(OTHER)
+  amount          Decimal         @db.Decimal(12, 2)
+  description     String          @db.Text
+  transactionDate DateTime        @default(now())
+  complaintId     String?
+  complaint       Complaint?      @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  createdAt       DateTime        @default(now())
+}
+
+// ------------------------------------------------------
+// Maintenance & Complaints
+// ------------------------------------------------------
+
+model Complaint {
+  id           String            @id @default(uuid())
+  roomId       String
+  room         Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  category     ComplaintCategory @default(OTHER)
+  description  String            @db.Text
+  status       ComplaintStatus   @default(PENDING)
+  reportedDate DateTime          @default(now())
+  resolvedDate DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  expenses Expense[]
+}
+
+// ------------------------------------------------------
+// Engagement & Communication
+// ------------------------------------------------------
+
+model Announcement {
+  id          String               @id @default(uuid())
+  title       String
+  content     String               @db.Text
+  category    AnnouncementCategory @default(UMUM)
+  isBroadcast Boolean              @default(false)
+  sentAt      DateTime?
+  createdAt   DateTime             @default(now())
+}
+
+model NotificationLog {
+  id              String   @id @default(uuid())
+  recipientNumber String
+  messageType     String   // e.g. "DUE_DATE_REMINDER", "BIRTHDAY_WISH", "ANNOUNCEMENT", "INVOICE"
+  status          String   // e.g. "SENT", "FAILED"
+  notes           String?  @db.Text
+  sentAt          DateTime @default(now())
+}
+
+// ------------------------------------------------------
+// AI Executive Reports
+// ------------------------------------------------------
+
+model AiFinancialReport {
+  id                 String   @id @default(uuid())
+  periodMonth        Int
+  periodYear         Int
+  totalIncome        Decimal  @db.Decimal(12, 2)
+  totalExpense       Decimal  @db.Decimal(12, 2)
+  netProfit          Decimal  @db.Decimal(12, 2)
+  occupancyRate      Float
+  aiNarrativeSummary Json
+  pdfFileUrl         String?
+  createdAt          DateTime @default(now())
 }

@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: homeekost_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:secret@db:5432/homeekost?schema=public
+      - OPEN_WA_API_URL=http://open-wa:2785/api
+      - OPEN_WA_API_KEY=${OPEN_WA_API_KEY:-homeekost-openwa-secure-api-key}
+      - OPEN_WA_SESSION_ID=${OPEN_WA_SESSION_ID:-homeekost-session}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-homeekost-better-auth-secret-key-change-me-32chars}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      - APP_URL=${APP_URL:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+      open-wa:
+        condition: service_started
+
+  db:
+    image: postgres:16-alpine
+    container_name: homeekost_db
+    restart: always
+    environment:
+      - POSTGRES_DB=homeekost
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d homeekost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  open-wa:
+    image: ghcr.io/rmyndharis/openwa:latest
+    container_name: homeekost_openwa
+    restart: always
+    ports:
+      - "2785:2785" # Dashboard & REST API
+    environment:
+      - PORT=2785
+      - API_KEY=${OPEN_WA_API_KEY:-homeekost-openwa-secure-api-key}
+    volumes:
+      - openwa_data:/app/data
+
+volumes:
+  pgdata:
+  openwa_data:
