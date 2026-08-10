@@ -29,25 +29,25 @@ Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) — Monolith Server-Side Render
 
 ## Phase 1: Database Schema & Multi-Role Readiness (Minggu 1)
 ### 1.1 PostgreSQL & Prisma Setup
-- [ ] 🔴 Verifikasi koneksi PostgreSQL dengan `@prisma/adapter-pg` pada `.env.local`
-- [ ] 🔴 Eksekusi migrasi database awal (`npm run db:migrate` / `npm run db:push`)
+- [x] 🔴 Verifikasi koneksi PostgreSQL dengan `@prisma/adapter-pg` pada `.env`
+- [x] 🔴 Eksekusi migrasi database & generasi Prisma Client (`npm run db:generate`)
 
 ### 1.2 Schema Models Definition (`prisma/schema.prisma`)
-- [ ] 🔴 Model `Role` (`id`, `name`: `ADMIN` / `TENANT` / `STAFF`, `description`) - *Tabel terpisah untuk kesiapan multi-role masa depan*
-- [ ] 🔴 Model `User` (`id`, `email`, `passwordHash`, `name`, `createdAt`)
-- [ ] 🔴 Model `UserRole` (`userId`, `roleId`) - *Jembatan relasi User ke Role*
-- [ ] 🔴 Model `Room` (`id`, `roomNumber`, `type`, `monthlyPrice`, `facilities`, `status`: `VACANT` / `OCCUPIED` / `MAINTENANCE`)
-- [ ] 🔴 Model `Tenant` (`id`, `name`, `whatsappNumber`, `identityCardNumber`, `birthDate` DateTime optional, `status`: `ACTIVE` / `INACTIVE`, `createdAt`)
-- [ ] 🔴 Model `RentalContract` (`id`, `tenantId`, `roomId`, `startDate`, `dueDateDay`, `status`: `ACTIVE` / `TERMINATED`)
-- [ ] 🔴 Model `Invoice` (`id`, `invoiceNumber`, `contractId`, `periodMonth`, `periodYear`, `amount`, `dueDate`, `status`: `PENDING` / `PAID` / `OVERDUE` / `CANCELLED`, `paidAt`, `pdfUrl`)
-- [ ] 🔴 Model `Complaint` (`id`, `roomId`, `category`: `PLUMBING` / `ELECTRICAL` / `AC` / `FURNITURE` / `OTHER`, `description`, `status`: `PENDING` / `IN_PROGRESS` / `DONE`, `reportedDate`, `resolvedDate`)
-- [ ] 🔴 Model `Expense` (`id`, `category`: `UTILITIES` / `INTERNET` / `MAINTENANCE` / `SALARY` / `OTHER`, `amount`, `description`, `transactionDate`, `complaintId` optional)
-- [ ] 🔴 Model `Announcement` (`id`, `title`, `content`, `category`: `KERJA_BAKTI` / `MAINTENANCE` / `ACARA` / `UMUM`, `createdAt`, `sentAt` optional, `isBroadcast` Boolean)
-- [ ] 🔴 Model `AiFinancialReport` (`id`, `periodMonth`, `periodYear`, `totalIncome`, `totalExpense`, `netProfit`, `occupancyRate`, `aiNarrativeSummary` JSON, `pdfFileUrl`, `createdAt`)
-- [ ] 🔴 Model `NotificationLog` (`id`, `recipientNumber`, `messageType`, `sentAt`, `status`, `notes`)
+- [x] 🔴 Model `Role` (`id`, `name`: `ADMIN` / `TENANT` / `STAFF`, `description`) - *Tabel terpisah untuk kesiapan multi-role masa depan*
+- [x] 🔴 Model `User` (`id`, `email`, `passwordHash`, `name`, `createdAt`) *1 User hanya 1 role*
+- [x] 🔴 Model `Room` (`id`, `roomNumber`, `type`, `monthlyPrice`, `facilities`, `status`: `VACANT` / `OCCUPIED` / `MAINTENANCE`)
+- [x] 🔴 Model `Tenant` (`id`, `name`, `whatsappNumber`, `identityCardNumber`, `birthDate` DateTime optional, `status`: `ACTIVE` / `INACTIVE`, `createdAt`)
+- [x] 🔴 Model `RentalContract` (`id`, `tenantId`, `roomId`, `startDate`, `dueDateDay`, `status`: `ACTIVE` / `TERMINATED`)
+- [x] 🔴 Model `Invoice` (`id`, `invoiceNumber`, `contractId`, `periodMonth`, `periodYear`, `amount`, `dueDate`, `status`: `PENDING` / `PAID` / `OVERDUE` / `CANCELLED`, `paidAt`, `pdfUrl`)
+- [x] 🔴 Model `Complaint` (`id`, `roomId`, `category`: `PLUMBING` / `ELECTRICAL` / `AC` / `FURNITURE` / `OTHER`, `description`, `status`: `PENDING` / `IN_PROGRESS` / `DONE`, `reportedDate`, `resolvedDate`)
+- [x] 🔴 Model `Expense` (`id`, `category`: `UTILITIES` / `INTERNET` / `MAINTENANCE` / `SALARY` / `OTHER`, `amount`, `description`, `transactionDate`, `complaintId` optional)
+- [x] 🔴 Model `Announcement` (`id`, `title`, `content`, `category`: `KERJA_BAKTI` / `MAINTENANCE` / `ACARA` / `UMUM`, `createdAt`, `sentAt` optional, `isBroadcast` Boolean)
+- [x] 🔴 Model `AiFinancialReport` (`id`, `periodMonth`, `periodYear`, `totalIncome`, `totalExpense`, `netProfit`, `occupancyRate`, `aiNarrativeSummary` JSON, `pdfFileUrl`, `createdAt`)
+- [x] 🔴 Model `NotificationLog` (`id`, `recipientNumber`, `messageType`, `sentAt`, `status`, `notes`)
 
 ### 1.3 Seed Data (`prisma/seed.ts`)
-- [ ] 🟡 Buat script `db:seed` untuk mengisi tabel `Role` (`ADMIN`, `TENANT`), akun Admin Bude Frisda, serta 10 kamar & penyewa awal
+- [x] 🟡 Buat script `db:seed` untuk mengisi tabel `Role` (`ADMIN`, `TENANT`), akun Admin Bude Frisda, serta 10 kamar & penyewa awal
+
 
 ---
 
