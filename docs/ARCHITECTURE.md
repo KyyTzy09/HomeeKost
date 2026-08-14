@@ -14,7 +14,7 @@
 ### 1.1 Core Value Proposition & Prinsip Desain
 1. **Multi-Property Isolation**: Pengelolaan banyak properti kos dalam satu sistem dengan pemisahan mutlak data kamar, penyewa, kontrak, arus kas, dan pengeluaran operasional per cabang kos.
 2. **Deterministic Financial Math + Generative AI Narrative**: Semua kalkulasi finansial (Omzet, Pengeluaran, Laba Bersih, Rasio Okupansi, Tunggakan) dihitung 100% secara deterministik melalui kueri agregasi PostgreSQL berpresisi tinggi (`Decimal(12,2)`). AI (Gemini / Groq) hanya bertindak sebagai *Financial Analyst* naratif yang membaca data terstruktur (RAG) untuk menghasilkan insight eksekutif dan rekomendasi taktis.
-3. **Automated WhatsApp Engagement Hub**: Pengiriman tagihan digital, invoice PDF, pengingat jatuh tempo berkala (H-3, H-0, H+1 Overdue), pengumuman kegiatan, dan ucapan ulang tahun penghuni kos secara otomatis via WhatsApp Gateway mandiri (`rmyndharis/OpenWA`) tanpa biaya API berbayar per pesan.
+3. **Automated WhatsApp Engagement Hub**: Pengiriman tagihan digital, invoice PDF, pengingat jatuh tempo berkala (H-3, H-0, H+1 Overdue), pengumuman kegiatan, dan ucapan ulang tahun penghuni kos secara otomatis via WhatsApp Gateway mandiri (`Fonnte WhatsApp Gateway (api.fonnte.com)`) tanpa biaya API berbayar per pesan.
 4. **Single-Role Operational Web Dashboard**: Antarmuka dioptimalkan secara eksklusif untuk pengelola kos (*Desktop-First with Mobile-Responsive Drawer*), sedangkan anak kos menerima manfaat dokumen dan tagihan langsung melalui WhatsApp tanpa perlu akun portal/login yang membebani.
 5. **Warm & Calm Sage Cream Aesthetic**: Mengadopsi design system elegan bernuansa hijau sage (`#4F6958` / `#718B78`) dan latar krem hangat (`#FAF9F5`), memberikan pengalaman operasional yang padat informasi, bersih, dan nyaman bagi mata.
 
@@ -61,10 +61,10 @@ HomeeKost dibangun dengan arsitektur **Type-Safe Fullstack Monolith** modern yan
 | **Styling & Design System**| **Tailwind CSS v4** + **HomeeKost Sage Design Tokens** | Utility CSS modern berbasis engine LightningCSS yang sangat cepat, dikombinasikan dengan token warna dan utility kustom HomeeKost (`.hk-btn`, `.hk-card`, `.ai-insight-box`). |
 | **Authentication & RBAC** | **Better-Auth** (`better-auth/tanstack-start`) | Sistem autentikasi mandiri berbasis session cookie (`HttpOnly`, `SameSite=Lax`), mendukung schema multi-role (`SUPER_ADMIN`, `ADMIN`). |
 | **Database & ORM** | **PostgreSQL 16** + **Prisma ORM v7** (`@prisma/adapter-pg`) | Basis data relasional dengan integritas referensial kuat, tipe data `Decimal(12,2)` untuk mencegah pembulatan mengambang (floating-point bug) keuangan kos. |
-| **WhatsApp Gateway** | **rmyndharis/OpenWA** (Docker Image) | Gateway WhatsApp berbasis Puppeteer/Chromium mandiri, menyediakan REST API untuk mengirim pesan teks, lampiran PDF invoice, dan monitoring sesi via QR code. |
+| **WhatsApp Gateway** | **Fonnte WhatsApp Gateway (api.fonnte.com)** (Docker Image) | Gateway WhatsApp berbasis Puppeteer/Chromium mandiri, menyediakan REST API untuk mengirim pesan teks, lampiran PDF invoice, dan monitoring sesi via QR code. |
 | **AI Intelligence / LLM** | **Google Gemini API** (v1.5/2.0 Flash) / **Groq Cloud API** (Llama 3.3 70B) | Ekstraksi wawasan naratif cepat berbiaya rendah dengan enforcement Zod Structured Output untuk laporan eksekutif bulanan. |
 | **Job Scheduling** | **Server Cron Endpoints** (Nitro Handlers / OS Cron) | Eksekusi otomatis tugas harian (pukul 08:00 WIB untuk cek tagihan & ultah) dan bulanan (tanggal 1 pukul 00:01 WIB untuk AI Report). |
-| **Containerization** | **Docker & Docker Compose** | Multi-container orchestration (`app`, `db`, `open-wa`) yang siap dideploy pada VPS Linux berspesifikasi hemat (4GB RAM, 2 vCPU). |
+| **Containerization** | **Docker & Docker Compose** | Multi-container orchestration (`app`, `db`, `fonnte`) yang siap dideploy pada VPS Linux berspesifikasi hemat (4GB RAM, 2 vCPU). |
 
 ---
 
@@ -182,7 +182,7 @@ kosan_app/
     │   │   ├── auth-client.ts               # Client RPC auth untuk frontend
     │   │   ├── db.ts                        # Singleton instance PrismaClient
     │   │   ├── database-url.ts              # Connection string parser
-    │   │   ├── open-wa-client.ts            # REST Client OpenWA (`POST /send-text`, etc.)
+    │   │   ├── fonnte-client.ts            # REST Client Fonnte (`POST /send-text`, etc.)
     │   │   ├── pdf-generator.ts             # Engine pembuat dokumen PDF Invoice & Report
     │   │   └── ai-client.ts                 # Unified LLM caller (Gemini / Groq)
     │   │
@@ -215,7 +215,7 @@ kosan_app/
     │   │       ├── cron/                    # Automated Background Cron Endpoints
     │   │       │   ├── daily-tasks.ts       # Trigger Harian (Jatuh Tempo & Ultah, 08:00 WIB)
     │   │       │   └── monthly-ai-report.ts # Trigger Bulanan (AI Report, Tgl 1 00:01 WIB)
-    │   │       └── openwa/                  # Webhook receiver status WhatsApp session
+    │   │       └── fonnte/                  # Webhook receiver status WhatsApp session
     │   │           └── webhook.ts
     │   │
     │   ├── generated/                       # Prisma Generated Client artifacts
@@ -224,7 +224,7 @@ kosan_app/
     │   └── styles.css                       # Master CSS (Tokens, Utilities & Keyframes)
     │
     ├── Dockerfile                           # Multi-stage production build container
-    ├── docker-compose.yml                   # Orkestrasi 3-tier container (App, DB, OpenWA)
+    ├── docker-compose.yml                   # Orkestrasi 3-tier container (App, DB, Fonnte)
     ├── package.json                         # Dependencies & script runner
     ├── tsconfig.json                        # Konfigurasi kompilasi TypeScript
     ├── biome.json                           # Konfigurasi Linter & Formatter Biome
@@ -540,9 +540,9 @@ export type AiFinancialInsight = z.infer<typeof AiFinancialInsightSchema>;
 
 ---
 
-## 6. WhatsApp Gateway & Messaging Architecture (`rmyndharis/OpenWA`)
+## 6. WhatsApp Gateway & Messaging Architecture (`Fonnte WhatsApp Gateway (api.fonnte.com)`)
 
-Integrasi WhatsApp pada HomeeKost dirancang untuk efisiensi maksimal tanpa membebankan biaya API WhatsApp Business resmi per pesan (seperti Twilio atau Meta Cloud API berbayar). HomeeKost memanfaatkan kontainer gateway **`rmyndharis/OpenWA`** yang berjalan mandiri di dalam satu jaringan Docker lokal.
+Integrasi WhatsApp pada HomeeKost dirancang untuk efisiensi maksimal tanpa membebankan biaya API WhatsApp Business resmi per pesan (seperti Twilio atau Meta Cloud API berbayar). HomeeKost memanfaatkan kontainer gateway **`Fonnte WhatsApp Gateway (api.fonnte.com)`** yang berjalan mandiri di dalam satu jaringan Docker lokal.
 
 ### 6.1 WhatsApp Messaging Sequence & Fallback Mechanism
 
@@ -560,10 +560,10 @@ flowchart TD
     MsgBday --> Sanitize
     MsgAnnounce --> Sanitize
 
-    Sanitize --> DispatchOpenWA{Panggil OpenWA REST API}
+    Sanitize --> DispatchFonnte{Panggil Fonnte REST API}
     
-    DispatchOpenWA -->|HTTP 200 Success| LogSuccess[Simpan Log ke NotificationLog: status = 'SENT']
-    DispatchOpenWA -->|Error / Gateway Offline| CheckMode{Trigger Mode?}
+    DispatchFonnte -->|HTTP 200 Success| LogSuccess[Simpan Log ke NotificationLog: status = 'SENT']
+    DispatchFonnte -->|Error / Gateway Offline| CheckMode{Trigger Mode?}
     
     CheckMode -->|Background Cron| LogFailed[Simpan Log ke NotificationLog: status = 'FAILED', notes = Error Details]
     CheckMode -->|Manual User Click di UI| FallbackWaMe[Fallback: Redirect Browser ke wa.me/628xxx?text=EncodedMessage]
@@ -573,14 +573,16 @@ flowchart TD
     FallbackWaMe --> Done
 ```
 
-### 6.2 OpenWA API Specification & Payload Format
-- **Gateway Endpoint**: `POST http://open-wa:2785/api/sessions/{sessionId}/messages/send-text`
-- **Security Header**: `X-API-Key: ${OPEN_WA_API_KEY}`
+### 6.2 Fonnte API Specification & Payload Format
+- **Gateway Endpoint**: `POST http://fonnte:2785/api/sessions/{sessionId}/messages/send-text`
+- **Security Header**: `Authorization: ${FONNTE_TOKEN}`
 - **Request Body**:
   ```json
   {
-    "chatId": "6281234567890@c.us",
-    "text": "Halo *Rian*, berikut adalah tagihan sewa Kamar *A-101* periode *September 2026* sebesar *Rp 1.800.000* yang jatuh tempo pada *15 September 2026*. Silakan transfer ke rekening BCA 12345678 a.n Bude Frisda. Unduh invoice resmi: https://app.homeekost.id/invoice/INV-202609-0001.pdf"
+    "target": "6281234567890",
+    "message": "Halo *Rian*, berikut adalah tagihan sewa Kamar *A-101* periode *September 2026* sebesar *Rp 1.800.000* yang jatuh tempo pada *15 September 2026*. Silakan transfer ke rekening BCA 12345678 a.n Bude Frisda.",
+    "url": "https://app.homeekost.id/invoice/INV-202609-0001.pdf",
+    "filename": "Invoice-A101-September-2026.pdf"
   }
   ```
 
@@ -644,16 +646,16 @@ graph TB
     subgraph "Docker Bridge Network: homeekost_net"
         Nginx -->|Port 3000| AppContainer["homeekost_app (TanStack Start SSR Node Runtime)<br>Memory Limit: 1024MB"]
         AppContainer -->|Port 5432 (Internal)| DbContainer["homeekost_db (PostgreSQL 16 Alpine)<br>Memory Limit: 512MB<br>Volume: pgdata"]
-        AppContainer -->|Port 2785 (Internal)| WaContainer["homeekost_openwa (rmyndharis/OpenWA)<br>Memory Limit: 1024MB<br>Volume: openwa_data"]
+        AppContainer -->|Port 2785 (Internal)| WaContainer["homeekost_fonnte (Fonnte WhatsApp Gateway (api.fonnte.com))<br>Memory Limit: 1024MB<br>Volume: fonnte_data"]
     end
 
     subgraph "Host Persistent Storage"
         pgdata[(Postgres Data Volume)]
-        openwa_data[(OpenWA Session Data Volume)]
+        fonnte_data[(Fonnte Session Data Volume)]
     end
 
     DbContainer -.-> pgdata
-    WaContainer -.-> openwa_data
+    WaContainer -.-> fonnte_data
 ```
 
 ### 8.2 RAM Resource Budgeting Plan (4GB Total)
@@ -661,7 +663,7 @@ graph TB
 | Container / Proses | Estimasi Alokasi RAM | Memory Limit Docker | Catatan & Strategi Optimasi |
 | :--- | :---: | :---: | :--- |
 | **PostgreSQL 16 Alpine** | 256 MB – 384 MB | `512MB` | `shared_buffers = 128MB`, `max_connections = 50` (hemat memori). |
-| **OpenWA Gateway (Chromium)** | 512 MB – 768 MB | `1024MB` | Headless browser dengan argumen `--no-sandbox --disable-gpu --disable-dev-shm-usage`. |
+| **Fonnte Gateway (Chromium)** | 512 MB – 768 MB | `1024MB` | Headless browser dengan argumen `--no-sandbox --disable-gpu --disable-dev-shm-usage`. |
 | **TanStack Start App (Node.js)** | 256 MB – 512 MB | `1024MB` | SSR runtime Node 22 dengan optimasi heap `--max-old-space-size=512`. |
 | **Nginx + OS Linux Buffer** | ~1024 MB | — | Buffer I/O sistem operasi dan SSL termination. |
 | **Swap File Buffer (Emergency)** | 2048 MB (Disk) | — | 2GB Linux Swapfile untuk mencegah Out-Of-Memory (OOM) killer saat peak traffic. |
@@ -683,7 +685,7 @@ flowchart TD
     G --> H[Generate Otomatis Invoice Pertama: INV/YYYYMM/XXXX]
     H --> I[Buat Dokumen PDF Invoice Resmi]
     I --> J{Kirim Invoice via WA?}
-    J -->|Ya| K[OpenWA REST API kirim link Invoice ke WhatsApp Penyewa]
+    J -->|Ya| K[Fonnte REST API kirim link Invoice ke WhatsApp Penyewa]
     J -->|Nanti| L[Simpan di Tabel Invoice Status PENDING]
     K --> M[Catat ke NotificationLog]
     M --> N([Penyewa Resmi Terdaftar])
@@ -738,7 +740,7 @@ Aplikasi menggunakan font keluarga **`Inter`** dengan skala informasi padat (*Hi
 ## 11. Maintenance, Backup & Disaster Recovery
 
 1. **Daily Database Backup**: Script cron otomatis mengeksekusi `pg_dump` setiap hari pukul 02:00 WIB dan mengompresi arsip SQL ke direktori penyimpanan terisolasi.
-2. **WhatsApp Session Persistence**: Volume Docker `openwa_data` dipetakan langsung ke filesystem host agar sesi login WhatsApp tetap tersimpan meskipun kontainer direstart.
+2. **WhatsApp Session Persistence**: Volume Docker `fonnte_data` dipetakan langsung ke filesystem host agar sesi login WhatsApp tetap tersimpan meskipun kontainer direstart.
 3. **Database Healthchecks**: Container `db` dikonfigurasi dengan pemeriksaan kesehatan berkala (`pg_isready -U postgres -d homeekost`) untuk mencegah service `app` start sebelum database siap menerima koneksi.
 
 ---
