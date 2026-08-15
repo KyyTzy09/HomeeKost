@@ -17,9 +17,11 @@ export const propertySchema = z.object({
 		.int("Jumlah kamar harus berupa bilangan bulat")
 		.min(1, "Jumlah kamar minimal 1 kamar")
 		.max(200, "Jumlah kamar maksimal 200 kamar")
+		.optional()
 		.default(10),
 });
 
+export const propertyFormSchema = propertySchema;
 export type PropertyFormValues = z.infer<typeof propertySchema>;
 
 export const setActivePropertySchema = z.object({

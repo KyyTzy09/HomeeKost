@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import {
+	AlertCircle,
+	CheckCircle2,
+	ChevronLeft,
+	ChevronRight,
+	Loader2,
+	Plus,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
-import type { RoomItem } from "../../common/types/index.ts";
+import type { RoomItem, RoomStatusType } from "../../common/types/index.ts";
 import type { RoomFormValues } from "../../common/validations/index.ts";
 import {
 	RoomCard,
@@ -10,6 +17,13 @@ import {
 	RoomDetailDialog,
 	RoomFormDialog,
 } from "../../components/room/index.ts";
+import {
+	useCreateRoom,
+	useDashboardContext,
+	useDeleteRoom,
+	useRooms,
+	useUpdateRoom,
+} from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/rooms")({
 	head: () => ({
@@ -18,556 +32,374 @@ export const Route = createFileRoute("/dashboard/rooms")({
 	component: RoomsPage,
 });
 
-// Comprehensive initial room dataset matching KostManagement.html (24 rooms total: 18 Terisi, 6 Kosong, 0 Maintenance)
-const INITIAL_ROOMS_DATA: RoomItem[] = [
-	{
-		id: "rm-1",
-		propertyId: "prop-a",
-		roomNo: "A-01",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Alya Putri",
-		dueDate: "10 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-2",
-		propertyId: "prop-a",
-		roomNo: "A-02",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Kosong",
-		tenantName: null,
-		dueDate: null,
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-3",
-		propertyId: "prop-a",
-		roomNo: "A-03",
-		type: "Deluxe",
-		price: "Rp1.200.000",
-		status: "Terisi",
-		tenantName: "Sarah Anindita",
-		dueDate: "15 Agu",
-		facilities: "AC · Kamar mandi · Wi-Fi",
-	},
-	{
-		id: "rm-4",
-		propertyId: "prop-a",
-		roomNo: "A-04",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Rizky Ramadhan",
-		dueDate: "18 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-5",
-		propertyId: "prop-a",
-		roomNo: "A-05",
-		type: "Deluxe",
-		price: "Rp1.100.000",
-		status: "Kosong",
-		tenantName: null,
-		dueDate: null,
-		facilities: "AC · Wi-Fi · Water Heater",
-	},
-	{
-		id: "rm-6",
-		propertyId: "prop-a",
-		roomNo: "A-06",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Dewi Lestari",
-		dueDate: "05 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-7",
-		propertyId: "prop-a",
-		roomNo: "A-07",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Fira Aulia",
-		dueDate: "08 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-8",
-		propertyId: "prop-a",
-		roomNo: "A-08",
-		type: "Suite",
-		price: "Rp1.500.000",
-		status: "Terisi",
-		tenantName: "Budi Santoso",
-		dueDate: "22 Agu",
-		facilities: "AC · Kamar mandi dalam · TV · Wi-Fi",
-	},
-	{
-		id: "rm-9",
-		propertyId: "prop-b",
-		roomNo: "B-01",
-		type: "Standard",
-		price: "Rp900.000",
-		status: "Terisi",
-		tenantName: "Dinda Maharani",
-		dueDate: "20 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-10",
-		propertyId: "prop-b",
-		roomNo: "B-02",
-		type: "Deluxe",
-		price: "Rp950.000",
-		status: "Terisi",
-		tenantName: "Nabila Putri",
-		dueDate: "12 Agu",
-		facilities: "AC · Wi-Fi · Furnished",
-	},
-	{
-		id: "rm-11",
-		propertyId: "prop-b",
-		roomNo: "B-03",
-		type: "Standard",
-		price: "Rp900.000",
-		status: "Kosong",
-		tenantName: null,
-		dueDate: null,
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-12",
-		propertyId: "prop-b",
-		roomNo: "B-04",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Maintenance",
-		tenantName: null,
-		dueDate: null,
-		facilities: "Sedang diperbaiki",
-	},
-	{
-		id: "rm-13",
-		propertyId: "prop-b",
-		roomNo: "B-05",
-		type: "Standard",
-		price: "Rp900.000",
-		status: "Terisi",
-		tenantName: "Hendra Wijaya",
-		dueDate: "14 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-14",
-		propertyId: "prop-b",
-		roomNo: "B-06",
-		type: "Deluxe",
-		price: "Rp1.050.000",
-		status: "Terisi",
-		tenantName: "Anita Rahma",
-		dueDate: "25 Agu",
-		facilities: "AC · Wi-Fi · Kamar mandi dalam",
-	},
-	{
-		id: "rm-15",
-		propertyId: "prop-b",
-		roomNo: "B-07",
-		type: "Standard",
-		price: "Rp900.000",
-		status: "Terisi",
-		tenantName: "Reza Pratama",
-		dueDate: "03 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-16",
-		propertyId: "prop-b",
-		roomNo: "B-08",
-		type: "Deluxe",
-		price: "Rp1.000.000",
-		status: "Kosong",
-		tenantName: null,
-		dueDate: null,
-		facilities: "AC · Wi-Fi · Furnished",
-	},
-	{
-		id: "rm-17",
-		propertyId: "prop-c",
-		roomNo: "C-01",
-		type: "Deluxe",
-		price: "Rp1.200.000",
-		status: "Terisi",
-		tenantName: "Sarah Anindita",
-		dueDate: "15 Agu",
-		facilities: "AC · Kamar mandi · Wi-Fi",
-	},
-	{
-		id: "rm-18",
-		propertyId: "prop-c",
-		roomNo: "C-02",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Gita Permata",
-		dueDate: "11 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-19",
-		propertyId: "prop-c",
-		roomNo: "C-03",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Kosong",
-		tenantName: null,
-		dueDate: null,
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-20",
-		propertyId: "prop-c",
-		roomNo: "C-04",
-		type: "Suite",
-		price: "Rp1.600.000",
-		status: "Terisi",
-		tenantName: "Dimas Anggara",
-		dueDate: "09 Agu",
-		facilities: "AC · Kitchenette · Wi-Fi · TV",
-	},
-	{
-		id: "rm-21",
-		propertyId: "prop-c",
-		roomNo: "C-05",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Maya Indah",
-		dueDate: "19 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-22",
-		propertyId: "prop-c",
-		roomNo: "C-06",
-		type: "Deluxe",
-		price: "Rp1.150.000",
-		status: "Terisi",
-		tenantName: "Ilham Kurnia",
-		dueDate: "28 Agu",
-		facilities: "AC · Wi-Fi · Meja Belajar",
-	},
-	{
-		id: "rm-23",
-		propertyId: "prop-c",
-		roomNo: "C-07",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Terisi",
-		tenantName: "Rina Marlina",
-		dueDate: "07 Agu",
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-	{
-		id: "rm-24",
-		propertyId: "prop-c",
-		roomNo: "C-08",
-		type: "Standard",
-		price: "Rp850.000",
-		status: "Kosong",
-		tenantName: null,
-		dueDate: null,
-		facilities: "Kamar mandi dalam · Wi-Fi",
-	},
-];
-
-const ITEMS_PER_PAGE = 12;
-
 function RoomsPage() {
-	const [rooms, setRooms] = useState<RoomItem[]>(INITIAL_ROOMS_DATA);
-	const [statusFilter, setStatusFilter] = useState<string>("Semua");
+	// Active property context
+	const { activeProperty } = useDashboardContext();
+	const propertyId = activeProperty?.id || "";
+
+	// TanStack Query room hooks
+	const {
+		data: rooms = [],
+		isLoading,
+		error: queryError,
+	} = useRooms(propertyId) as {
+		data: RoomItem[];
+		isLoading: boolean;
+		error: Error | null;
+	};
+
+	const createMutation = useCreateRoom();
+	const updateMutation = useUpdateRoom();
+	const deleteMutation = useDeleteRoom();
+
+	// Local states for filtering and pagination
+	const [activeFilter, setActiveFilter] = useState<"all" | RoomStatusType>(
+		"all",
+	);
 	const [currentPage, setCurrentPage] = useState<number>(1);
-	const [toastMessage, setToastMessage] = useState<string | null>(null);
+	const itemsPerPage = 8;
 
 	// Dialog states
-	const [selectedDetailRoom, setSelectedDetailRoom] = useState<RoomItem | null>(
-		null,
-	);
-	const [isRoomFormOpen, setIsRoomFormOpen] = useState(false);
+	const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+	const [isDetailOpen, setIsDetailOpen] = useState<boolean>(false);
+	const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
+
 	const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
-	const [deletingRoom, setDeletingRoom] = useState<RoomItem | null>(null);
+	const [selectedRoom, setSelectedRoom] = useState<RoomItem | null>(null);
+	const [roomToDelete, setRoomToDelete] = useState<RoomItem | null>(null);
+
+	const [toastMessage, setToastMessage] = useState<string | null>(null);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const showToast = (msg: string) => {
 		setToastMessage(msg);
 		setTimeout(() => setToastMessage(null), 3000);
 	};
 
+	const showError = (msg: string) => {
+		setErrorMessage(msg);
+		setTimeout(() => setErrorMessage(null), 4000);
+	};
+
+	// ─── Filter & Pagination ───────────────────────────────────────────────────
+	const filteredRooms = useMemo(() => {
+		if (activeFilter === "all") return rooms;
+		return rooms.filter((r) => r.status === activeFilter);
+	}, [rooms, activeFilter]);
+
+	const totalPages = Math.max(
+		1,
+		Math.ceil(filteredRooms.length / itemsPerPage),
+	);
+
+	const paginatedRooms = useMemo(() => {
+		const start = (currentPage - 1) * itemsPerPage;
+		return filteredRooms.slice(start, start + itemsPerPage);
+	}, [filteredRooms, currentPage]);
+
 	// Counts
 	const totalCount = rooms.length;
-	const occupiedCount = rooms.filter((r) => r.status === "Terisi").length;
 	const vacantCount = rooms.filter((r) => r.status === "Kosong").length;
+	const occupiedCount = rooms.filter((r) => r.status === "Terisi").length;
 	const maintenanceCount = rooms.filter(
 		(r) => r.status === "Maintenance",
 	).length;
 
-	// Filtered rooms
-	const filteredRooms = useMemo(() => {
-		if (statusFilter === "Semua") return rooms;
-		return rooms.filter((r) => r.status === statusFilter);
-	}, [rooms, statusFilter]);
-
-	// Pagination
-	const totalPages = Math.ceil(filteredRooms.length / ITEMS_PER_PAGE) || 1;
-	const paginatedRooms = useMemo(() => {
-		const start = (currentPage - 1) * ITEMS_PER_PAGE;
-		return filteredRooms.slice(start, start + ITEMS_PER_PAGE);
-	}, [filteredRooms, currentPage]);
-
-	const handleFilterChange = (filter: string) => {
-		setStatusFilter(filter);
+	// ─── Handlers ──────────────────────────────────────────────────────────────
+	const handleFilterChange = (filter: "all" | RoomStatusType) => {
+		setActiveFilter(filter);
 		setCurrentPage(1);
 	};
 
-	// Actions
 	const handleOpenAdd = () => {
 		setEditingRoom(null);
-		setIsRoomFormOpen(true);
+		setIsFormOpen(true);
+	};
+
+	const handleOpenDetail = (room: RoomItem) => {
+		setSelectedRoom(room);
+		setIsDetailOpen(true);
 	};
 
 	const handleOpenEdit = (room: RoomItem) => {
-		setSelectedDetailRoom(null);
 		setEditingRoom(room);
-		setIsRoomFormOpen(true);
+		setIsFormOpen(true);
 	};
 
-	const handleSaveRoom = (values: RoomFormValues) => {
+	const handleOpenDelete = (room: RoomItem) => {
+		setRoomToDelete(room);
+		setIsDeleteOpen(true);
+	};
+
+	const handleFormSubmit = (values: RoomFormValues) => {
+		if (!propertyId) {
+			showError("Pilih properti kos aktif terlebih dahulu.");
+			return;
+		}
+
 		if (editingRoom) {
-			setRooms((prev) =>
-				prev.map((r) =>
-					r.id === editingRoom.id
-						? {
-								...r,
-								roomNo: values.roomNo,
-								type: values.type,
-								price: values.price,
-								status: values.status,
-								facilities: values.facilities,
-							}
-						: r,
-				),
+			updateMutation.mutate(
+				{
+					id: editingRoom.id,
+					propertyId,
+					data: values,
+				},
+				{
+					onSuccess: (updated: RoomItem) => {
+						showToast(`Kamar ${updated.roomNo} berhasil diperbarui`);
+						setIsFormOpen(false);
+						setEditingRoom(null);
+					},
+					onError: (err: Error) => {
+						showError(
+							err instanceof Error ? err.message : "Gagal memperbarui kamar",
+						);
+					},
+				},
 			);
-			showToast(`Kamar ${values.roomNo} berhasil diperbarui`);
 		} else {
-			const newRoom: RoomItem = {
-				id: `rm-${Date.now()}`,
-				propertyId: "prop-a",
-				roomNo: values.roomNo,
-				type: values.type,
-				price: values.price,
-				status: values.status,
-				facilities: values.facilities,
-			};
-			setRooms((prev) => [newRoom, ...prev]);
-			showToast(`Kamar ${values.roomNo} berhasil ditambahkan`);
+			createMutation.mutate(
+				{
+					propertyId,
+					data: values,
+				},
+				{
+					onSuccess: (created: RoomItem) => {
+						showToast(`Kamar ${created.roomNo} berhasil ditambahkan`);
+						setIsFormOpen(false);
+					},
+					onError: (err: Error) => {
+						showError(
+							err instanceof Error ? err.message : "Gagal menambahkan kamar",
+						);
+					},
+				},
+			);
 		}
 	};
 
-	const handleConfirmDelete = () => {
-		if (!deletingRoom) return;
-		setRooms((prev) => prev.filter((r) => r.id !== deletingRoom.id));
-		showToast(`Kamar ${deletingRoom.roomNo} telah dihapus`);
-		setDeletingRoom(null);
-		setSelectedDetailRoom(null);
+	const handleDeleteConfirm = () => {
+		if (!roomToDelete || !propertyId) return;
+
+		deleteMutation.mutate(
+			{
+				id: roomToDelete.id,
+				propertyId,
+			},
+			{
+				onSuccess: () => {
+					showToast(`Kamar ${roomToDelete.roomNo} telah dihapus`);
+					setIsDeleteOpen(false);
+					setRoomToDelete(null);
+				},
+				onError: (err: Error) => {
+					showError(
+						err instanceof Error ? err.message : "Gagal menghapus kamar",
+					);
+				},
+			},
+		);
 	};
 
 	return (
 		<div className="space-y-6">
-			{/* Toast */}
-			<div
-				className={`toast ${toastMessage ? "show" : ""}`}
-				role="status"
-				aria-live="polite"
-			>
-				{toastMessage}
-			</div>
+			{/* Toast Success Notification */}
+			{toastMessage && (
+				<div className="fixed bottom-6 right-6 z-50 bg-[#253129] text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+					<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
+					<span>{toastMessage}</span>
+				</div>
+			)}
+
+			{/* Toast Error Notification */}
+			{errorMessage && (
+				<div className="fixed bottom-6 right-6 z-50 bg-[#3a1d1a] border border-[#a45149] text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+					<AlertCircle className="w-4 h-4 text-[#e07d75]" />
+					<span>{errorMessage}</span>
+				</div>
+			)}
 
 			{/* Page Header */}
 			<div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
 				<div>
-					<h1 className="text-[24px] font-bold text-[#252925] tracking-tight leading-tight m-0">
-						Kamar
+					<div className="text-[11px] text-[#718078] mb-1 font-medium">
+						{activeProperty?.name || "Pilih Kos"} · Properti Aktif
+					</div>
+					<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
+						Manajemen Kamar
 					</h1>
-					<p className="text-[12.5px] text-[#737873] m-0 mt-1">
-						Kelola status dan informasi seluruh kamar HomeeKost.
+					<p className="text-xs text-[#737873] mt-0.5">
+						Kelola ketersediaan unit kamar, tipe fasilitas, harga sewa, dan
+						status penghuni.
 					</p>
 				</div>
+
 				<Button
 					type="button"
+					className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
 					onClick={handleOpenAdd}
-					className="h-[38px] px-4 rounded-[8px] bg-[#4f6958] hover:bg-[#425949] text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-xs self-start sm:self-auto cursor-pointer"
 				>
-					<Plus className="w-4 h-4" />
+					<Plus className="w-4 h-4 mr-1.5" />
 					Tambah Kamar
 				</Button>
 			</div>
 
-			{/* Filter Tabs */}
-			<div className="flex flex-wrap items-center gap-2">
+			{/* Filter Segmented Buttons */}
+			<div className="flex items-center gap-1.5 p-1 bg-[#f0f4f0] border border-[#dce5dd] rounded-xl w-fit">
 				<button
 					type="button"
-					onClick={() => handleFilterChange("Semua")}
-					className={`h-[34px] px-3.5 rounded-[7px] text-[11px] font-semibold transition-all border cursor-pointer ${
-						statusFilter === "Semua"
-							? "bg-[#e8f0ea] text-[#4f6958] border-[#d4e2d6] shadow-xs"
-							: "bg-white text-[#737873] border-[#e4e9e4] hover:bg-[#f3f7f3] hover:text-[#4f6958]"
+					onClick={() => handleFilterChange("all")}
+					className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+						activeFilter === "all"
+							? "bg-white text-[#252925] shadow-sm border border-[#d5dfd6]"
+							: "text-[#737873] hover:text-[#252925]"
 					}`}
 				>
-					Semua · {totalCount}
+					Semua ({totalCount})
 				</button>
-
 				<button
 					type="button"
 					onClick={() => handleFilterChange("Terisi")}
-					className={`h-[34px] px-3.5 rounded-[7px] text-[11px] font-semibold transition-all border cursor-pointer ${
-						statusFilter === "Terisi"
-							? "bg-[#e8f0ea] text-[#4f6958] border-[#d4e2d6] shadow-xs"
-							: "bg-white text-[#737873] border-[#e4e9e4] hover:bg-[#f3f7f3] hover:text-[#4f6958]"
+					className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+						activeFilter === "Terisi"
+							? "bg-white text-[#2b6cb0] shadow-sm border border-[#d5dfd6]"
+							: "text-[#737873] hover:text-[#252925]"
 					}`}
 				>
-					Terisi · {occupiedCount}
+					Terisi ({occupiedCount})
 				</button>
-
 				<button
 					type="button"
 					onClick={() => handleFilterChange("Kosong")}
-					className={`h-[34px] px-3.5 rounded-[7px] text-[11px] font-semibold transition-all border cursor-pointer ${
-						statusFilter === "Kosong"
-							? "bg-[#e8f0ea] text-[#4f6958] border-[#d4e2d6] shadow-xs"
-							: "bg-white text-[#737873] border-[#e4e9e4] hover:bg-[#f3f7f3] hover:text-[#4f6958]"
+					className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+						activeFilter === "Kosong"
+							? "bg-white text-[#568062] shadow-sm border border-[#d5dfd6]"
+							: "text-[#737873] hover:text-[#252925]"
 					}`}
 				>
-					Kosong · {vacantCount}
+					Kosong ({vacantCount})
 				</button>
-
 				<button
 					type="button"
 					onClick={() => handleFilterChange("Maintenance")}
-					className={`h-[34px] px-3.5 rounded-[7px] text-[11px] font-semibold transition-all border cursor-pointer ${
-						statusFilter === "Maintenance"
-							? "bg-[#e8f0ea] text-[#4f6958] border-[#d4e2d6] shadow-xs"
-							: "bg-white text-[#737873] border-[#e4e9e4] hover:bg-[#f3f7f3] hover:text-[#4f6958]"
+					className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+						activeFilter === "Maintenance"
+							? "bg-white text-[#99773d] shadow-sm border border-[#d5dfd6]"
+							: "text-[#737873] hover:text-[#252925]"
 					}`}
 				>
-					Maintenance · {maintenanceCount}
+					Maintenance ({maintenanceCount})
 				</button>
 			</div>
 
-			{/* Room Grid */}
-			{paginatedRooms.length > 0 ? (
-				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+			{/* Room Cards Grid */}
+			{isLoading ? (
+				<div className="p-16 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-2 shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
+					<Loader2 className="w-7 h-7 text-[#4f6958] animate-spin" />
+					<p className="text-xs text-[#737873]">Memuat daftar kamar...</p>
+				</div>
+			) : queryError ? (
+				<div className="p-6 bg-[#fff7f6] border border-[#f5cfcc] rounded-2xl text-xs text-[#a45149]">
+					<b className="font-bold block mb-1">Gagal memuat data kamar:</b>
+					{queryError instanceof Error
+						? queryError.message
+						: "Terjadi kesalahan pada server."}
+				</div>
+			) : paginatedRooms.length === 0 ? (
+				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl text-center shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
+					<p className="text-xs text-[#737873]">
+						Tidak ada kamar yang sesuai dengan filter ini.
+					</p>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						className="mt-3 text-xs border-[#e4e9e4]"
+						onClick={handleOpenAdd}
+					>
+						<Plus className="w-3 h-3 mr-1" />
+						Tambah Kamar Pertama
+					</Button>
+				</div>
+			) : (
+				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 					{paginatedRooms.map((room) => (
 						<RoomCard
 							key={room.id}
 							room={room}
-							onDetail={setSelectedDetailRoom}
-							onDelete={setDeletingRoom}
+							onDetail={handleOpenDetail}
+							onDelete={handleOpenDelete}
 						/>
 					))}
 				</div>
-			) : (
-				<div className="bg-white border border-[#e4e9e4] rounded-[14px] p-10 text-center text-[#737873] text-[13px] shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
-					Tidak ada kamar dengan status{" "}
-					<strong className="text-[#252925]">{statusFilter}</strong>.
-				</div>
 			)}
 
-			{/* Pagination */}
+			{/* Pagination Controls */}
 			{totalPages > 1 && (
-				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-					<div className="text-[12px] text-[#737873] font-medium">
-						Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1} -{" "}
-						{Math.min(currentPage * ITEMS_PER_PAGE, filteredRooms.length)} dari{" "}
-						{filteredRooms.length} kamar
-					</div>
-
-					<div className="flex items-center gap-1.5 self-end sm:self-auto">
+				<div className="flex items-center justify-between pt-4 border-t border-[#edf1ed]">
+					<span className="text-[11px] text-[#737873]">
+						Menampilkan {paginatedRooms.length} dari {filteredRooms.length}{" "}
+						kamar
+					</span>
+					<div className="flex items-center gap-1.5">
 						<Button
 							type="button"
 							variant="outline"
 							size="sm"
+							className="h-8 text-xs border-[#e4e9e4] text-[#252925] disabled:opacity-40"
 							onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 							disabled={currentPage === 1}
-							className="h-[34px] px-3 rounded-[8px] border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-[11.5px] font-semibold disabled:opacity-40"
 						>
 							<ChevronLeft className="w-3.5 h-3.5 mr-1" />
 							Sebelumnya
 						</Button>
-
-						{Array.from({ length: totalPages }, (_, i) => i + 1).map(
-							(pageNum) => (
-								<button
-									key={pageNum}
-									type="button"
-									onClick={() => setCurrentPage(pageNum)}
-									className={`w-[34px] h-[34px] rounded-[8px] text-[12px] font-semibold transition-all cursor-pointer border ${
-										currentPage === pageNum
-											? "bg-[#4f6958] text-white border-[#4f6958]"
-											: "bg-white text-[#506257] border-[#e4e9e4] hover:bg-[#f3f7f3]"
-									}`}
-								>
-									{pageNum}
-								</button>
-							),
-						)}
-
+						<span className="text-xs font-semibold text-[#252925] px-2">
+							{currentPage} / {totalPages}
+						</span>
 						<Button
 							type="button"
 							variant="outline"
 							size="sm"
+							className="h-8 text-xs border-[#e4e9e4] text-[#252925] disabled:opacity-40"
 							onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
 							disabled={currentPage === totalPages}
-							className="h-[34px] px-3 rounded-[8px] border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-[11.5px] font-semibold disabled:opacity-40"
 						>
-							Selanjutnya
+							Berikutnya
 							<ChevronRight className="w-3.5 h-3.5 ml-1" />
 						</Button>
 					</div>
 				</div>
 			)}
 
-			{/* Room Detail Dialog */}
+			{/* Dialog Modals */}
+			<RoomFormDialog
+				open={isFormOpen}
+				onOpenChange={setIsFormOpen}
+				editingRoom={editingRoom}
+				propertyName={activeProperty?.name || "Kos A"}
+				onSubmit={handleFormSubmit}
+			/>
+
 			<RoomDetailDialog
-				open={Boolean(selectedDetailRoom)}
-				onOpenChange={(open) => !open && setSelectedDetailRoom(null)}
-				room={selectedDetailRoom}
-				propertyName="Kos A"
-				onEdit={handleOpenEdit}
+				open={isDetailOpen}
+				onOpenChange={setIsDetailOpen}
+				room={selectedRoom}
+				propertyName={activeProperty?.name || "Kos A"}
+				onEdit={(room) => {
+					setIsDetailOpen(false);
+					handleOpenEdit(room);
+				}}
 				onDelete={(room) => {
-					setSelectedDetailRoom(null);
-					setDeletingRoom(room);
+					setIsDetailOpen(false);
+					handleOpenDelete(room);
 				}}
 			/>
 
-			{/* Room Add / Edit Dialog (TanStack Form + Zod) */}
-			<RoomFormDialog
-				open={isRoomFormOpen}
-				onOpenChange={setIsRoomFormOpen}
-				propertyName="Kos A"
-				editingRoom={editingRoom}
-				onSubmit={handleSaveRoom}
-			/>
-
-			{/* Room Delete Confirmation Dialog */}
 			<RoomDeleteDialog
-				open={Boolean(deletingRoom)}
-				onOpenChange={(open) => !open && setDeletingRoom(null)}
-				room={deletingRoom}
-				onConfirm={handleConfirmDelete}
+				open={isDeleteOpen}
+				onOpenChange={setIsDeleteOpen}
+				room={roomToDelete}
+				onConfirm={handleDeleteConfirm}
 			/>
 		</div>
 	);

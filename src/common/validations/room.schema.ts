@@ -15,4 +15,5 @@ export const roomSchema = z.object({
 	facilities: z.string().optional(),
 });
 
+export const roomFormSchema = roomSchema;
 export type RoomFormValues = z.infer<typeof roomSchema>;

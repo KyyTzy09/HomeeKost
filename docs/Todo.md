@@ -107,20 +107,21 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 3: Modul Properti Kos (Kost / Property Management — SuperAdmin) (Minggu 2)
 ### 3.1 Data Access & Server Functions Properti
-- [ ] 🔴 Repository & Service `src/data/repositories/property.repo.ts`:
+- [x] 🔴 Repository & Service `src/data/repositories/property.repository.ts` & `src/data/services/property.service.ts`:
   - CRUD Data Cabang Kos
   - Agregasi statistik kos (Total kamar, kamar terisi, persentase okupansi, estimasi omzet per properti)
-  - Pengaturan rekening bank / QRIS default per properti
-- [ ] 🔴 Zod Schema validation `src/common/validations/property.schema.ts`
+  - Pengaturan rekening bank default per properti
+- [x] 🔴 Zod Schema validation `src/common/validations/property.schema.ts`
+- [x] 🔴 Server Functions `src/data/servers/property.fn.ts` & Hooks `src/hooks/use-properties.ts`
 
 ### 3.2 Halaman Daftar & Detail Properti (`KostManagement.html` Screen `#propertyScreen` & `#propertyDetail`)
-- [ ] 🔴 Halaman `src/routes/properti/index.tsx`:
+- [x] 🔴 Halaman `src/routes/dashboard/select-property.tsx`:
   - Card View Daftar Kos (Nama kos, alamat, jumlah kamar, status okupansi, info rekening)
-  - Hover state naik 3px & shadow lembut
-  - Tombol "Kelola Kos" (Masuk ke scope kos), Tombol Edit, dan Tombol Hapus Kos
-- [ ] 🔴 Modal Form Tambah / Edit Kos (`#propertyModal`):
-  - Form input: Nama Kos, Alamat Lengkap, Deskripsi, No Rekening / Bank / QRIS, Upload/Link Foto
-- [ ] 🔴 Halaman `src/routes/properti/$propertyId.tsx`:
+  - Hover state & shadow lembut sesuai Design System
+  - Tombol "Masuk Kos" / "Kelola Kos" (Set active property session & redirect), Tombol Edit, dan Tombol Hapus Kos
+- [x] 🔴 Modal Form Tambah / Edit Kos (`PropertyFormDialog`):
+  - Form input: Nama Kos, Alamat Lengkap, Deskripsi, No Rekening / Bank, Link Foto
+- [x] 🔴 Halaman `src/routes/dashboard/properties.$propertyId.tsx`:
   - Header detail kos, alamat lengkap, dan statistik ringkas properti
   - Grid daftar seluruh kamar di bawah kos tersebut
   - Tombol navigasi cepat untuk menambah kamar baru ke properti terpilih
@@ -129,23 +130,28 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 4: Modul Kamar, Penyewa & Kontrak Sewa (Admin & SuperAdmin) (Minggu 2 - 3)
 ### 4.1 Manajemen Kamar (Room Management — Screen `#rooms`)
-- [ ] 🔴 Repository & Service `src/data/repositories/room.repo.ts`:
+- [x] 🔴 Repository & Service `src/data/repositories/room.repository.ts` & `src/data/services/room.service.ts`:
   - CRUD Kamar terikat pada `propertyId`
   - Update status kamar (`VACANT`, `OCCUPIED`, `MAINTENANCE`)
-  - Riwayat kontrak sewa kamar
-- [ ] 🔴 Halaman `src/routes/kamar/index.tsx`:
+  - Format harga dan penanganan kontrak sewa aktif
+- [x] 🔴 Server Functions `src/data/servers/room.fn.ts` & Hooks `src/hooks/use-rooms.ts`
+- [x] 🔴 Halaman `src/routes/dashboard/rooms.tsx`:
   - Room Cards Grid dengan visual status:
     - Hijau (`#E8F2EA` / `#568062`) = `VACANT` / Tersedia
     - Biru (`#E6F0FA` / `#2B6CB0`) = `OCCUPIED` / Terisi
     - Kuning (`#F6F0E4` / `#99773D`) = `MAINTENANCE` / Perbaikan
+  - Segmented status filters (`Semua`, `Terisi`, `Kosong`, `Maintenance`) & Paginasi
+  - Modal Form Tambah & Edit Kamar (`RoomFormDialog`) dengan Zod & TanStack Form
+  - Modal Detail Kamar (`RoomDetailDialog`) & Modal Hapus Kamar (`RoomDeleteDialog`)
+
   - Filter Bar Status: Semua, Tersedia (Vacant), Terisi (Occupied), Perbaikan (Maintenance)
   - Quick action card: Tombol klik untuk buka detail kamar
-- [ ] 🔴 Modal Tambah / Edit Kamar (`#roomModal`):
-  - Input: Nomor Kamar (e.g. A-101), Tipe (Standard/Deluxe), Harga Sewa Bulanan (Rp), Fasilitas (AC, WiFi, Kamar Mandi Dalam, Kasur, Lemari), Status Kamar
-- [ ] 🔴 Modal / Halaman Detail Kamar (`#roomDetailModal` / `src/routes/kamar/$roomId.tsx`):
+- [x] 🔴 Modal Tambah / Edit Kamar (`RoomFormDialog`):
+  - Input: Nomor Kamar, Tipe (Standard/Deluxe/Suite), Harga Sewa Bulanan (Rp), Fasilitas, Status Kamar
+- [x] 🔴 Modal Detail Kamar (`RoomDetailDialog`):
   - Rincian harga sewa, fasilitas, status kamar saat ini
-  - Informasi Penyewa Aktif (Nama, WA, Tanggal Masuk, Tanggal Jatuh Tempo)
-  - Riwayat Sewa (Rental History) kamar dari waktu ke waktu
+  - Informasi Penyewa Aktif & Tanggal Jatuh Tempo
+
 
 ### 4.2 Manajemen Penyewa & Kontrak Sewa (Tenant Management — Screen `#tenants`)
 - [ ] 🔴 Repository & Service `src/data/repositories/tenant.repo.ts` & `rental-contract.repo.ts`:

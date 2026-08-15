@@ -1,5 +1,6 @@
 export type RoomType = "Standard" | "Deluxe" | "Suite";
 export type RoomStatus = "Kosong" | "Terisi" | "Maintenance";
+export type RoomStatusType = RoomStatus;
 
 export interface RoomItem {
 	id: string;

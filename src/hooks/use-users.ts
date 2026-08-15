@@ -1,4 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	type UseMutationResult,
+	type UseQueryResult,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import type { AuditLogItem, UserItem } from "../common/types/index.ts";
 import type { UserFormValues } from "../common/validations/index.ts";
 import {
 	createUserServerFn,
@@ -11,8 +18,8 @@ import {
 export const USERS_QUERY_KEY = ["users"] as const;
 export const USER_AUDIT_LOGS_QUERY_KEY = ["user-audit-logs"] as const;
 
-export function useUsers() {
-	return useQuery({
+export function useUsers(): UseQueryResult<UserItem[], Error> {
+	return useQuery<UserItem[], Error>({
 		queryKey: USERS_QUERY_KEY,
 		queryFn: async () => {
 			return getUsersServerFn();
@@ -20,8 +27,8 @@ export function useUsers() {
 	});
 }
 
-export function useUserAuditLogs() {
-	return useQuery({
+export function useUserAuditLogs(): UseQueryResult<AuditLogItem[], Error> {
+	return useQuery<AuditLogItem[], Error>({
 		queryKey: USER_AUDIT_LOGS_QUERY_KEY,
 		queryFn: async () => {
 			return getUserAuditLogsServerFn();
@@ -29,10 +36,14 @@ export function useUserAuditLogs() {
 	});
 }
 
-export function useCreateUser() {
+export function useCreateUser(): UseMutationResult<
+	UserItem,
+	Error,
+	UserFormValues
+> {
 	const queryClient = useQueryClient();
 
-	return useMutation({
+	return useMutation<UserItem, Error, UserFormValues>({
 		mutationFn: async (data: UserFormValues) => {
 			return createUserServerFn({ data });
 		},
@@ -43,10 +54,14 @@ export function useCreateUser() {
 	});
 }
 
-export function useUpdateUser() {
+export function useUpdateUser(): UseMutationResult<
+	UserItem,
+	Error,
+	{ id: string; data: UserFormValues }
+> {
 	const queryClient = useQueryClient();
 
-	return useMutation({
+	return useMutation<UserItem, Error, { id: string; data: UserFormValues }>({
 		mutationFn: async ({ id, data }: { id: string; data: UserFormValues }) => {
 			return updateUserServerFn({ data: { id, data } });
 		},
@@ -57,10 +72,14 @@ export function useUpdateUser() {
 	});
 }
 
-export function useDeleteUser() {
+export function useDeleteUser(): UseMutationResult<
+	{ success: boolean; id: string },
+	Error,
+	string
+> {
 	const queryClient = useQueryClient();
 
-	return useMutation({
+	return useMutation<{ success: boolean; id: string }, Error, string>({
 		mutationFn: async (id: string) => {
 			return deleteUserServerFn({ data: { id } });
 		},

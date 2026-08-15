@@ -1,3 +1,5 @@
+import type React from "react";
+import { Button } from "#/common/shadcn/button.tsx";
 import type { RoomItem } from "../../common/types/index.ts";
 
 interface RoomCardProps {
@@ -74,26 +76,26 @@ export function RoomCard({ room, onDetail, onDelete }: RoomCardProps) {
 					{room.facilities || "Kamar mandi dalam · Wi-Fi"}
 				</span>
 				<div className="flex items-center gap-2">
-					<button
-						className="text-[10px] font-semibold text-[#4f6958] hover:underline cursor-pointer bg-transparent border-0 p-0"
+					<Button
+						className="text-[10px] font-semibold text-[#4f6958] hover:underline cursor-pointer bg-transparent border-0 p-0 hover:bg-transparent hover:border-0"
 						type="button"
-						onClick={(e) => {
+						onClick={(e: React.MouseEvent) => {
 							e.stopPropagation();
 							onDetail?.(room);
 						}}
 					>
 						Detail
-					</button>
-					<button
-						className="text-[10px] font-semibold text-[#b66b68] hover:underline cursor-pointer bg-transparent border-0 p-0"
+					</Button>
+					<Button
+						className="text-[10px] font-semibold text-[#b66b68] hover:underline cursor-pointer bg-transparent border-0 p-0 hover:bg-transparent hover:border-0"
 						type="button"
-						onClick={(e) => {
+						onClick={(e: React.MouseEvent) => {
 							e.stopPropagation();
 							onDelete?.(room);
 						}}
 					>
 						Hapus
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>
