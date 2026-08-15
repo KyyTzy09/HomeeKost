@@ -69,3 +69,20 @@ export function formatShortDueDate(dateStr: string): string {
 	const month = months[date.getMonth()];
 	return `${day} ${month}`;
 }
+
+/**
+ * Memformat string YYYY-MM-DD menjadi format lengkap lokal ID (contoh: 07 Agu 2026)
+ */
+export function formatDate(value?: string | Date | null): string {
+	if (!value) return "—";
+	const d =
+		typeof value === "string"
+			? new Date(value.includes("T") ? value : `${value}T00:00:00`)
+			: value;
+	if (Number.isNaN(d.getTime())) return String(value);
+	return d.toLocaleDateString("id-ID", {
+		day: "2-digit",
+		month: "short",
+		year: "numeric",
+	});
+}
