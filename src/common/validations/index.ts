@@ -7,3 +7,4 @@ export * from "./property.schema.ts";
 export * from "./report.schema.ts";
 export * from "./room.schema.ts";
 export * from "./tenant.schema.ts";
+export * from "./user.schema.ts";

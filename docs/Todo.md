@@ -272,16 +272,18 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
   - Tombol Fullscreen Modal Stream CCTV (`#cctvFullscreenModal`)
 
 ### 9.2 Manajemen User & Staf Kos (User Management — Screen `#users` — SuperAdmin Only)
-- [ ] 🔴 Repository & Service `src/data/repositories/user.repo.ts`:
+- [x] 🔴 Repository & Service `src/data/repositories/user.repository.ts` & `src/data/services/user-management.service.ts`:
   - CRUD Akun Pengguna sistem (SuperAdmin & Admin Staf)
   - Penugasan cabang kos (`assignedPropertyId`)
   - Tracking riwayat transaksi yang dibuat oleh user (`createdBy` audit trail)
-- [ ] 🔴 Halaman `src/routes/users/index.tsx`:
-  - Tabel Daftar Pengguna: Nama, Email, Role Badge (`SUPER_ADMIN` / `ADMIN`), Cabang Kos yang Dikelola, Tanggal Terdaftar, Status Akun
-  - Tombol Tambah User Baru & Tombol Aksi Hapus/Nonaktifkan
-- [ ] 🔴 Modal Tambah / Edit User (`#userModal`):
-  - Form Input: Nama Lengkap, Email, Password, Pilihan Role (`SUPER_ADMIN` / `ADMIN`), Penugasan Properti Kos
-- [ ] 🔴 Halaman / Modal Detail User (`src/routes/users/$userId.tsx`):
+- [x] 🔴 Halaman `src/routes/dashboard/users.tsx`:
+  - Tabel Daftar Pengguna: Nama, Email, Role Badge (`SUPER_ADMIN` / `ADMIN` / `STAFF`), Cabang Kos yang Dikelola, Tanggal Terdaftar, Status Akun
+  - Segmented Filter Role (`Semua`, `Admin`, `Staff`) & Search
+  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) dengan TanStack Form & Zod
+  - Modal Konfirmasi Hapus Pengguna (`UserDeleteDialog`)
+  - Tabel Riwayat Perubahan & Audit Trail Log
+  - Integrasi End-to-End dengan TanStack Query Hooks (`useUsers`, `useUserAuditLogs`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`) & Server Functions (`user.fn.ts`)
+- [x] 🔴 Halaman / Modal Detail User (`src/routes/users/$userId.tsx`):
   - Profil staf, hak akses, dan Tabel Riwayat Input Transaksi Keuangan oleh staf tersebut
 
 ---

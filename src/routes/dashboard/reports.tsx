@@ -222,16 +222,10 @@ function ReportsPage() {
 								<SelectValue placeholder="Pilih Periode" />
 							</SelectTrigger>
 							<SelectContent className="bg-white border-[#e4e9e4]">
-								<SelectItem
-									value="Juli 2026"
-									className="text-xs font-semibold"
-								>
+								<SelectItem value="Juli 2026" className="text-xs font-semibold">
 									Juli 2026
 								</SelectItem>
-								<SelectItem
-									value="Agustus 2026"
-									className="text-xs"
-								>
+								<SelectItem value="Agustus 2026" className="text-xs">
 									Agustus 2026
 								</SelectItem>
 								<SelectItem value="Juni 2026" className="text-xs">
