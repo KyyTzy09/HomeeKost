@@ -35,8 +35,8 @@ export const createUserServerFn = createServerFn({
 		return userFormSchema.parse(input);
 	})
 	.handler(async ({ data }): Promise<UserItem> => {
-		await requireAuthSession();
-		return userManagementService.createUser(data);
+		const session = await requireAuthSession();
+		return userManagementService.createUser(data, session.user.id);
 	});
 
 export const updateUserServerFn = createServerFn({
@@ -51,8 +51,8 @@ export const updateUserServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { id, data } }): Promise<UserItem> => {
-		await requireAuthSession();
-		return userManagementService.updateUser(id, data);
+		const session = await requireAuthSession();
+		return userManagementService.updateUser(id, data, session.user.id);
 	});
 
 export const deleteUserServerFn = createServerFn({

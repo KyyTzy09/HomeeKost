@@ -8,11 +8,25 @@ import type { RoleName } from "../../generated/prisma/client.js";
 import { propertyRepository } from "../repositories/property.repository.ts";
 import { userRepository } from "../repositories/user.repository.ts";
 
+export const ROLE_HIERARCHY: Record<AppUserRole, number> = {
+	STAFF: 1,
+	ADMIN: 2,
+	SUPER_ADMIN: 3,
+};
+
 export class UserManagementService {
 	constructor(
 		private readonly userRepo = userRepository,
 		private readonly propertyRepo = propertyRepository,
 	) {}
+
+	private async getRequesterRole(
+		requesterUserId?: string,
+	): Promise<AppUserRole> {
+		if (!requesterUserId) return "STAFF";
+		const user = await this.userRepo.findById(requesterUserId);
+		return (user?.role?.name || "STAFF") as AppUserRole;
+	}
 
 	async getUsers(): Promise<UserItem[]> {
 		const rawUsers = await this.userRepo.findAll();
@@ -27,13 +41,28 @@ export class UserManagementService {
 				email: u.email,
 				role: roleName,
 				assignedProperty: propertyName,
+				assignedPropertyId: u.assignedProperty?.id || null,
 				status: "ACTIVE",
 				createdAt: u.createdAt.toISOString().slice(0, 10),
 			};
 		});
 	}
 
-	async createUser(input: UserFormValues): Promise<UserItem> {
+	async createUser(
+		input: UserFormValues,
+		requesterUserId?: string,
+	): Promise<UserItem> {
+		const requesterRole = await this.getRequesterRole(requesterUserId);
+		const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? 1;
+		const targetLevel = ROLE_HIERARCHY[input.role as AppUserRole] ?? 1;
+
+		// Role hierarchy guard: User cannot create account with same or higher role
+		if (requesterRole !== "SUPER_ADMIN" && targetLevel >= requesterLevel) {
+			throw new Error(
+				"Anda tidak memiliki hak akses untuk membuat akun dengan role yang setara atau lebih tinggi dari Anda.",
+			);
+		}
+
 		const existingUser = await this.userRepo.findByEmail(input.email);
 		if (existingUser) {
 			throw new Error(`Email ${input.email} sudah terdaftar di sistem.`);
@@ -74,15 +103,50 @@ export class UserManagementService {
 			email: created.email,
 			role: (created.role?.name || "STAFF") as AppUserRole,
 			assignedProperty: created.assignedProperty?.name || "Semua Kost",
+			assignedPropertyId: created.assignedProperty?.id || null,
 			status: "ACTIVE",
 			createdAt: created.createdAt.toISOString().slice(0, 10),
 		};
 	}
 
-	async updateUser(id: string, input: UserFormValues): Promise<UserItem> {
+	async updateUser(
+		id: string,
+		input: UserFormValues,
+		requesterUserId?: string,
+	): Promise<UserItem> {
+		// Self-modification guard: user cannot modify themselves from this management table
+		if (requesterUserId && id === requesterUserId) {
+			throw new Error(
+				"Anda tidak dapat mengubah data akun Anda sendiri melalui tabel manajemen pengguna.",
+			);
+		}
+
 		const existing = await this.userRepo.findById(id);
 		if (!existing) {
 			throw new Error("Pengguna tidak ditemukan.");
+		}
+
+		const requesterRole = await this.getRequesterRole(requesterUserId);
+		const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? 1;
+		const targetExistingRole = (existing.role?.name || "STAFF") as AppUserRole;
+		const targetExistingLevel = ROLE_HIERARCHY[targetExistingRole] ?? 1;
+		const newRoleLevel = ROLE_HIERARCHY[input.role as AppUserRole] ?? 1;
+
+		// Hierarchy guard: Cannot modify a user with equal or higher role
+		if (
+			requesterRole !== "SUPER_ADMIN" &&
+			targetExistingLevel >= requesterLevel
+		) {
+			throw new Error(
+				"Anda tidak memiliki wewenang untuk mengubah data pengguna dengan tingkat role yang sama atau lebih tinggi.",
+			);
+		}
+
+		// Hierarchy guard: Cannot assign a role equal to or higher than requester's own role
+		if (requesterRole !== "SUPER_ADMIN" && newRoleLevel >= requesterLevel) {
+			throw new Error(
+				"Anda tidak dapat menetapkan role yang sama atau lebih tinggi dari role Anda.",
+			);
 		}
 
 		if (input.email !== existing.email) {
@@ -143,6 +207,7 @@ export class UserManagementService {
 			email: updated.email,
 			role: (updated.role?.name || "STAFF") as AppUserRole,
 			assignedProperty: updated.assignedProperty?.name || "Semua Kost",
+			assignedPropertyId: updated.assignedProperty?.id || null,
 			status: input.status,
 			createdAt: updated.createdAt.toISOString().slice(0, 10),
 		};
@@ -161,6 +226,18 @@ export class UserManagementService {
 			throw new Error("Pengguna tidak ditemukan.");
 		}
 
+		const requesterRole = await this.getRequesterRole(requesterUserId);
+		const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? 1;
+		const targetRole = (existing.role?.name || "STAFF") as AppUserRole;
+		const targetLevel = ROLE_HIERARCHY[targetRole] ?? 1;
+
+		// Hierarchy guard: Cannot delete equal or higher role
+		if (requesterRole !== "SUPER_ADMIN" && targetLevel >= requesterLevel) {
+			throw new Error(
+				"Anda tidak memiliki hak akses untuk menghapus pengguna dengan role yang sama atau lebih tinggi.",
+			);
+		}
+
 		if (existing.role?.name === "SUPER_ADMIN") {
 			const superAdminCount = await this.userRepo.countSuperAdmins();
 			if (superAdminCount <= 1) {
@@ -175,7 +252,6 @@ export class UserManagementService {
 	}
 
 	async getAuditLogs(): Promise<AuditLogItem[]> {
-		// Mock initial audit logs based on realistic system actions
 		return [
 			{
 				id: 1,

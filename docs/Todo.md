@@ -284,8 +284,8 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
   - Tracking riwayat transaksi yang dibuat oleh user (`createdBy` audit trail)
 - [x] 🔴 Halaman `src/routes/dashboard/users.tsx`:
   - Tabel Daftar Pengguna: Nama, Email, Role Badge (`SUPER_ADMIN` / `ADMIN` / `STAFF`), Cabang Kos yang Dikelola, Tanggal Terdaftar, Status Akun
-  - Segmented Filter Role (`Semua`, `Admin`, `Staff`) & Search
-  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) dengan TanStack Form & Zod
+  - Segmented Filter Role (`Semua`, `SuperAdmin`, `Admin`, `Staff`) dengan live counter badge & Search
+  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) terintegrasi dinamis dengan data real database cabang properti (`useProperties`)
   - Modal Konfirmasi Hapus Pengguna (`UserDeleteDialog`)
   - Tabel Riwayat Perubahan & Audit Trail Log
   - Integrasi End-to-End dengan TanStack Query Hooks (`useUsers`, `useUserAuditLogs`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`) & Server Functions (`user.fn.ts`)

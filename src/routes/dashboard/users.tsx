@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle2, Loader2, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
-import type { UserItem } from "../../common/types/index.ts";
+import type { AppUserRole, UserItem } from "../../common/types/index.ts";
 import type { UserFormValues } from "../../common/validations/index.ts";
 import {
 	UserAuditLogTable,
@@ -12,7 +12,9 @@ import {
 } from "../../components/user/index.ts";
 import {
 	useCreateUser,
+	useDashboardContext,
 	useDeleteUser,
+	useProperties,
 	useUpdateUser,
 	useUserAuditLogs,
 	useUsers,
@@ -30,13 +32,18 @@ export const Route = createFileRoute("/dashboard/users")({
 });
 
 function UsersPage() {
-	// TanStack Query data fetching
+	// TanStack Query data fetching & session context
+	const { user: currentUser, userRole } = useDashboardContext();
+	const currentUserId = currentUser?.id;
+	const currentUserRole = (userRole || "STAFF") as AppUserRole;
+
 	const {
 		data: users = [],
 		isLoading: isUsersLoading,
 		error: usersError,
 	} = useUsers();
 	const { data: auditLogs = [], isLoading: isLogsLoading } = useUserAuditLogs();
+	const { data: properties = [] } = useProperties();
 
 	// TanStack Query mutations
 	const createUserMutation = useCreateUser();
@@ -140,7 +147,7 @@ function UsersPage() {
 						User Management
 					</h1>
 					<p className="text-xs text-[#737873] mt-1">
-						Kelola pengguna, staf operasional, dan hak akses RBAC ke sistem
+						Kelola pengguna, staf operasional, dan hak akses ke sistem
 						HomeeKost.
 					</p>
 				</div>
@@ -158,7 +165,7 @@ function UsersPage() {
 				</Button>
 			</div>
 
-			{/* User Table Component */}
+			{/* User Table Component with Strict Hierarchy & Self-Modification Protection */}
 			{isUsersLoading ? (
 				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-2 shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
 					<Loader2 className="w-6 h-6 text-[#4f6958] animate-spin" />
@@ -174,6 +181,8 @@ function UsersPage() {
 			) : (
 				<UserTable
 					data={users}
+					currentUserId={currentUserId}
+					currentUserRole={currentUserRole}
 					onEditUser={(user) => {
 						setEditingUser(user);
 						setIsFormOpen(true);
@@ -200,6 +209,8 @@ function UsersPage() {
 				open={isFormOpen}
 				onOpenChange={setIsFormOpen}
 				editingUser={editingUser}
+				properties={properties}
+				currentUserRole={currentUserRole}
 				onSubmit={handleSaveUser}
 			/>
 

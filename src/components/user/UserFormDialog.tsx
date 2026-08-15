@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { UserPlus } from "lucide-react";
+import { ShieldCheck, UserCog, UserPlus } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
@@ -22,6 +22,7 @@ import {
 import type {
 	AppUserRole,
 	AppUserStatus,
+	PropertyItem,
 	UserItem,
 } from "../../common/types/index.ts";
 import {
@@ -33,6 +34,7 @@ interface UserFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	editingUser: UserItem | null;
+	properties: PropertyItem[];
 	onSubmit: (values: UserFormValues) => void;
 }
 
@@ -40,6 +42,7 @@ export function UserFormDialog({
 	open,
 	onOpenChange,
 	editingUser,
+	properties = [],
 	onSubmit,
 }: UserFormDialogProps) {
 	const form = useForm({
@@ -85,11 +88,14 @@ export function UserFormDialog({
 				form.setFieldValue("name", "");
 				form.setFieldValue("email", "");
 				form.setFieldValue("role", "ADMIN");
-				form.setFieldValue("assignedProperty", "Semua Kost");
+				form.setFieldValue(
+					"assignedProperty",
+					properties.length > 0 ? properties[0].name : "Semua Kost",
+				);
 				form.setFieldValue("status", "ACTIVE");
 			}
 		}
-	}, [open, editingUser, form]);
+	}, [open, editingUser, properties, form]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -98,17 +104,28 @@ export function UserFormDialog({
 				aria-describedby="user-dialog-description"
 			>
 				<DialogHeader className="pb-4 border-b border-[#e4e9e4]">
-					<DialogTitle className="text-lg font-bold text-[#252925] flex items-center gap-2">
-						<UserPlus className="w-5 h-5 text-[#4f6958]" />
-						{editingUser ? "Edit Pengguna" : "Tambah Pengguna Baru"}
-					</DialogTitle>
-					<DialogDescription
-						id="user-dialog-description"
-						className="text-xs text-[#737873] mt-1"
-					>
-						Kelola akun staf dan admin yang memiliki hak akses ke sistem
-						HomeeKost.
-					</DialogDescription>
+					<div className="flex items-center gap-3">
+						<div className="w-10 h-10 rounded-xl bg-[#e8f0ea] text-[#4f6958] flex items-center justify-center border border-[#cfe2d3] shrink-0">
+							{editingUser ? (
+								<UserCog className="w-5 h-5" />
+							) : (
+								<UserPlus className="w-5 h-5" />
+							)}
+						</div>
+						<div>
+							<DialogTitle className="text-base font-bold text-[#252925]">
+								{editingUser ? "Edit Pengguna Sistem" : "Tambah Pengguna Baru"}
+							</DialogTitle>
+							<DialogDescription
+								id="user-dialog-description"
+								className="text-xs text-[#737873] mt-0.5"
+							>
+								{editingUser
+									? `Perbarui profil dan penugasan kos untuk ${editingUser.name}.`
+									: "Tambahkan akun staf atau pengelola kos ke sistem HomeeKost."}
+							</DialogDescription>
+						</div>
+					</div>
 				</DialogHeader>
 
 				<form
@@ -117,23 +134,29 @@ export function UserFormDialog({
 						e.stopPropagation();
 						form.handleSubmit();
 					}}
-					className="space-y-4 pt-2"
+					className="space-y-4 pt-4"
 				>
 					{/* Nama Lengkap */}
 					<form.Field name="name">
 						{(field) => (
 							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold text-[#252925]">
-									Nama Lengkap
+								<Label
+									htmlFor={field.name}
+									className="text-xs font-semibold text-[#252925]"
+								>
+									Nama Lengkap <span className="text-[#b66b68]">*</span>
 								</Label>
 								<Input
-									placeholder="Contoh: Rani Setyawati"
+									id={field.name}
+									name={field.name}
 									value={field.state.value}
+									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
-									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
+									placeholder="Contoh: Budi Santoso"
+									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]"
 								/>
-								{field.state.meta.errors?.[0] && (
-									<p className="text-[11px] text-[#a65f5b]">
+								{field.state.meta.errors.length > 0 && (
+									<p className="text-[11px] text-[#b66b68]">
 										{field.state.meta.errors[0]}
 									</p>
 								)}
@@ -145,18 +168,24 @@ export function UserFormDialog({
 					<form.Field name="email">
 						{(field) => (
 							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold text-[#252925]">
-									Alamat Email
+								<Label
+									htmlFor={field.name}
+									className="text-xs font-semibold text-[#252925]"
+								>
+									Alamat Email <span className="text-[#b66b68]">*</span>
 								</Label>
 								<Input
+									id={field.name}
+									name={field.name}
 									type="email"
-									placeholder="rani@homeekost.id"
 									value={field.state.value}
+									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
-									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
+									placeholder="budi@homeekost.id"
+									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]"
 								/>
-								{field.state.meta.errors?.[0] && (
-									<p className="text-[11px] text-[#a65f5b]">
+								{field.state.meta.errors.length > 0 && (
+									<p className="text-[11px] text-[#b66b68]">
 										{field.state.meta.errors[0]}
 									</p>
 								)}
@@ -164,21 +193,27 @@ export function UserFormDialog({
 						)}
 					</form.Field>
 
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-						{/* Role Hak Akses */}
+					{/* Grid Role & Status */}
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+						{/* Role Selection */}
 						<form.Field name="role">
 							{(field) => (
-								<div className="space-y-1.5">
+								<div className="space-y-1.5 w-full">
 									<Label className="text-xs font-semibold text-[#252925]">
-										Role Akses
+										Hak Akses (Role)
 									</Label>
 									<Select
 										value={field.state.value}
 										onValueChange={(val) => {
-											if (val) field.handleChange(val as AppUserRole);
+											if (val) {
+												field.handleChange(val as AppUserRole);
+												if (val === "SUPER_ADMIN") {
+													form.setFieldValue("assignedProperty", "Semua Kost");
+												}
+											}
 										}}
 									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
 											<SelectValue placeholder="Pilih Role" />
 										</SelectTrigger>
 										<SelectContent className="bg-white border-[#e4e9e4]">
@@ -200,7 +235,7 @@ export function UserFormDialog({
 						{/* Status Akun */}
 						<form.Field name="status">
 							{(field) => (
-								<div className="space-y-1.5">
+								<div className="space-y-1.5 w-full">
 									<Label className="text-xs font-semibold text-[#252925]">
 										Status Akun
 									</Label>
@@ -210,10 +245,10 @@ export function UserFormDialog({
 											if (val) field.handleChange(val as AppUserStatus);
 										}}
 									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
 											<SelectValue placeholder="Pilih Status" />
 										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
+										<SelectContent className=" bg-white border-[#e4e9e4]">
 											<SelectItem value="ACTIVE" className="text-xs">
 												Aktif
 											</SelectItem>
@@ -227,35 +262,43 @@ export function UserFormDialog({
 						</form.Field>
 					</div>
 
-					{/* Penugasan Cabang Kos */}
+					{/* Penugasan Cabang Kos (Integrated dynamically with properties from DB) */}
 					<form.Field name="assignedProperty">
 						{(field) => (
-							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold text-[#252925]">
-									Penugasan Cabang Properti
-								</Label>
+							<div className="space-y-1.5 w-full">
+								<div className="flex items-center justify-between w-full">
+									<Label className="text-xs font-semibold text-[#252925]">
+										Penugasan Cabang Properti
+									</Label>
+									{form.state.values.role === "SUPER_ADMIN" && (
+										<span className="text-[10px] text-[#4f6958] font-medium flex items-center gap-1">
+											<ShieldCheck className="w-3 h-3" /> Akses Global Seluruh
+											Kos
+										</span>
+									)}
+								</div>
 								<Select
 									value={field.state.value}
 									onValueChange={(val) => {
 										if (val) field.handleChange(val);
 									}}
 								>
-									<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+									<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
 										<SelectValue placeholder="Pilih Cabang Properti" />
 									</SelectTrigger>
 									<SelectContent className="bg-white border-[#e4e9e4]">
 										<SelectItem value="Semua Kost" className="text-xs">
-											Semua Kost (Akses Global)
+											Semua Kost (Akses Multi-Cabang Global)
 										</SelectItem>
-										<SelectItem value="Kos A" className="text-xs">
-											Kos A (Kaliurang)
-										</SelectItem>
-										<SelectItem value="Kos B" className="text-xs">
-											Kos B (Malioboro)
-										</SelectItem>
-										<SelectItem value="Kos C" className="text-xs">
-											Kos C (Solo KM 8)
-										</SelectItem>
+										{properties.map((prop) => (
+											<SelectItem
+												key={prop.id}
+												value={prop.name}
+												className="text-xs"
+											>
+												{prop.name} {prop.address ? `· ${prop.address}` : ""}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</div>
@@ -275,7 +318,7 @@ export function UserFormDialog({
 							type="submit"
 							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
 						>
-							Simpan Pengguna
+							{editingUser ? "Simpan Perubahan" : "Simpan Pengguna"}
 						</Button>
 					</DialogFooter>
 				</form>

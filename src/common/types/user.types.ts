@@ -7,6 +7,7 @@ export interface UserItem {
 	email: string;
 	role: AppUserRole;
 	assignedProperty: string; // e.g. "Semua Kost", "Kos A", "Kos B"
+	assignedPropertyId?: string | null;
 	status: AppUserStatus;
 	createdAt?: string;
 }

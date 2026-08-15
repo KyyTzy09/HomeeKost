@@ -1,3 +1,5 @@
+import { Button } from "@base-ui/react";
+import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Pencil, Trash2 } from "lucide-react";
 import type { PropertyItem } from "../../common/types/index.ts";
 
@@ -16,6 +18,10 @@ export function PropertyCard({
 	onEdit,
 	onDelete,
 }: PropertyCardProps) {
+	const navigate = useNavigate();
+	const handleNavigate = (propertyId: string) => {
+		navigate({ to: `/dashboard/properties/${propertyId}` });
+	};
 	return (
 		<div
 			onClick={() => onEnter(property)}
@@ -77,9 +83,15 @@ export function PropertyCard({
 			</p>
 
 			{/* Arrow Navigation */}
-			<div className="absolute right-5 bottom-5 w-[30px] h-[30px] rounded-[9px] bg-[#f3f7f3] flex items-center justify-center text-[#6c8171] group-hover:bg-[#4f6958] group-hover:text-white transition-all">
+			<Button
+				onClick={(e) => {
+					e.stopPropagation();
+					handleNavigate(property.id);
+				}}
+				className="absolute z-10 right-5 bottom-5 w-[30px] h-[30px] rounded-[9px] bg-[#f3f7f3] flex items-center justify-center text-[#6c8171] group-hover:bg-[#4f6958] group-hover:text-white transition-all"
+			>
 				<ArrowRight className="w-4 h-4" />
-			</div>
+			</Button>
 		</div>
 	);
 }
