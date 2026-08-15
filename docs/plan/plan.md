@@ -9,8 +9,8 @@ Dokumen ini adalah **Master Plan Progress Aplikasi** untuk melacak status pelaks
 | Phase | Nama Phase | Target Minggu | Status | Progress |
 | :--- | :--- | :--- | :--- | :--- |
 | **Phase 0** | **Environment, Design System & Docker Foundation** | Minggu 1 | ✅ Completed | 100% |
-| **Phase 1** | **Database Schema PostgreSQL & Prisma ORM (`ERD.md`)** | Minggu 1 | 🚀 Next Target | 0% |
-| **Phase 2** | **Autentikasi RBAC, Session Guard & Master Shell Layout** | Minggu 1 - 2 | ⏳ Pending | 0% |
+| **Phase 1** | **Database Schema PostgreSQL & Prisma ORM (`ERD.md`)** | Minggu 1 | ✅ Completed | 100% |
+| **Phase 2** | **Autentikasi RBAC, Session Guard & Master Shell Layout** | Minggu 1 - 2 | 🚀 Next Target | 0% |
 | **Phase 3** | **Modul Properti Kos (Kost Management — SuperAdmin)** | Minggu 2 | ⏳ Pending | 0% |
 | **Phase 4** | **Modul Kamar, Penyewa & Kontrak Sewa** | Minggu 2 - 3 | ⏳ Pending | 0% |
 | **Phase 5** | **Modul Keuangan, Arus Kas & Sinkronisasi Komplain** | Minggu 3 | ⏳ Pending | 0% |
@@ -39,15 +39,14 @@ Mendefinisikan skema relasional PostgreSQL melalui **Prisma ORM** (`prisma/schem
 - [x] Konfigurasi provider Prisma dengan adapter postgresql.
 
 #### Task 1.2: Prisma Schema Definition (`prisma/schema.prisma`)
-- [ ] Buat model `Role`, `User`, `Property`, `UserPropertyAccess`, `CctvDevice`.
-- [ ] Buat model `Room`, `Tenant`, `RentalContract`, `Invoice`.
-- [ ] Buat model `Transaction`, `Complaint`, `Announcement`, `NotificationLog`, `AiFinancialReport`.
-- [ ] Konfigurasi enum: `RoleName`, `RoomStatus`, `TenantStatus`, `ContractStatus`, `InvoiceStatus`, `TransactionType`, `TransactionCategory`, `ComplaintCategory`, `ComplaintStatus`, `AnnouncementCategory`, `NotificationType`, `NotificationStatus`.
+- [x] Buat model `Role`, `User`, `Property`, `UserPropertyAccess`, `CctvDevice`.
+- [x] Buat model `Room`, `Tenant`, `RentalContract`, `Invoice`.
+- [x] Buat model `Transaction`, `Complaint`, `Announcement`, `NotificationLog`, `AiFinancialReport`.
+- [x] Konfigurasi enum: `RoleName`, `RoomStatus`, `TenantStatus`, `ContractStatus`, `InvoiceStatus`, `TransactionType`, `TransactionCategory`, `ComplaintCategory`, `ComplaintStatus`, `AnnouncementCategory`, `NotificationType`, `NotificationStatus`.
 
 #### Task 1.3: Migration & Seed Execution
-- [ ] Eksekusi migrasi database (`prisma migrate dev` / `prisma db push`).
-- [ ] Generasi Prisma Client (`npm run db:generate` -> `src/generated/prisma`).
-- [ ] Pembuatan script `prisma/seed.ts` untuk seed data awal multi-property, kamar, penyewa, dan transaksi.
+- [x] Generasi Prisma Client (`npm run db:generate` -> `src/generated/prisma`).
+- [x] Pembuatan script `prisma/seed.ts` untuk seed data awal multi-property, kamar, penyewa, dan transaksi.
 
 ---
 

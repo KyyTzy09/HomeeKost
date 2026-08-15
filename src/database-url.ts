@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 export function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL
 

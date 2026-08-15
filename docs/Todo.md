@@ -45,29 +45,29 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 1: Database Schema PostgreSQL & Prisma ORM (Sesuai `ERD.md`) (Minggu 1)
 ### 1.1 Definisi Model Prisma Schema (`prisma/schema.prisma`)
-- [ ] 🔴 Setup Prisma Schema dengan generator client `@prisma/adapter-pg`
-- [ ] 🔴 Model `Role` (`id`, `name`: `SUPER_ADMIN` / `ADMIN` / `TENANT`, `description`)
-- [ ] 🔴 Model `User` (`id`, `roleId` FK, `email` UK, `passwordHash`, `name`, `assignedPropertyId` FK optional, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `Property` (`id`, `name`, `address`, `description`, `bankAccountInfo`, `imageUrl` optional, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `UserPropertyAccess` (`id`, `userId` FK, `propertyId` FK) — Relasi penugasan akses kos untuk Admin
-- [ ] 🔴 Model `CctvDevice` (`id`, `propertyId` FK, `name`, `streamUrl`, `isActive`, `createdAt`)
-- [ ] 🔴 Model `Room` (`id`, `propertyId` FK, `roomNumber` UK, `type`: `Standard`/`Deluxe`, `price` / `monthlyPrice` `Decimal(12,2)`, `facilities` Text/JSON, `status`: `VACANT` / `OCCUPIED` / `MAINTENANCE`, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `Tenant` (`id`, `name`, `NIK` UK, `phoneNumber` / `whatsappNumber`, `email` optional, `birthDate` DateTime optional, `occupation`, `originAddress`, `status`: `ACTIVE` / `INACTIVE`, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `RentalContract` (`id`, `roomId` FK, `tenantId` FK, `billingCycle`: `MONTHLY` / `QUARTERLY` / `SEMI_ANNUAL` / `ANNUALLY`, `startDate`, `endDate`, `dueDateDay` Int (1-31), `status`: `ACTIVE` / `TERMINATED`, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `Invoice` (`id`, `contractId` FK, `invoiceNumber` UK, `periodMonth`, `periodYear`, `amount` `Decimal(12,2)`, `dueDate`, `paidAt` optional, `status`: `PENDING` / `PAID` / `OVERDUE` / `CANCELLED`, `pdfUrl` optional, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `Transaction` / `Expense` (`id`, `propertyId` FK, `createdBy` / `recordedById` FK User, `complaintId` FK optional, `type`: `INCOME` / `EXPENSE`, `category`: `RENT` / `UTILITIES` / `INTERNET` / `MAINTENANCE` / `SALARY` / `OTHER`, `amount` `Decimal(12,2)`, `transactionDate`, `description`, `createdAt`)
-- [ ] 🔴 Model `Complaint` (`id`, `roomId` FK, `category`: `PLUMBING` / `ELECTRICAL` / `AC` / `FURNITURE` / `OTHER`, `description`, `status`: `PENDING` / `IN_PROGRESS` / `DONE`, `reportedDate`, `resolvedDate` optional, `createdAt`, `updatedAt`)
-- [ ] 🔴 Model `Announcement` (`id`, `propertyId` FK optional, `title`, `content`, `category`: `KERJA_BAKTI` / `MAINTENANCE` / `ACARA` / `UMUM`, `isBroadcast` Boolean, `sentAt` optional, `createdAt`)
-- [ ] 🔴 Model `NotificationLog` (`id`, `recipientNumber`, `messageType`: `DUE_DATE_REMINDER` / `BIRTHDAY_WISH` / `ANNOUNCEMENT` / `INVOICE`, `status`: `SENT` / `FAILED`, `notes` optional, `sentAt`)
-- [ ] 🔴 Model `AiFinancialReport` (`id`, `propertyId` FK optional, `periodMonth`, `periodYear`, `totalIncome` `Decimal(12,2)`, `totalExpense` `Decimal(12,2)`, `netProfit` `Decimal(12,2)`, `occupancyRate` Float, `aiNarrativeSummary` JSON, `pdfFileUrl` optional, `createdAt`)
+- [x] 🔴 Setup Prisma Schema dengan generator client `@prisma/adapter-pg`
+- [x] 🔴 Model `Role` (`id`, `name`: `SUPER_ADMIN` / `ADMIN` / `TENANT` / `STAFF`, `description`)
+- [x] 🔴 Model `User` (`id`, `roleId` FK, `email` UK, `passwordHash`, `name`, `assignedPropertyId` FK optional, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `Property` (`id`, `name`, `address`, `description`, `bankAccountInfo`, `imageUrl` optional, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `UserPropertyAccess` (`id`, `userId` FK, `propertyId` FK) — Relasi penugasan akses kos untuk Admin
+- [x] 🔴 Model `CctvDevice` (`id`, `propertyId` FK, `name`, `streamUrl`, `isActive`, `createdAt`)
+- [x] 🔴 Model `Room` (`id`, `propertyId` FK, `roomNumber`, `type`: `Standard`/`Deluxe`, `price` / `monthlyPrice` `Decimal(12,2)`, `facilities` Text/JSON, `status`: `VACANT` / `OCCUPIED` / `MAINTENANCE`, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `Tenant` (`id`, `name`, `NIK` UK, `phoneNumber` / `whatsappNumber`, `email` optional, `birthDate` DateTime optional, `occupation`, `originAddress`, `status`: `ACTIVE` / `INACTIVE`, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `RentalContract` (`id`, `roomId` FK, `tenantId` FK, `billingCycle`: `MONTHLY` / `QUARTERLY` / `SEMI_ANNUAL` / `ANNUALLY`, `startDate`, `endDate`, `dueDateDay` Int (1-31), `status`: `ACTIVE` / `TERMINATED`, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `Invoice` (`id`, `contractId` FK, `invoiceNumber` UK, `periodMonth`, `periodYear`, `amount` `Decimal(12,2)`, `dueDate`, `paidAt` optional, `status`: `PENDING` / `PAID` / `OVERDUE` / `CANCELLED`, `pdfUrl` optional, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `Transaction` / `Expense` (`id`, `propertyId` FK, `createdBy` / `recordedById` FK User, `complaintId` FK optional, `type`: `INCOME` / `EXPENSE`, `category`: `RENT` / `UTILITIES` / `INTERNET` / `MAINTENANCE` / `SALARY` / `OTHER`, `amount` `Decimal(12,2)`, `transactionDate`, `description`, `createdAt`)
+- [x] 🔴 Model `Complaint` (`id`, `roomId` FK, `category`: `PLUMBING` / `ELECTRICAL` / `AC` / `FURNITURE` / `OTHER`, `description`, `status`: `PENDING` / `IN_PROGRESS` / `DONE`, `reportedDate`, `resolvedDate` optional, `createdAt`, `updatedAt`)
+- [x] 🔴 Model `Announcement` (`id`, `propertyId` FK optional, `title`, `content`, `category`: `KERJA_BAKTI` / `MAINTENANCE` / `ACARA` / `UMUM`, `isBroadcast` Boolean, `sentAt` optional, `createdAt`)
+- [x] 🔴 Model `NotificationLog` (`id`, `recipientNumber`, `messageType`: `DUE_DATE_REMINDER` / `BIRTHDAY_WISH` / `ANNOUNCEMENT` / `INVOICE`, `status`: `SENT` / `FAILED`, `notes` optional, `sentAt`)
+- [x] 🔴 Model `AiFinancialReport` (`id`, `propertyId` FK optional, `periodMonth`, `periodYear`, `totalIncome` `Decimal(12,2)`, `totalExpense` `Decimal(12,2)`, `netProfit` `Decimal(12,2)`, `occupancyRate` Float, `aiNarrativeSummary` JSON, `pdfFileUrl` optional, `createdAt`)
 
 ### 1.2 Database Migration & Seed Initial Data
-- [ ] 🔴 Eksekusi migrasi database (`prisma migrate dev` / `prisma db push`) & generate Prisma Client ke `src/generated/prisma`
-- [ ] 🟡 Buat script `prisma/seed.ts` berisi data realistis:
-  - Role: `SUPER_ADMIN` dan `ADMIN`
+- [x] 🔴 Definisi skema dan generate Prisma Client ke `src/generated/prisma`
+- [x] 🟡 Buat script `prisma/seed.ts` berisi data realistis:
+  - Role: `SUPER_ADMIN`, `ADMIN`, `TENANT`, `STAFF`
   - Akun SuperAdmin (Owner) & Akun Admin Staf
   - 2 Properti Kos: "HomeeKost Cabang Melati" & "HomeeKost Cabang Mawar"
-  - 10+ Kamar per properti (kombinasi `VACANT`, `OCCUPIED`, `MAINTENANCE`)
+  - Kamar per properti (kombinasi `VACANT`, `OCCUPIED`, `MAINTENANCE`)
   - Data Penyewa & Kontrak Sewa aktif dengan tanggal jatuh tempo & tanggal lahir
   - Data Transaksi Kas (Pemasukan & Pengeluaran) & Log Komplain
   - CCTV Device dummy per cabang
@@ -76,26 +76,26 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 2: Autentikasi RBAC, Session Guard & Master Shell Layout (Minggu 1 - 2)
 ### 2.1 Better-Auth Implementation & Server Route Guards
-- [ ] 🔴 Konfigurasi Better-Auth server provider di `src/lib/auth.ts` dengan session cookie (`HttpOnly`, `SameSite=Lax`)
-- [ ] 🔴 Auth Client RPC helper di `src/lib/auth-client.ts`
-- [ ] 🔴 Halaman Login `src/routes/login.tsx` (Form email, password, animasi transisi & validasi kredensial)
+- [x] 🔴 Konfigurasi Better-Auth server provider di `src/lib/auth.ts` dengan session cookie & adapter Prisma PostgreSQL
+- [x] 🔴 Auth Client RPC helper di `src/lib/auth-client.ts`
+- [x] 🔴 Skema validasi Zod form login di `src/common/validations/auth.schema.ts`
+- [x] 🔴 Halaman Login `src/routes/login.tsx` (TanStack Form, Zod validation, UI Sage & Cream exact replica dari `KostManagement.html`)
 - [ ] 🔴 Protected Route Middleware & Role Guard (`SUPER_ADMIN` vs `ADMIN`) di TanStack Router context `beforeLoad`
 - [ ] 🔴 State active property selector pada session context untuk isolasi multi-property
 
 ### 2.2 Layout Shell Aplikasi (100% Mengikuti `KostManagement.html`)
-- [ ] 🔴 Komponen `Sidebar.tsx`:
+- [x] 🔴 Komponen `Sidebar.tsx`:
   - Brand header Logo HomeeKost & Badge Properti Terpilih
   - Menu Navigasi: Dashboard, Properti (SuperAdmin), Kamar, Penghuni, Pembayaran, Invoice, Keuangan, Engagement, CCTV, User Management (SuperAdmin), Laporan & Insight
   - Indikator Active Menu (latar `#E8F0EA`, teks `#4F6958`) & Counter Badge
   - Mini Card Bantuan / WhatsApp Help
   - Profil Mini & Tombol Logout di bagian bawah sidebar
-- [ ] 🔴 Komponen `Topbar.tsx`:
+- [x] 🔴 Komponen `Topbar.tsx`:
   - Tombol toggle sidebar mobile drawer
   - Breadcrumb dinamis & Global Property Switcher Dropdown (SuperAdmin)
-  - Input Global Search (`#globalSearchInput`) dengan popup hasil pencarian
-  - Tombol Aksi Cepat (+ Tambah Cepat Transaksi / Kamar / Penyewa)
+  - Input Global Search dengan popup hasil pencarian
   - Tombol Notifikasi Popover & Avatar Profil Mini Popover
-- [ ] 🔴 Komponen `MasterShell.tsx` (Desktop fixed sidebar 244px, sticky topbar 72px, max-width content 1550px)
+- [x] 🔴 Layout Route `/dashboard` & Root Dashboard Page `/dashboard/index.tsx` (Desktop fixed sidebar 244px, sticky topbar 72px, max-width content 1550px)
 - [ ] 🔴 Komponen Reusable Primitives UI:
   - `Button.tsx` (primary, secondary, destructive, icon-btn)
   - `Input.tsx`, `Select.tsx`, `Badge.tsx` (`.hk-badge-green`, `.hk-badge-amber`, `.hk-badge-red`)
