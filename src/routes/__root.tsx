@@ -9,7 +9,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import TanStackQueryDevtools from '../common/integrations/tanstack-query/devtools.tsx'
 
-import appCss from '../styles.css?url'
+import appCss from '../globals.css'
 
 import type { QueryClient } from '@tanstack/react-query'
 
