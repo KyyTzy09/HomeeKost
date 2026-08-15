@@ -263,13 +263,19 @@ model Tenant {
   id                 String           @id @default(cuid())
   name               String
   NIK                String           @unique
-  identityCardNumber String?
   phoneNumber        String
   whatsappNumber     String?
   email              String?
   birthDate          DateTime?
   occupation         String?
+  institution        String?
   originAddress      String?
+  emergencyName      String?
+  emergencyRelation  String?
+  emergencyPhone     String?
+  vehicle            String?
+  deposit            Decimal?         @default(0) @db.Decimal(12, 2)
+  notes              String?          @db.Text
   status             TenantStatus     @default(ACTIVE)
   rentalContracts    RentalContract[]
   createdAt          DateTime         @default(now())

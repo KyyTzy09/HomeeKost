@@ -32,9 +32,9 @@ interface UserTableProps {
 }
 
 const ROLE_HIERARCHY: Record<AppUserRole, number> = {
-	"SUPER_ADMIN": 3,
-	"ADMIN": 2,
-	"STAFF": 1,
+	SUPER_ADMIN: 3,
+	ADMIN: 2,
+	STAFF: 1,
 };
 
 const columnHelper = createColumnHelper<UserItem>();
@@ -178,14 +178,16 @@ export function UserTable({
 
 					return (
 						<span
-							className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${isActive
+							className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+								isActive
 									? "bg-[#e8f2ea] text-[#568062]"
 									: "bg-[#f4f7f4] text-[#737873]"
-								}`}
+							}`}
 						>
 							<span
-								className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-[#568062]" : "bg-[#737873]"
-									}`}
+								className={`w-1.5 h-1.5 rounded-full ${
+									isActive ? "bg-[#568062]" : "bg-[#737873]"
+								}`}
 							/>
 							{isActive ? "Aktif" : "Nonaktif"}
 						</span>
@@ -227,10 +229,11 @@ export function UserTable({
 								variant="ghost"
 								size="sm"
 								disabled={!canEdit}
-								className={`h-7 w-7 p-0 transition-colors ${canEdit
+								className={`h-7 w-7 p-0 transition-colors ${
+									canEdit
 										? "text-[#737873] hover:text-[#4f6958] hover:bg-[#e8f0ea]"
 										: "text-[#b0b8b2] opacity-35 cursor-not-allowed"
-									}`}
+								}`}
 								onClick={() => canEdit && onEditUser(user)}
 								title={editTooltip}
 							>
@@ -241,10 +244,11 @@ export function UserTable({
 								variant="ghost"
 								size="sm"
 								disabled={!canDelete}
-								className={`h-7 w-7 p-0 transition-colors ${canDelete
+								className={`h-7 w-7 p-0 transition-colors ${
+									canDelete
 										? "text-[#737873] hover:text-[#b66b68] hover:bg-[#f7e9e8]"
 										: "text-[#b0b8b2] opacity-35 cursor-not-allowed"
-									}`}
+								}`}
 								onClick={() => canDelete && onDeleteUser(user)}
 								title={deleteTooltip}
 							>
@@ -290,40 +294,44 @@ export function UserTable({
 					<button
 						type="button"
 						onClick={() => setRoleFilter("ALL")}
-						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${roleFilter === "ALL"
+						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+							roleFilter === "ALL"
 								? "bg-white text-[#252925] shadow-sm border border-[#d5dfd6]"
 								: "text-[#737873] hover:text-[#252925]"
-							}`}
+						}`}
 					>
 						Semua ({data.length})
 					</button>
 					<button
 						type="button"
 						onClick={() => setRoleFilter("SUPER_ADMIN")}
-						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${roleFilter === "SUPER_ADMIN"
+						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+							roleFilter === "SUPER_ADMIN"
 								? "bg-white text-[#4f6958] shadow-sm border border-[#d5dfd6]"
 								: "text-[#737873] hover:text-[#252925]"
-							}`}
+						}`}
 					>
 						SuperAdmin ({superAdminCount})
 					</button>
 					<button
 						type="button"
 						onClick={() => setRoleFilter("ADMIN")}
-						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${roleFilter === "ADMIN"
+						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+							roleFilter === "ADMIN"
 								? "bg-white text-[#2b6cb0] shadow-sm border border-[#d5dfd6]"
 								: "text-[#737873] hover:text-[#252925]"
-							}`}
+						}`}
 					>
 						Admin ({adminCount})
 					</button>
 					<button
 						type="button"
 						onClick={() => setRoleFilter("STAFF")}
-						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${roleFilter === "STAFF"
+						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+							roleFilter === "STAFF"
 								? "bg-white text-[#636c64] shadow-sm border border-[#d5dfd6]"
 								: "text-[#737873] hover:text-[#252925]"
-							}`}
+						}`}
 					>
 						Staff ({staffCount})
 					</button>
@@ -347,9 +355,9 @@ export function UserTable({
 										{header.isPlaceholder
 											? null
 											: flexRender(
-												header.column.columnDef.header,
-												header.getContext(),
-											)}
+													header.column.columnDef.header,
+													header.getContext(),
+												)}
 									</th>
 								))}
 							</tr>

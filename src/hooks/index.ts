@@ -5,4 +5,5 @@ export * from "./use-properties.ts";
 export * from "./use-rooms.ts";
 export * from "./use-set-active-property.ts";
 export * from "./use-storage.ts";
+export * from "./use-tenants.ts";
 export * from "./use-users.ts";

@@ -35,6 +35,7 @@ interface UserFormDialogProps {
 	onOpenChange: (open: boolean) => void;
 	editingUser: UserItem | null;
 	properties: PropertyItem[];
+	currentUserRole?: AppUserRole;
 	onSubmit: (values: UserFormValues) => void;
 }
 
@@ -43,6 +44,7 @@ export function UserFormDialog({
 	onOpenChange,
 	editingUser,
 	properties = [],
+	currentUserRole = "SUPER_ADMIN",
 	onSubmit,
 }: UserFormDialogProps) {
 	const form = useForm({
@@ -217,14 +219,18 @@ export function UserFormDialog({
 											<SelectValue placeholder="Pilih Role" />
 										</SelectTrigger>
 										<SelectContent className="bg-white border-[#e4e9e4]">
-											<SelectItem value="ADMIN" className="text-xs">
-												Admin (Cabang Kos)
-											</SelectItem>
+											{currentUserRole === "SUPER_ADMIN" && (
+												<SelectItem value="SUPER_ADMIN" className="text-xs">
+													SuperAdmin (Owner)
+												</SelectItem>
+											)}
+											{currentUserRole === "SUPER_ADMIN" && (
+												<SelectItem value="ADMIN" className="text-xs">
+													Admin (Cabang Kos)
+												</SelectItem>
+											)}
 											<SelectItem value="STAFF" className="text-xs">
 												Staff (Operasional)
-											</SelectItem>
-											<SelectItem value="SUPER_ADMIN" className="text-xs">
-												SuperAdmin (Owner)
 											</SelectItem>
 										</SelectContent>
 									</Select>

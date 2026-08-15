@@ -63,6 +63,76 @@ export const DEFAULT_ROOM_OPTIONS: RoomOption[] = [
 	{ roomNo: "C-04", type: "Suite", monthlyPrice: 1600000 },
 ];
 
+/**
+ * Helper to safely convert any date format (e.g. ISO, "10 Jan 2026", "10 Agu") into standard HTML "YYYY-MM-DD"
+ */
+function toInputDateFormat(dateStr?: string | null): string {
+	if (!dateStr || dateStr === "—" || dateStr.trim() === "") return "";
+	const trimmed = dateStr.trim();
+
+	// Already YYYY-MM-DD
+	if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+	// ISO format: YYYY-MM-DDTHH:mm:ss
+	if (trimmed.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+		return trimmed.slice(0, 10);
+	}
+
+	const monthsMap: Record<string, string> = {
+		jan: "01",
+		feb: "02",
+		mar: "03",
+		apr: "04",
+		mei: "05",
+		may: "05",
+		jun: "06",
+		jul: "07",
+		agu: "08",
+		aug: "08",
+		sep: "09",
+		okt: "10",
+		oct: "10",
+		nov: "11",
+		des: "12",
+		dec: "12",
+	};
+
+	// Format: "10 Jan 2026" or "10-Jan-2026"
+	const parts3 = trimmed.split(/[\s-]+/);
+	if (parts3.length === 3) {
+		const day = parts3[0].padStart(2, "0");
+		const mKey = parts3[1].toLowerCase().slice(0, 3);
+		const month = monthsMap[mKey] || "01";
+		let year = parts3[2];
+		if (year.length === 2) year = `20${year}`;
+		if (/^\d{4}$/.test(year) && /^\d{2}$/.test(day)) {
+			return `${year}-${month}-${day}`;
+		}
+	}
+
+	// Format: "10 Agu" (day and month without year)
+	if (parts3.length === 2) {
+		const day = parts3[0].padStart(2, "0");
+		const mKey = parts3[1].toLowerCase().slice(0, 3);
+		const month = monthsMap[mKey];
+		if (month && /^\d{2}$/.test(day)) {
+			const year = new Date().getFullYear();
+			return `${year}-${month}-${day}`;
+		}
+	}
+
+	// Native Date fallback
+	const d = new Date(trimmed);
+	if (!Number.isNaN(d.getTime())) {
+		const year = d.getFullYear();
+		const month = (d.getMonth() + 1).toString().padStart(2, "0");
+		const day = d.getDate().toString().padStart(2, "0");
+		return `${year}-${month}-${day}`;
+	}
+
+	return "";
+}
+
 export function TenantFormDialog({
 	open,
 	onOpenChange,
@@ -78,17 +148,18 @@ export function TenantFormDialog({
 	const [isComboboxOpen, setIsComboboxOpen] = useState(false);
 	const comboboxRef = useRef<HTMLDivElement>(null);
 
-	const initialStartDate = editingTenant?.startDate || todayStr;
+	const initialStartDate =
+		toInputDateFormat(editingTenant?.startDate) || todayStr;
 	const initialDuration = (editingTenant?.duration ??
 		"Bulanan") as RentDuration;
-	const initialDueDate = editingTenant?.dueDate?.includes("-")
-		? editingTenant.dueDate
-		: calculateDueDate(initialStartDate, initialDuration);
+	const initialDueDate =
+		toInputDateFormat(editingTenant?.dueDate) ||
+		calculateDueDate(initialStartDate, initialDuration);
 
 	const form = useForm({
 		defaultValues: {
 			name: editingTenant?.name ?? "",
-			birthDate: editingTenant?.birthDate ?? "",
+			birthDate: toInputDateFormat(editingTenant?.birthDate) ?? "",
 			nik: editingTenant?.nik ?? "",
 			phone: editingTenant?.phone ?? "",
 			originAddress: editingTenant?.originAddress ?? "",
@@ -96,19 +167,44 @@ export function TenantFormDialog({
 			occupationStatus: (editingTenant?.occupationStatus ??
 				"Mahasiswa") as OccupationStatus,
 			institution: editingTenant?.institution ?? "",
-			roomNo: editingTenant?.roomNo ?? "A-01",
-			rent: editingTenant?.rent ?? "Rp850.000",
+			roomNo: editingTenant?.roomNo ?? (roomOptions[0]?.roomNo || "A-01"),
+			rent:
+				editingTenant?.rent ??
+				(roomOptions[0]
+					? formatRupiah(roomOptions[0].monthlyPrice)
+					: "Rp850.000"),
 			duration: initialDuration,
 			startDate: initialStartDate,
 			dueDate: initialDueDate,
 			vehicle: editingTenant?.vehicle ?? "",
-			deposit: editingTenant?.deposit ?? "Rp0",
+			deposit: editingTenant?.deposit ?? "Rp500.000",
 			emergencyName: editingTenant?.emergencyName ?? "",
 			emergencyRelation: editingTenant?.emergencyRelation ?? "",
 			emergencyPhone: editingTenant?.emergencyPhone ?? "",
-			registrationDate: editingTenant?.registrationDate ?? todayStr,
+			registrationDate:
+				toInputDateFormat(editingTenant?.registrationDate) || todayStr,
 			notes: editingTenant?.notes ?? "",
 			agreement: true,
+		},
+		validators: {
+			onSubmit: ({ value }) => {
+				const sanitizedValue = {
+					...value,
+					phone: sanitizePhone(value.phone),
+				};
+				const result = tenantSchema.safeParse(sanitizedValue);
+				if (!result.success) {
+					const fieldErrors: Record<string, string> = {};
+					for (const issue of result.error.issues) {
+						const field = issue.path[0];
+						if (field && !fieldErrors[String(field)]) {
+							fieldErrors[String(field)] = issue.message;
+						}
+					}
+					return fieldErrors;
+				}
+				return undefined;
+			},
 		},
 		onSubmit: async ({ value }) => {
 			const sanitizedValue: TenantFormValues = {
@@ -121,6 +217,95 @@ export function TenantFormDialog({
 			onOpenChange(false);
 		},
 	});
+
+	// Synchronize form fields automatically whenever modal opens or editingTenant changes
+	useEffect(() => {
+		if (open) {
+			if (editingTenant) {
+				const startDate =
+					toInputDateFormat(editingTenant.startDate) || todayStr;
+				const duration = (editingTenant.duration || "Bulanan") as RentDuration;
+				const dueDate =
+					toInputDateFormat(editingTenant.dueDate) ||
+					calculateDueDate(startDate, duration);
+
+				form.setFieldValue("name", editingTenant.name || "");
+				form.setFieldValue(
+					"birthDate",
+					toInputDateFormat(editingTenant.birthDate) || "",
+				);
+				form.setFieldValue("nik", editingTenant.nik || "");
+				form.setFieldValue("phone", editingTenant.phone || "");
+				form.setFieldValue("originAddress", editingTenant.originAddress || "");
+				form.setFieldValue("email", editingTenant.email || "");
+				form.setFieldValue(
+					"occupationStatus",
+					(editingTenant.occupationStatus || "Mahasiswa") as OccupationStatus,
+				);
+				form.setFieldValue("institution", editingTenant.institution || "");
+				form.setFieldValue(
+					"roomNo",
+					editingTenant.roomNo || (roomOptions[0]?.roomNo ?? "A-01"),
+				);
+				form.setFieldValue(
+					"rent",
+					editingTenant.rent ||
+						(roomOptions[0]
+							? formatRupiah(roomOptions[0].monthlyPrice)
+							: "Rp850.000"),
+				);
+				form.setFieldValue("duration", duration);
+				form.setFieldValue("startDate", startDate);
+				form.setFieldValue("dueDate", dueDate);
+				form.setFieldValue("vehicle", editingTenant.vehicle || "");
+				form.setFieldValue("deposit", editingTenant.deposit || "Rp500.000");
+				form.setFieldValue("emergencyName", editingTenant.emergencyName || "");
+				form.setFieldValue(
+					"emergencyRelation",
+					editingTenant.emergencyRelation || "",
+				);
+				form.setFieldValue(
+					"emergencyPhone",
+					editingTenant.emergencyPhone || "",
+				);
+				form.setFieldValue(
+					"registrationDate",
+					toInputDateFormat(editingTenant.registrationDate) || todayStr,
+				);
+				form.setFieldValue("notes", editingTenant.notes || "");
+				form.setFieldValue("agreement", true);
+			} else {
+				form.reset();
+				const defaultRoom = roomOptions[0];
+				const defaultRent = defaultRoom
+					? formatRupiah(defaultRoom.monthlyPrice)
+					: "Rp850.000";
+				const defaultDue = calculateDueDate(todayStr, "Bulanan");
+
+				form.setFieldValue("name", "");
+				form.setFieldValue("birthDate", "");
+				form.setFieldValue("nik", "");
+				form.setFieldValue("phone", "");
+				form.setFieldValue("originAddress", "");
+				form.setFieldValue("email", "");
+				form.setFieldValue("occupationStatus", "Mahasiswa");
+				form.setFieldValue("institution", "");
+				form.setFieldValue("roomNo", defaultRoom?.roomNo ?? "A-01");
+				form.setFieldValue("rent", defaultRent);
+				form.setFieldValue("duration", "Bulanan");
+				form.setFieldValue("startDate", todayStr);
+				form.setFieldValue("dueDate", defaultDue);
+				form.setFieldValue("vehicle", "");
+				form.setFieldValue("deposit", "Rp500.000");
+				form.setFieldValue("emergencyName", "");
+				form.setFieldValue("emergencyRelation", "");
+				form.setFieldValue("emergencyPhone", "");
+				form.setFieldValue("registrationDate", todayStr);
+				form.setFieldValue("notes", "");
+				form.setFieldValue("agreement", true);
+			}
+		}
+	}, [open, editingTenant, roomOptions, todayStr, form]);
 
 	// Close combobox when clicking outside
 	useEffect(() => {
@@ -193,6 +378,8 @@ export function TenantFormDialog({
 		}
 	};
 
+	const isEditing = Boolean(editingTenant);
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-[760px] max-h-[90vh] overflow-y-auto rounded-[20px] border-[#e1e8e2] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]">
@@ -203,13 +390,11 @@ export function TenantFormDialog({
 						</div>
 						<div>
 							<DialogTitle className="text-[18px] font-bold text-[#29382e]">
-								{editingTenant
-									? "Edit Data Penghuni"
-									: "Formulir Pendaftaran Kost"}
+								{isEditing ? "Edit Data Penghuni" : "Formulir Pendaftaran Kost"}
 							</DialogTitle>
 							<DialogDescription className="text-[11px] text-[#8a958d]">
-								{editingTenant
-									? `Perbarui data identitas dan sewa untuk ${editingTenant.name}`
+								{isEditing
+									? `Perbarui profil, identitas, dan kontak darurat untuk ${editingTenant?.name}`
 									: "Data pendaftaran penghuni baru untuk properti yang sedang dipilih."}
 							</DialogDescription>
 						</div>
@@ -219,6 +404,11 @@ export function TenantFormDialog({
 				<div className="text-[11px] text-[#55705d] bg-[#f3f7f3] border border-[#dce6df] rounded-[10px] p-2.5 mb-2 font-medium">
 					Properti aktif:{" "}
 					<strong className="text-[#26372c]">{propertyName}</strong>
+					{isEditing && editingTenant?.roomNo && (
+						<span className="ml-2 pl-2 border-l border-[#dce6df] text-[#415648]">
+							Kamar: <strong>{editingTenant.roomNo}</strong>
+						</span>
+					)}
 				</div>
 
 				<form
@@ -235,7 +425,7 @@ export function TenantFormDialog({
 							A. Informasi Pribadi
 						</h3>
 						<p className="text-[10px] text-[#737873] m-0 mb-3">
-							Data identitas dan kontak calon penghuni.
+							Data identitas dan kontak penghuni.
 						</p>
 
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -426,21 +616,41 @@ export function TenantFormDialog({
 							</div>
 
 							{/* Email */}
-							<form.Field name="email">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Email
-										</Label>
-										<Input
-											type="email"
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="nama@email.com"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
+							<form.Field
+								name="email"
+								validators={{
+									onChange: ({ value }) =>
+										value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+											? "Format email tidak valid"
+											: undefined,
+								}}
+							>
+								{(field) => {
+									const hasError = field.state.meta.errors.length > 0;
+									return (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Email
+											</Label>
+											<Input
+												type="email"
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="nama@email.com"
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
+											/>
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{field.state.meta.errors[0]}
+												</p>
+											)}
+										</div>
+									);
+								}}
 							</form.Field>
 						</div>
 					</div>
@@ -451,7 +661,7 @@ export function TenantFormDialog({
 							B. Informasi Pekerjaan / Pendidikan
 						</h3>
 						<p className="text-[10px] text-[#737873] m-0 mb-3">
-							Status dan institusi calon penghuni.
+							Status dan institusi penghuni.
 						</p>
 
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -508,250 +718,329 @@ export function TenantFormDialog({
 						</div>
 					</div>
 
-					{/* Section C: Rincian Pendaftaran Kost */}
-					<div className="border-t border-[#edf1ed] pt-3">
-						<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
-							C. Rincian Pendaftaran Kost
-						</h3>
-						<p className="text-[10px] text-[#737873] m-0 mb-3">
-							Detail kamar, durasi, dan kendaraan penghuni.
-						</p>
+					{/* Section C: Rincian Pendaftaran Kost (Hanya ditampilkan pada Pendaftaran Baru) */}
+					{!isEditing && (
+						<div className="border-t border-[#edf1ed] pt-3">
+							<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
+								C. Rincian Pendaftaran Kost
+							</h3>
+							<p className="text-[10px] text-[#737873] m-0 mb-3">
+								Detail kamar, durasi, dan kendaraan penghuni.
+							</p>
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-							{/* Searchable Combobox for Room Selection */}
-							<form.Field name="roomNo">
-								{(field) => (
-									<div className="space-y-1 relative" ref={comboboxRef}>
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Nomor Kamar <span className="text-[#b66b68]">*</span>
-										</Label>
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+								{/* Searchable Combobox for Room Selection */}
+								<form.Field
+									name="roomNo"
+									validators={{
+										onChange: ({ value }) =>
+											!value ? "Nomor kamar wajib dipilih" : undefined,
+									}}
+								>
+									{(field) => {
+										const hasError = field.state.meta.errors.length > 0;
+										return (
+											<div className="space-y-1 relative" ref={comboboxRef}>
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Nomor Kamar <span className="text-[#b66b68]">*</span>
+												</Label>
 
-										{/* Trigger Button */}
-										<button
-											type="button"
-											onClick={() => setIsComboboxOpen((prev) => !prev)}
-											className="w-full h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between hover:border-[#8fa594] transition-colors cursor-pointer text-left"
-										>
-											<span>
-												{field.state.value ? (
-													<span className="font-semibold text-[#252925]">
-														Kamar {field.state.value}
-													</span>
-												) : (
-													<span className="text-[#8a958d]">Pilih Kamar</span>
-												)}
-											</span>
-											<ChevronsUpDown className="w-4 h-4 text-[#8a958d] shrink-0" />
-										</button>
-
-										{/* Combobox Dropdown */}
-										{isComboboxOpen && (
-											<div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-[#dfe7e0] rounded-[12px] shadow-[0_10px_30px_rgba(30,45,35,0.12)] p-2 space-y-1.5 max-h-[260px] overflow-hidden flex flex-col">
-												{/* Search Input */}
-												<div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f5f8f5] border border-[#dce6df] rounded-[8px]">
-													<Search className="w-3.5 h-3.5 text-[#737873] shrink-0" />
-													<input
-														type="text"
-														autoFocus
-														value={roomQuery}
-														onChange={(e) => setRoomQuery(e.target.value)}
-														placeholder="Cari no kamar / tipe..."
-														className="w-full text-[11.5px] bg-transparent outline-none text-[#252925] placeholder:text-[#9aa09b]"
-													/>
-												</div>
-
-												{/* Room List */}
-												<div className="overflow-y-auto space-y-1 pr-1 flex-1">
-													{filteredRooms.length > 0 ? (
-														filteredRooms.map((room) => {
-															const isSelected =
-																field.state.value === room.roomNo;
-															return (
-																<button
-																	key={room.roomNo}
-																	type="button"
-																	onClick={() => handleSelectRoom(room)}
-																	className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${
-																		isSelected
-																			? "bg-[#edf4ee] text-[#3e5646] font-bold"
-																			: "hover:bg-[#f6faf6] text-[#37443c]"
-																	}`}
-																>
-																	<div className="flex items-center gap-2">
-																		<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
-																		<span>
-																			<strong>Kamar {room.roomNo}</strong> (
-																			{room.type})
-																		</span>
-																	</div>
-																	<div className="flex items-center gap-2">
-																		<span className="text-[11px] text-[#55705d] font-mono">
-																			{formatRupiah(room.monthlyPrice)}/bln
-																		</span>
-																		{isSelected && (
-																			<Check className="w-3.5 h-3.5 text-[#4f6958]" />
-																		)}
-																	</div>
-																</button>
-															);
-														})
-													) : (
-														<div className="py-4 text-center text-[11px] text-[#8a958d]">
-															Kamar tidak ditemukan
-														</div>
-													)}
-												</div>
-											</div>
-										)}
-									</div>
-								)}
-							</form.Field>
-
-							{/* Lama Sewa Radio */}
-							<form.Field name="duration">
-								{(field) => (
-									<div className="space-y-1.5">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Lama Sewa <span className="text-[#b66b68]">*</span>
-										</Label>
-										<div className="flex flex-wrap gap-3 py-1">
-											{(
-												[
-													"Bulanan",
-													"Triwulan",
-													"Semesteran",
-													"Tahunan",
-												] as const
-											).map((dur) => (
-												<label
-													key={dur}
-													className="flex items-center gap-1.5 text-[11.5px] text-[#34443a] cursor-pointer"
+												{/* Trigger Button */}
+												<button
+													type="button"
+													onClick={() => setIsComboboxOpen((prev) => !prev)}
+													className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${
+														hasError
+															? "border-[#b66b68]"
+															: "border-[#dfe7e0] hover:border-[#8fa594]"
+													}`}
 												>
-													<input
-														type="radio"
-														name="duration"
-														value={dur}
-														checked={field.state.value === dur}
-														onChange={() => handleChangeDuration(dur)}
-														className="accent-[#4f6958]"
-													/>
 													<span>
-														{dur}{" "}
-														<span className="text-[9.5px] text-[#8a958d]">
-															({getDurationMonths(dur)} bln)
-														</span>
+														{field.state.value ? (
+															<span className="font-semibold text-[#252925]">
+																Kamar {field.state.value}
+															</span>
+														) : (
+															<span className="text-[#8a958d]">
+																Pilih Kamar
+															</span>
+														)}
 													</span>
-												</label>
-											))}
-										</div>
-									</div>
-								)}
-							</form.Field>
+													<ChevronsUpDown className="w-4 h-4 text-[#8a958d] shrink-0" />
+												</button>
 
-							{/* Harga Total Sewa (Auto-calculated, Editable) */}
-							<form.Field name="rent">
-								{(field) => (
-									<div className="space-y-1">
-										<div className="flex items-center justify-between">
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{field.state.meta.errors[0]}
+													</p>
+												)}
+
+												{/* Combobox Dropdown */}
+												{isComboboxOpen && (
+													<div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-[#dfe7e0] rounded-[12px] shadow-[0_10px_30px_rgba(30,45,35,0.12)] p-2 space-y-1.5 max-h-[260px] overflow-hidden flex flex-col">
+														{/* Search Input */}
+														<div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f5f8f5] border border-[#dce6df] rounded-[8px]">
+															<Search className="w-3.5 h-3.5 text-[#737873] shrink-0" />
+															<input
+																type="text"
+																autoFocus
+																value={roomQuery}
+																onChange={(e) => setRoomQuery(e.target.value)}
+																placeholder="Cari no kamar / tipe..."
+																className="w-full text-[11.5px] bg-transparent outline-none text-[#252925] placeholder:text-[#9aa09b]"
+															/>
+														</div>
+
+														{/* Room List */}
+														<div className="overflow-y-auto space-y-1 pr-1 flex-1">
+															{filteredRooms.length > 0 ? (
+																filteredRooms.map((room) => {
+																	const isSelected =
+																		field.state.value === room.roomNo;
+																	return (
+																		<button
+																			key={room.roomNo}
+																			type="button"
+																			onClick={() => handleSelectRoom(room)}
+																			className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${
+																				isSelected
+																					? "bg-[#edf4ee] text-[#3e5646] font-bold"
+																					: "hover:bg-[#f6faf6] text-[#37443c]"
+																			}`}
+																		>
+																			<div className="flex items-center gap-2">
+																				<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
+																				<span>
+																					<strong>Kamar {room.roomNo}</strong> (
+																					{room.type})
+																				</span>
+																			</div>
+																			<div className="flex items-center gap-2">
+																				<span className="text-[11px] text-[#55705d] font-mono">
+																					{formatRupiah(room.monthlyPrice)}/bln
+																				</span>
+																				{isSelected && (
+																					<Check className="w-3.5 h-3.5 text-[#4f6958]" />
+																				)}
+																			</div>
+																		</button>
+																	);
+																})
+															) : (
+																<div className="py-4 text-center text-[11px] text-[#8a958d]">
+																	Kamar tidak ditemukan
+																</div>
+															)}
+														</div>
+													</div>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
+
+								{/* Lama Sewa Radio */}
+								<form.Field name="duration">
+									{(field) => (
+										<div className="space-y-1.5">
 											<Label className="text-[11px] font-bold text-[#506257]">
-												Harga Total Sewa{" "}
-												<span className="text-[#b66b68]">*</span>
+												Lama Sewa <span className="text-[#b66b68]">*</span>
 											</Label>
-											<span className="text-[9.5px] text-[#55705d] font-semibold">
-												Otomatis terhitung
-											</span>
+											<div className="flex flex-wrap gap-3 py-1">
+												{(
+													[
+														"Bulanan",
+														"Triwulan",
+														"Semesteran",
+														"Tahunan",
+													] as const
+												).map((dur) => (
+													<label
+														key={dur}
+														className="flex items-center gap-1.5 text-[11.5px] text-[#34443a] cursor-pointer"
+													>
+														<input
+															type="radio"
+															name="duration"
+															value={dur}
+															checked={field.state.value === dur}
+															onChange={() => handleChangeDuration(dur)}
+															className="accent-[#4f6958]"
+														/>
+														<span>
+															{dur}{" "}
+															<span className="text-[9.5px] text-[#8a958d]">
+																({getDurationMonths(dur)} bln)
+															</span>
+														</span>
+													</label>
+												))}
+											</div>
 										</div>
-										<Input
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="Rp850.000"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb]"
-										/>
-									</div>
-								)}
-							</form.Field>
+									)}
+								</form.Field>
 
-							{/* Tanggal Mulai Sewa (Input Date) */}
-							<form.Field name="startDate">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Tanggal Mulai Sewa{" "}
-											<span className="text-[#b66b68]">*</span>
-										</Label>
-										<Input
-											type="date"
-											value={field.state.value}
-											onChange={(e) => handleChangeStartDate(e.target.value)}
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
-							</form.Field>
+								{/* Harga Total Sewa (Auto-calculated, Editable) */}
+								<form.Field
+									name="rent"
+									validators={{
+										onChange: ({ value }) =>
+											!value ? "Harga sewa wajib diisi" : undefined,
+									}}
+								>
+									{(field) => {
+										const hasError = field.state.meta.errors.length > 0;
+										return (
+											<div className="space-y-1">
+												<div className="flex items-center justify-between">
+													<Label className="text-[11px] font-bold text-[#506257]">
+														Harga Total Sewa{" "}
+														<span className="text-[#b66b68]">*</span>
+													</Label>
+													<span className="text-[9.5px] text-[#55705d] font-semibold">
+														Otomatis terhitung
+													</span>
+												</div>
+												<Input
+													value={field.state.value}
+													onChange={(e) => field.handleChange(e.target.value)}
+													placeholder="Rp850.000"
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${
+														hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+												/>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{field.state.meta.errors[0]}
+													</p>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
 
-							{/* Tanggal Jatuh Tempo (Input Date, Auto-calculated) */}
-							<form.Field name="dueDate">
-								{(field) => (
-									<div className="space-y-1">
-										<div className="flex items-center justify-between">
+								{/* Tanggal Mulai Sewa (Input Date) */}
+								<form.Field
+									name="startDate"
+									validators={{
+										onChange: ({ value }) =>
+											!value ? "Tanggal mulai sewa wajib diisi" : undefined,
+									}}
+								>
+									{(field) => {
+										const hasError = field.state.meta.errors.length > 0;
+										return (
+											<div className="space-y-1">
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Tanggal Mulai Sewa{" "}
+													<span className="text-[#b66b68]">*</span>
+												</Label>
+												<Input
+													type="date"
+													value={field.state.value}
+													onChange={(e) =>
+														handleChangeStartDate(e.target.value)
+													}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+														hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+												/>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{field.state.meta.errors[0]}
+													</p>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
+
+								{/* Tanggal Jatuh Tempo (Input Date, Auto-calculated) */}
+								<form.Field
+									name="dueDate"
+									validators={{
+										onChange: ({ value }) =>
+											!value ? "Tanggal jatuh tempo wajib diisi" : undefined,
+									}}
+								>
+									{(field) => {
+										const hasError = field.state.meta.errors.length > 0;
+										return (
+											<div className="space-y-1">
+												<div className="flex items-center justify-between">
+													<Label className="text-[11px] font-bold text-[#506257]">
+														Tanggal Jatuh Tempo{" "}
+														<span className="text-[#b66b68]">*</span>
+													</Label>
+													<span className="text-[9.5px] text-[#55705d] font-semibold">
+														Otomatis +periode sewa
+													</span>
+												</div>
+												<Input
+													type="date"
+													value={field.state.value}
+													onChange={(e) => field.handleChange(e.target.value)}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+														hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+												/>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{field.state.meta.errors[0]}
+													</p>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
+
+								{/* No Kendaraan */}
+								<form.Field name="vehicle">
+									{(field) => (
+										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
-												Tanggal Jatuh Tempo{" "}
-												<span className="text-[#b66b68]">*</span>
+												No. Kendaraan (jika ada)
 											</Label>
-											<span className="text-[9.5px] text-[#55705d] font-semibold">
-												Otomatis +periode sewa
-											</span>
+											<Input
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="B 1234 ABC"
+												className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
+											/>
 										</div>
-										<Input
-											type="date"
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
-							</form.Field>
+									)}
+								</form.Field>
 
-							{/* No Kendaraan */}
-							<form.Field name="vehicle">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											No. Kendaraan (jika ada)
-										</Label>
-										<Input
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="B 1234 ABC"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
-							</form.Field>
-
-							{/* Deposit */}
-							<form.Field name="deposit">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Deposit
-										</Label>
-										<Input
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="Rp0"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
-							</form.Field>
+								{/* Deposit */}
+								<form.Field name="deposit">
+									{(field) => (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Deposit
+											</Label>
+											<Input
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												placeholder="Rp500.000"
+												className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
+											/>
+										</div>
+									)}
+								</form.Field>
+							</div>
 						</div>
-					</div>
+					)}
 
-					{/* Section D: Kontak Darurat */}
+					{/* Section D (atau C saat Edit): Kontak Darurat */}
 					<div className="border-t border-[#edf1ed] pt-3">
 						<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
-							D. Kontak Darurat
+							{isEditing ? "C. Kontak Darurat" : "D. Kontak Darurat"}
 						</h3>
 						<p className="text-[10px] text-[#737873] m-0 mb-3">
 							Kontak yang dapat dihubungi jika terjadi keadaan darurat.
@@ -806,74 +1095,136 @@ export function TenantFormDialog({
 								)}
 							</form.Field>
 						</div>
-					</div>
 
-					{/* Section E: Persetujuan dan Tanda Tangan */}
-					<div className="border-t border-[#edf1ed] pt-3">
-						<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
-							E. Persetujuan dan Tanda Tangan
-						</h3>
-						<p className="text-[10px] text-[#737873] m-0 mb-3">
-							Persetujuan pendaftaran penghuni.
-						</p>
-
-						<div className="grid grid-cols-1 gap-3">
-							<form.Field name="registrationDate">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Tanggal Pendaftaran{" "}
-											<span className="text-[#b66b68]">*</span>
-										</Label>
-										<Input
-											type="date"
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
-							</form.Field>
-
-							<form.Field name="notes">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Catatan
-										</Label>
-										<textarea
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											rows={2}
-											placeholder="Catatan tambahan tentang penghuni"
-											className="w-full border border-[#dfe7e0] rounded-[11px] p-2.5 text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] outline-none"
-										/>
-									</div>
-								)}
-							</form.Field>
-
-							<form.Field name="agreement">
-								{(field) => (
-									<div className="bg-[#f7faf7] border border-[#e4ebe5] rounded-[12px] p-3 mt-1">
-										<label className="flex gap-2.5 items-start text-[11px] leading-relaxed text-[#5f6d64] cursor-pointer">
-											<input
-												type="checkbox"
-												checked={field.state.value}
-												onChange={(e) => field.handleChange(e.target.checked)}
-												className="mt-0.5 accent-[#4f6958]"
+						{/* Catatan Pengelola (Ditampilkan juga pada mode Edit) */}
+						{isEditing && (
+							<div className="mt-3">
+								<form.Field name="notes">
+									{(field) => (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Catatan Tambahan Pengelola
+											</Label>
+											<textarea
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												rows={2}
+												placeholder="Catatan tambahan tentang penghuni"
+												className="w-full border border-[#dfe7e0] rounded-[11px] p-2.5 text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] outline-none"
 											/>
-											<span>
-												Dengan menyetujui formulir ini, penghuni menyatakan
-												bahwa seluruh informasi yang diberikan adalah benar dan
-												menyetujui syarat dan ketentuan yang berlaku di
-												HomeeKost.
-											</span>
-										</label>
-									</div>
-								)}
-							</form.Field>
-						</div>
+										</div>
+									)}
+								</form.Field>
+							</div>
+						)}
 					</div>
+
+					{/* Section E: Persetujuan dan Tanda Tangan (Hanya pada Pendaftaran Baru) */}
+					{!isEditing && (
+						<div className="border-t border-[#edf1ed] pt-3">
+							<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
+								E. Persetujuan dan Tanda Tangan
+							</h3>
+							<p className="text-[10px] text-[#737873] m-0 mb-3">
+								Persetujuan pendaftaran penghuni.
+							</p>
+
+							<div className="grid grid-cols-1 gap-3">
+								<form.Field
+									name="registrationDate"
+									validators={{
+										onChange: ({ value }) =>
+											!value ? "Tanggal pendaftaran wajib diisi" : undefined,
+									}}
+								>
+									{(field) => {
+										const hasError = field.state.meta.errors.length > 0;
+										return (
+											<div className="space-y-1">
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Tanggal Pendaftaran{" "}
+													<span className="text-[#b66b68]">*</span>
+												</Label>
+												<Input
+													type="date"
+													value={field.state.value}
+													onChange={(e) => field.handleChange(e.target.value)}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+														hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+												/>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{field.state.meta.errors[0]}
+													</p>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
+
+								<form.Field name="notes">
+									{(field) => (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Catatan
+											</Label>
+											<textarea
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												rows={2}
+												placeholder="Catatan tambahan tentang penghuni"
+												className="w-full border border-[#dfe7e0] rounded-[11px] p-2.5 text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] outline-none"
+											/>
+										</div>
+									)}
+								</form.Field>
+
+								<form.Field
+									name="agreement"
+									validators={{
+										onChange: ({ value }) =>
+											!value
+												? "Persetujuan formulir wajib dicentang"
+												: undefined,
+									}}
+								>
+									{(field) => {
+										const hasError = field.state.meta.errors.length > 0;
+										return (
+											<div className="space-y-1">
+												<div className="bg-[#f7faf7] border border-[#e4ebe5] rounded-[12px] p-3 mt-1">
+													<label className="flex gap-2.5 items-start text-[11px] leading-relaxed text-[#5f6d64] cursor-pointer">
+														<input
+															type="checkbox"
+															checked={field.state.value}
+															onChange={(e) =>
+																field.handleChange(e.target.checked)
+															}
+															className="mt-0.5 accent-[#4f6958]"
+														/>
+														<span>
+															Dengan menyetujui formulir ini, penghuni
+															menyatakan bahwa seluruh informasi yang diberikan
+															adalah benar dan menyetujui syarat dan ketentuan
+															yang berlaku di HomeeKost.
+														</span>
+													</label>
+												</div>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{field.state.meta.errors[0]}
+													</p>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
+							</div>
+						</div>
+					)}
 
 					<DialogFooter className="pt-3 border-t border-[#edf1ed] flex gap-2 justify-end">
 						<Button
@@ -893,7 +1244,7 @@ export function TenantFormDialog({
 									disabled={!canSubmit || isSubmitting}
 									className="h-[38px] px-5 rounded-[9px] bg-[#4f6958] hover:bg-[#425949] text-white font-semibold text-[12px]"
 								>
-									{editingTenant ? "Simpan Perubahan" : "Simpan Pendaftaran"}
+									{isEditing ? "Simpan Perubahan" : "Simpan Pendaftaran"}
 								</Button>
 							)}
 						</form.Subscribe>

@@ -154,18 +154,18 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 
 ### 4.2 Manajemen Penyewa & Kontrak Sewa (Tenant Management — Screen `#tenants`)
-- [ ] 🔴 Repository & Service `src/data/repositories/tenant.repo.ts` & `rental-contract.repo.ts`:
+- [x] 🔴 Repository & Service `src/data/repositories/tenant.repository.ts` & `src/data/services/tenant.service.ts`:
   - CRUD Penyewa & Kontrak Sewa
-  - Logic sanitasi nomor WhatsApp (format internasional `628xxx` / `08xxx`)
+  - Logic sanitasi nomor WhatsApp (`sanitizePhone` format canonical `628xxx` & UI display `08xxx`)
   - Relasi penyewa ke kamar & siklus pembayaran (`MONTHLY`, `QUARTERLY`, `SEMI_ANNUAL`, `ANNUALLY`)
   - Auto-update status kamar menjadi `OCCUPIED` saat kontrak aktif, dan kembali ke `VACANT` saat keluar
-- [ ] 🔴 Halaman `src/routes/penyewa/index.tsx`:
-  - Tabel Data Penyewa: Nama, Kamar Disewa, Status Pekerjaan (Mahasiswa/Karyawan), Nomor WhatsApp, NIK, Tanggal Lahir, Jatuh Tempo, Status Aktif
-  - Search & Filtering berdasarkan status, kamar, dan pekerjaan
-  - Pagination kontrol tabel
-- [ ] 🔴 Modal Form Tambah / Edit Penyewa (`#residentModal`):
-  - Input: Nama Lengkap, Nomor KTP (NIK), Tanggal Lahir (datepicker untuk Birthday Reminder), Nomor WhatsApp aktif, Email, Alamat Asal, Pekerjaan, Pilihan Kamar, Siklus Pembayaran, Tanggal Mulai Sewa, Tanggal Jatuh Tempo
-- [ ] 🔴 Modal / Halaman Detail Penyewa (`#tenantDetailModal` / `src/routes/penyewa/$tenantId.tsx`):
+- [x] 🔴 Halaman `src/routes/dashboard/tenants.tsx`:
+  - Tabel Data Penyewa: Nama, Kamar Disewa, Status Pekerjaan (Mahasiswa/Karyawan), Nomor WhatsApp, NIK, Tanggal Lahir, Jatuh Tempo, Status Pembayaran (Lancar/Terlambat)
+  - Search & Filtering berdasarkan status dan pencarian instan
+  - Server Functions (`tenant.fn.ts`) & TanStack Query Hooks (`useTenants`, `useCreateTenant`, `useUpdateTenant`, `useDeleteTenant`)
+- [x] 🔴 Modal Form Tambah / Edit Penyewa (`TenantFormDialog`):
+  - Input: Nama Lengkap, Nomor KTP (NIK), Tanggal Lahir (datepicker untuk Birthday Reminder), Nomor WhatsApp aktif, Email, Alamat Asal, Pekerjaan, Pilihan Kamar (Dynamic Combobox dari `useRooms`), Siklus Pembayaran, Tanggal Mulai Sewa, Tanggal Jatuh Tempo
+- [x] 🔴 Modal Detail Penyewa (`TenantDetailDialog`):
   - Profil lengkap, kontak WA dengan link langsung, NIK, riwayat pembayaran & invoice, status kontrak
 
 ---
