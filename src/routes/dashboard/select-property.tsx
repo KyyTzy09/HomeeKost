@@ -9,7 +9,6 @@ import {
 	PropertyDeleteDialog,
 	PropertyFormDialog,
 } from "../../components/property/index.ts";
-import { useSetActiveProperty } from "../../hooks/index.ts";
 import { authClient } from "../../lib/auth-client.ts";
 
 export const Route = createFileRoute("/dashboard/select-property")({
@@ -153,15 +152,11 @@ function SelectPropertyPage() {
 		setDeletingProperty(null);
 	};
 
-	const setActivePropertyMutation = useSetActiveProperty();
-
-	const handleEnterProperty = async (property: PropertyItem) => {
-		try {
-			await setActivePropertyMutation.mutateAsync({ propertyId: property.id });
-		} catch (e) {
-			console.error("Gagal memilih properti:", e);
-		}
-		navigate({ to: "/dashboard" });
+	const handleCardClick = (property: PropertyItem) => {
+		navigate({
+			to: "/dashboard/properties/$propertyId",
+			params: { propertyId: property.id },
+		});
 	};
 
 	const handleLogout = async () => {
@@ -210,7 +205,7 @@ function SelectPropertyPage() {
 					<PropertyCard
 						key={prop.id}
 						property={prop}
-						onEnter={handleEnterProperty}
+						onEnter={handleCardClick}
 						onEdit={handleOpenEdit}
 						onDelete={setDeletingProperty}
 					/>

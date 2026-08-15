@@ -24,6 +24,7 @@ import { Route as DashboardSelectPropertyRouteImport } from './routes/dashboard/
 import { Route as DashboardTenantsRouteImport } from './routes/dashboard/tenants'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as DashboardPropertiesPropertyIdRouteImport } from './routes/dashboard/properties.$propertyId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -100,6 +101,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardPropertiesPropertyIdRoute =
+  DashboardPropertiesPropertyIdRouteImport.update({
+    id: '/properties/$propertyId',
+    path: '/properties/$propertyId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -133,6 +141,7 @@ export interface FileRoutesByTo {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,6 +160,7 @@ export interface FileRoutesById {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard/'
     | '/api/auth/$'
+    | '/dashboard/properties/$propertyId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard'
     | '/api/auth/$'
+    | '/dashboard/properties/$propertyId'
   id:
     | '__root__'
     | '/'
@@ -203,6 +215,7 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard/'
     | '/api/auth/$'
+    | '/dashboard/properties/$propertyId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/properties/$propertyId': {
+      id: '/dashboard/properties/$propertyId'
+      path: '/properties/$propertyId'
+      fullPath: '/dashboard/properties/$propertyId'
+      preLoaderRoute: typeof DashboardPropertiesPropertyIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
@@ -334,6 +354,7 @@ interface DashboardRouteChildren {
   DashboardTenantsRoute: typeof DashboardTenantsRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardPropertiesPropertyIdRoute: typeof DashboardPropertiesPropertyIdRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -348,6 +369,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardTenantsRoute: DashboardTenantsRoute,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardPropertiesPropertyIdRoute: DashboardPropertiesPropertyIdRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

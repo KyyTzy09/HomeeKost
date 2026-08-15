@@ -17,7 +17,6 @@ export const auth = betterAuth({
 			enabled: true,
 			maxAge: 60 * 60 * 24 * 7, // 7 hari
 			strategy: "jwt", // Stateless — session disimpan di cookie JWT, tidak query tabel sessions
-			refreshCache: true,
 		},
 	},
 	account: {

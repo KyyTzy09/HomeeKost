@@ -1,4 +1,9 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Outlet,
+	redirect,
+	useRouterState,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { Sidebar } from "../components/layout/Sidebar.tsx";
 import { Topbar } from "../components/layout/Topbar.tsx";
@@ -20,9 +25,27 @@ export const Route = createFileRoute("/dashboard")({
 	component: DashboardLayout,
 });
 
+function getPageTitle(pathname: string): string {
+	if (pathname.includes("/dashboard/properties/")) return "Detail Kos";
+	if (pathname === "/dashboard/select-property") return "Pilih Kos";
+	if (pathname === "/dashboard/rooms") return "Kamar";
+	if (pathname === "/dashboard/tenants") return "Penghuni";
+	if (pathname === "/dashboard/payments") return "Pembayaran";
+	if (pathname === "/dashboard/invoices") return "Invoice";
+	if (pathname === "/dashboard/finance") return "Keuangan";
+	if (pathname === "/dashboard/engagement") return "Engagement";
+	if (pathname === "/dashboard/cctv") return "CCTV";
+	if (pathname === "/dashboard/reports") return "Laporan & Insight";
+	if (pathname === "/dashboard/users") return "User Management";
+	if (pathname === "/dashboard/profile") return "Profil Admin";
+	return "Dashboard";
+}
+
 function DashboardLayout() {
 	const { dashboard } = Route.useRouteContext();
 	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const currentTitle = getPageTitle(pathname);
 
 	return (
 		<div className="app">
@@ -34,7 +57,7 @@ function DashboardLayout() {
 			<main className="main">
 				<Topbar
 					onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-					currentTitle="Dashboard"
+					currentTitle={currentTitle}
 					dashboardContext={dashboard}
 				/>
 				<div className="content" id="mainContent">
