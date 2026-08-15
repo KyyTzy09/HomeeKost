@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../common/shadcn/button.tsx";
@@ -12,10 +12,17 @@ import {
 } from "../common/shadcn/card.tsx";
 import { Input } from "../common/shadcn/input.tsx";
 import { Label } from "../common/shadcn/label.tsx";
-import { sanitizedLoginSchema } from "../common/validations/auth.schema.ts";
+import { sanitizedLoginSchema } from "../common/validations/index.ts";
+import { getDashboardContextServerFn } from "../data/servers/index.ts";
 import { authClient } from "../lib/auth-client.ts";
 
 export const Route = createFileRoute("/login")({
+	beforeLoad: async () => {
+		const context = await getDashboardContextServerFn();
+		if (context) {
+			throw redirect({ to: "/dashboard" });
+		}
+	},
 	head: () => ({
 		meta: [
 			{

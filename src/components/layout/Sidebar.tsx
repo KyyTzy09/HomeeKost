@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
 	BarChart3,
 	BedDouble,
@@ -13,84 +13,114 @@ import {
 	Video,
 	Wallet,
 } from "lucide-react";
+import type { DashboardContextData } from "../../common/types/index.ts";
 import { authClient } from "../../lib/auth-client.ts";
 
 interface SidebarProps {
 	isOpen: boolean;
 	onClose: () => void;
-	setCurrentTitle?: (title: string) => void;
+	dashboardContext: DashboardContextData;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
-	const navigate = useNavigate();
+export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
+	const { user, isSuperAdmin } = dashboardContext;
 
 	const handleLogout = async () => {
-		if (typeof window !== "undefined") {
-			localStorage.removeItem("homeekost_user");
-			localStorage.removeItem("active_property_id");
+		try {
+			await authClient.signOut();
+		} catch (err) {
+			console.error("Error logging out:", err);
+		} finally {
+			window.location.href = "/login";
 		}
-		await authClient.signOut();
-		navigate({ to: "/login" });
 	};
 
-	const navLinks = [
+	const initials = user?.name
+		? user.name
+				.split(" ")
+				.map((n) => n[0])
+				.join("")
+				.slice(0, 2)
+				.toUpperCase()
+		: "HK";
+
+	const allNavLinks = [
 		{
 			to: "/dashboard/select-property",
 			label: "Pilih Kos",
 			icon: <Building2 className="w-[17px] h-[17px]" />,
+			superAdminOnly: true,
 		},
 		{
 			to: "/dashboard",
 			label: "Dashboard",
 			icon: <LayoutDashboard className="w-[17px] h-[17px]" />,
 			exact: true,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/rooms",
 			label: "Kamar",
 			icon: <BedDouble className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/tenants",
 			label: "Penghuni",
 			icon: <Users className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/payments",
 			label: "Pembayaran",
 			icon: <CreditCard className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/invoices",
 			label: "Invoice",
 			icon: <Receipt className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/finance",
 			label: "Keuangan",
 			icon: <Wallet className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/engagement",
 			label: "Engagement",
 			icon: <MessageSquare className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/cctv",
 			label: "CCTV",
 			icon: <Video className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/reports",
 			label: "Laporan & Insight",
 			icon: <BarChart3 className="w-[17px] h-[17px]" />,
+			superAdminOnly: false,
 		},
 		{
 			to: "/dashboard/users",
 			label: "User Management",
 			icon: <UserCog className="w-[17px] h-[17px]" />,
+			superAdminOnly: true,
 		},
 	];
+
+	// Filter links based on user role
+	const navLinks = allNavLinks.filter((item) => {
+		if (item.superAdminOnly && !isSuperAdmin) {
+			return false;
+		}
+		return true;
+	});
 
 	return (
 		<>
@@ -98,7 +128,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 			{isOpen && (
 				<div
 					onClick={onClose}
-					className="fixed inset-0 bg-[rgba(28,40,31,0.30)] z-15 md:hidden"
+					className="fixed inset-0 bg-[rgba(28,40,31,0.30)] z-40 md:hidden transition-opacity"
 				/>
 			)}
 
@@ -132,16 +162,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 					</div>
 
 					<div
-						className="profile-mini"
+						className="profile-mini cursor-pointer"
 						onClick={handleLogout}
-						title="Klik untuk keluar"
+						title="Klik untuk keluar akun"
 					>
-						<div className="avatar">BF</div>
+						<div className="avatar">{initials}</div>
 						<div className="flex-1 min-w-0">
-							<strong className="truncate">Frisda</strong>
-							<span className="truncate">SuperAdmin (Owner)</span>
+							<strong className="truncate block">{user.name}</strong>
+							<span className="truncate block text-[11px] text-[#737873]">
+								{isSuperAdmin ? "SuperAdmin (Owner)" : "Admin Staf"}
+							</span>
 						</div>
-						<span className="text-[10px] text-[#a65f5b] font-bold flex items-center gap-1">
+						<span className="text-[10px] text-[#a65f5b] font-bold flex items-center gap-1 shrink-0">
 							<LogOut className="w-3 h-3" />
 							Keluar
 						</span>

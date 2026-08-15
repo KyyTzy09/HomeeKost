@@ -21,3 +21,9 @@ export const propertySchema = z.object({
 });
 
 export type PropertyFormValues = z.infer<typeof propertySchema>;
+
+export const setActivePropertySchema = z.object({
+	propertyId: z.string().min(1, "ID properti wajib diisi"),
+});
+
+export type SetActivePropertyInput = z.infer<typeof setActivePropertySchema>;

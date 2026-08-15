@@ -191,15 +191,15 @@ function PaymentsPage() {
 				prev.map((p) =>
 					p.id === editingPayment.id
 						? {
-							...p,
-							tenantName: values.tenantName,
-							roomNumber: values.roomNumber,
-							period: values.period,
-							dueDate: values.dueDate,
-							amount: values.amount,
-							status: values.status,
-							paidAt: values.paidAt ?? null,
-						}
+								...p,
+								tenantName: values.tenantName,
+								roomNumber: values.roomNumber,
+								period: values.period,
+								dueDate: values.dueDate,
+								amount: values.amount,
+								status: values.status,
+								paidAt: values.paidAt ?? null,
+							}
 						: p,
 				),
 			);

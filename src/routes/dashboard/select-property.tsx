@@ -1,17 +1,27 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
-import type { PropertyFormValues } from "../../common/validations/property.schema.ts";
+import type { PropertyItem } from "../../common/types/index.ts";
+import type { PropertyFormValues } from "../../common/validations/index.ts";
 import {
 	AddPropertyCard,
 	PropertyCard,
 	PropertyDeleteDialog,
 	PropertyFormDialog,
-	type PropertyItem,
 } from "../../components/property/index.ts";
+import { useSetActiveProperty } from "../../hooks/index.ts";
 import { authClient } from "../../lib/auth-client.ts";
 
 export const Route = createFileRoute("/dashboard/select-property")({
+	beforeLoad: ({ context }) => {
+		const dashboard = (context as { dashboard?: { isSuperAdmin?: boolean } })
+			.dashboard;
+		if (!dashboard?.isSuperAdmin) {
+			throw redirect({
+				to: "/dashboard",
+			});
+		}
+	},
 	head: () => ({
 		meta: [
 			{
@@ -143,22 +153,24 @@ function SelectPropertyPage() {
 		setDeletingProperty(null);
 	};
 
-	const handleEnterProperty = (property: PropertyItem) => {
-		if (typeof window !== "undefined") {
-			localStorage.setItem("active_property_id", property.id);
-			localStorage.setItem("active_property_name", property.name);
+	const setActivePropertyMutation = useSetActiveProperty();
+
+	const handleEnterProperty = async (property: PropertyItem) => {
+		try {
+			await setActivePropertyMutation.mutateAsync({ propertyId: property.id });
+		} catch (e) {
+			console.error("Gagal memilih properti:", e);
 		}
 		navigate({ to: "/dashboard" });
 	};
 
 	const handleLogout = async () => {
-		if (typeof window !== "undefined") {
-			localStorage.removeItem("homeekost_user");
-			localStorage.removeItem("active_property_id");
-			localStorage.removeItem("active_property_name");
+		try {
+			await authClient.signOut();
+		} catch (err) {
+			console.error("Logout error:", err);
 		}
-		await authClient.signOut();
-		navigate({ to: "/login" });
+		window.location.href = "/login";
 	};
 
 	// ─── Render ────────────────────────────────────────────────────────────

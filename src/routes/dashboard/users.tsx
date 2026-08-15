@@ -1,8 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard/users")({
+	beforeLoad: ({ context }) => {
+		const dashboard = (context as { dashboard?: { isSuperAdmin?: boolean } })
+			.dashboard;
+		if (!dashboard?.isSuperAdmin) {
+			throw redirect({
+				to: "/dashboard",
+			});
+		}
+	},
 	head: () => ({
-		meta: [{ title: "Manajemen Pengguna — HomeeKost Management" }],
+		meta: [{ title: "Manajemen Pengguna & Staf — HomeeKost Management" }],
 	}),
 	component: UsersPage,
 });
@@ -20,7 +29,7 @@ function UsersPage() {
 				</div>
 			</div>
 			<div className="empty-state-box">
-				Halaman Manajemen Pengguna sedang dalam tahap pengembangan.
+				Halaman Manajemen Pengguna sedang dalam tahap pengembangan (Phase 9).
 			</div>
 		</div>
 	);

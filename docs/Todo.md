@@ -80,8 +80,8 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 - [x] 🔴 Auth Client RPC helper di `src/lib/auth-client.ts`
 - [x] 🔴 Skema validasi Zod form login di `src/common/validations/auth.schema.ts`
 - [x] 🔴 Halaman Login `src/routes/login.tsx` (TanStack Form, Zod validation, UI Sage & Cream exact replica dari `KostManagement.html`)
-- [ ] 🔴 Protected Route Middleware & Role Guard (`SUPER_ADMIN` vs `ADMIN`) di TanStack Router context `beforeLoad`
-- [ ] 🔴 State active property selector pada session context untuk isolasi multi-property
+- [x] 🔴 Protected Route Middleware & Role Guard (`SUPER_ADMIN` vs `ADMIN`) di TanStack Router context `beforeLoad`
+- [x] 🔴 State active property selector pada session context untuk isolasi multi-property
 
 ### 2.2 Layout Shell Aplikasi (100% Mengikuti `KostManagement.html`)
 - [x] 🔴 Komponen `Sidebar.tsx`:

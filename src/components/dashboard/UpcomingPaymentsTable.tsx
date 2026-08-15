@@ -5,17 +5,7 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { useMemo } from "react";
-
-export interface UpcomingPaymentItem {
-	id: string;
-	tenant: string;
-	room: string;
-	dueDate: string;
-	amount: string;
-	badgeText: string;
-	badgeClass: "amber" | "green" | "red";
-	actionText: "Reminder" | "Invoice";
-}
+import type { UpcomingPaymentItem } from "../../common/types/index.ts";
 
 interface UpcomingPaymentsTableProps {
 	data: UpcomingPaymentItem[];

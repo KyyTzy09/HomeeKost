@@ -20,13 +20,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
+import type { UpcomingPaymentItem } from "../../common/types/index.ts";
 import { OccupancyDonutChart } from "../../components/dashboard/OccupancyDonutChart.tsx";
 import { RevenueExpenseChart } from "../../components/dashboard/RevenueExpenseChart.tsx";
-import {
-	type UpcomingPaymentItem,
-	UpcomingPaymentsTable,
-} from "../../components/dashboard/UpcomingPaymentsTable.tsx";
+import { UpcomingPaymentsTable } from "../../components/dashboard/UpcomingPaymentsTable.tsx";
 import { DashboardSkeleton } from "../../components/layout/DashboardSkeleton.tsx";
+import { useGetDashboardData } from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/")({
 	head: () => ({
@@ -41,7 +40,7 @@ export const Route = createFileRoute("/dashboard/")({
 
 function DashboardHomePage() {
 	const navigate = useNavigate();
-	const [isLoading] = useState(false);
+	const { data: dashboardData, isLoading } = useGetDashboardData();
 	const [toastMessage, setToastMessage] = useState<string | null>(null);
 	const [chartPeriod, setChartPeriod] = useState("6 Bulan");
 
@@ -52,8 +51,7 @@ function DashboardHomePage() {
 		}, 3000);
 	};
 
-	// Dummy Dashboard Data matching KostManagement.html
-	const stats = {
+	const stats = dashboardData?.stats || {
 		totalRooms: 12,
 		occupiedRooms: 10,
 		vacantRooms: 2,
@@ -64,48 +62,49 @@ function DashboardHomePage() {
 		monthlyExpense: "Rp2,1 jt",
 	};
 
-	const upcomingPayments: UpcomingPaymentItem[] = [
-		{
-			id: "p1",
-			tenant: "Alya Putri",
-			room: "A-03",
-			dueDate: "10 Agu",
-			amount: "Rp850.000",
-			badgeText: "3 hari lagi",
-			badgeClass: "amber",
-			actionText: "Reminder",
-		},
-		{
-			id: "p2",
-			tenant: "Nabila Putri",
-			room: "B-02",
-			dueDate: "12 Agu",
-			amount: "Rp950.000",
-			badgeText: "5 hari lagi",
-			badgeClass: "green",
-			actionText: "Invoice",
-		},
-		{
-			id: "p3",
-			tenant: "Fira Aulia",
-			room: "A-07",
-			dueDate: "08 Agu",
-			amount: "Rp850.000",
-			badgeText: "Terlambat",
-			badgeClass: "red",
-			actionText: "Reminder",
-		},
-		{
-			id: "p4",
-			tenant: "Sarah Anindita",
-			room: "C-01",
-			dueDate: "15 Agu",
-			amount: "Rp1.200.000",
-			badgeText: "8 hari lagi",
-			badgeClass: "green",
-			actionText: "Invoice",
-		},
-	];
+	const upcomingPayments: UpcomingPaymentItem[] =
+		dashboardData?.upcomingPayments || [
+			{
+				id: "p1",
+				tenant: "Alya Putri",
+				room: "A-03",
+				dueDate: "10 Agu",
+				amount: "Rp850.000",
+				badgeText: "3 hari lagi",
+				badgeClass: "amber",
+				actionText: "Reminder",
+			},
+			{
+				id: "p2",
+				tenant: "Nabila Putri",
+				room: "B-02",
+				dueDate: "12 Agu",
+				amount: "Rp950.000",
+				badgeText: "5 hari lagi",
+				badgeClass: "green",
+				actionText: "Invoice",
+			},
+			{
+				id: "p3",
+				tenant: "Fira Aulia",
+				room: "A-07",
+				dueDate: "08 Agu",
+				amount: "Rp850.000",
+				badgeText: "Terlambat",
+				badgeClass: "red",
+				actionText: "Reminder",
+			},
+			{
+				id: "p4",
+				tenant: "Sarah Anindita",
+				room: "C-01",
+				dueDate: "15 Agu",
+				amount: "Rp1.200.000",
+				badgeText: "8 hari lagi",
+				badgeClass: "green",
+				actionText: "Invoice",
+			},
+		];
 
 	const todayAttentions = [
 		{
