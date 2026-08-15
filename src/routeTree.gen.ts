@@ -10,12 +10,90 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DashboardCctvRouteImport } from './routes/dashboard/cctv'
+import { Route as DashboardEngagementRouteImport } from './routes/dashboard/engagement'
+import { Route as DashboardFinanceRouteImport } from './routes/dashboard/finance'
+import { Route as DashboardInvoicesRouteImport } from './routes/dashboard/invoices'
+import { Route as DashboardPaymentsRouteImport } from './routes/dashboard/payments'
+import { Route as DashboardReportsRouteImport } from './routes/dashboard/reports'
+import { Route as DashboardRoomsRouteImport } from './routes/dashboard/rooms'
+import { Route as DashboardSelectPropertyRouteImport } from './routes/dashboard/select-property'
+import { Route as DashboardTenantsRouteImport } from './routes/dashboard/tenants'
+import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardCctvRoute = DashboardCctvRouteImport.update({
+  id: '/cctv',
+  path: '/cctv',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardEngagementRoute = DashboardEngagementRouteImport.update({
+  id: '/engagement',
+  path: '/engagement',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardFinanceRoute = DashboardFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardInvoicesRoute = DashboardInvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardPaymentsRoute = DashboardPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardReportsRoute = DashboardReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRoomsRoute = DashboardRoomsRouteImport.update({
+  id: '/rooms',
+  path: '/rooms',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSelectPropertyRoute = DashboardSelectPropertyRouteImport.update({
+  id: '/select-property',
+  path: '/select-property',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTenantsRoute = DashboardTenantsRouteImport.update({
+  id: '/tenants',
+  path: '/tenants',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardUsersRoute = DashboardUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -25,27 +103,112 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/login': typeof LoginRoute
+  '/dashboard/cctv': typeof DashboardCctvRoute
+  '/dashboard/engagement': typeof DashboardEngagementRoute
+  '/dashboard/finance': typeof DashboardFinanceRoute
+  '/dashboard/invoices': typeof DashboardInvoicesRoute
+  '/dashboard/payments': typeof DashboardPaymentsRoute
+  '/dashboard/reports': typeof DashboardReportsRoute
+  '/dashboard/rooms': typeof DashboardRoomsRoute
+  '/dashboard/select-property': typeof DashboardSelectPropertyRoute
+  '/dashboard/tenants': typeof DashboardTenantsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/dashboard/cctv': typeof DashboardCctvRoute
+  '/dashboard/engagement': typeof DashboardEngagementRoute
+  '/dashboard/finance': typeof DashboardFinanceRoute
+  '/dashboard/invoices': typeof DashboardInvoicesRoute
+  '/dashboard/payments': typeof DashboardPaymentsRoute
+  '/dashboard/reports': typeof DashboardReportsRoute
+  '/dashboard/rooms': typeof DashboardRoomsRoute
+  '/dashboard/select-property': typeof DashboardSelectPropertyRoute
+  '/dashboard/tenants': typeof DashboardTenantsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRouteWithChildren
+  '/login': typeof LoginRoute
+  '/dashboard/cctv': typeof DashboardCctvRoute
+  '/dashboard/engagement': typeof DashboardEngagementRoute
+  '/dashboard/finance': typeof DashboardFinanceRoute
+  '/dashboard/invoices': typeof DashboardInvoicesRoute
+  '/dashboard/payments': typeof DashboardPaymentsRoute
+  '/dashboard/reports': typeof DashboardReportsRoute
+  '/dashboard/rooms': typeof DashboardRoomsRoute
+  '/dashboard/select-property': typeof DashboardSelectPropertyRoute
+  '/dashboard/tenants': typeof DashboardTenantsRoute
+  '/dashboard/users': typeof DashboardUsersRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/dashboard/cctv'
+    | '/dashboard/engagement'
+    | '/dashboard/finance'
+    | '/dashboard/invoices'
+    | '/dashboard/payments'
+    | '/dashboard/reports'
+    | '/dashboard/rooms'
+    | '/dashboard/select-property'
+    | '/dashboard/tenants'
+    | '/dashboard/users'
+    | '/dashboard/'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/auth/$'
-  id: '__root__' | '/' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/dashboard/cctv'
+    | '/dashboard/engagement'
+    | '/dashboard/finance'
+    | '/dashboard/invoices'
+    | '/dashboard/payments'
+    | '/dashboard/reports'
+    | '/dashboard/rooms'
+    | '/dashboard/select-property'
+    | '/dashboard/tenants'
+    | '/dashboard/users'
+    | '/dashboard'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/dashboard/cctv'
+    | '/dashboard/engagement'
+    | '/dashboard/finance'
+    | '/dashboard/invoices'
+    | '/dashboard/payments'
+    | '/dashboard/reports'
+    | '/dashboard/rooms'
+    | '/dashboard/select-property'
+    | '/dashboard/tenants'
+    | '/dashboard/users'
+    | '/dashboard/'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
+  LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -58,6 +221,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/cctv': {
+      id: '/dashboard/cctv'
+      path: '/cctv'
+      fullPath: '/dashboard/cctv'
+      preLoaderRoute: typeof DashboardCctvRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/engagement': {
+      id: '/dashboard/engagement'
+      path: '/engagement'
+      fullPath: '/dashboard/engagement'
+      preLoaderRoute: typeof DashboardEngagementRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/finance': {
+      id: '/dashboard/finance'
+      path: '/finance'
+      fullPath: '/dashboard/finance'
+      preLoaderRoute: typeof DashboardFinanceRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/invoices': {
+      id: '/dashboard/invoices'
+      path: '/invoices'
+      fullPath: '/dashboard/invoices'
+      preLoaderRoute: typeof DashboardInvoicesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/payments': {
+      id: '/dashboard/payments'
+      path: '/payments'
+      fullPath: '/dashboard/payments'
+      preLoaderRoute: typeof DashboardPaymentsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/reports': {
+      id: '/dashboard/reports'
+      path: '/reports'
+      fullPath: '/dashboard/reports'
+      preLoaderRoute: typeof DashboardReportsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/rooms': {
+      id: '/dashboard/rooms'
+      path: '/rooms'
+      fullPath: '/dashboard/rooms'
+      preLoaderRoute: typeof DashboardRoomsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/select-property': {
+      id: '/dashboard/select-property'
+      path: '/select-property'
+      fullPath: '/dashboard/select-property'
+      preLoaderRoute: typeof DashboardSelectPropertyRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/tenants': {
+      id: '/dashboard/tenants'
+      path: '/tenants'
+      fullPath: '/dashboard/tenants'
+      preLoaderRoute: typeof DashboardTenantsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/users': {
+      id: '/dashboard/users'
+      path: '/users'
+      fullPath: '/dashboard/users'
+      preLoaderRoute: typeof DashboardUsersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -68,8 +322,42 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardCctvRoute: typeof DashboardCctvRoute
+  DashboardEngagementRoute: typeof DashboardEngagementRoute
+  DashboardFinanceRoute: typeof DashboardFinanceRoute
+  DashboardInvoicesRoute: typeof DashboardInvoicesRoute
+  DashboardPaymentsRoute: typeof DashboardPaymentsRoute
+  DashboardReportsRoute: typeof DashboardReportsRoute
+  DashboardRoomsRoute: typeof DashboardRoomsRoute
+  DashboardSelectPropertyRoute: typeof DashboardSelectPropertyRoute
+  DashboardTenantsRoute: typeof DashboardTenantsRoute
+  DashboardUsersRoute: typeof DashboardUsersRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardCctvRoute: DashboardCctvRoute,
+  DashboardEngagementRoute: DashboardEngagementRoute,
+  DashboardFinanceRoute: DashboardFinanceRoute,
+  DashboardInvoicesRoute: DashboardInvoicesRoute,
+  DashboardPaymentsRoute: DashboardPaymentsRoute,
+  DashboardReportsRoute: DashboardReportsRoute,
+  DashboardRoomsRoute: DashboardRoomsRoute,
+  DashboardSelectPropertyRoute: DashboardSelectPropertyRoute,
+  DashboardTenantsRoute: DashboardTenantsRoute,
+  DashboardUsersRoute: DashboardUsersRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DashboardRoute: DashboardRouteWithChildren,
+  LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

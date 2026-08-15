@@ -1,180 +1,161 @@
-# Product Requirements Document (PRD)
-## Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*)
+# Dokumen Kebutuhan Produk
+## HomeeKost — Aplikasi Pengelolaan Kos
 
----
+HomeeKost adalah aplikasi untuk membantu pemilik kos mengelola satu atau beberapa lokasi kos dalam satu tempat. Pada tahap awal, aplikasi hanya digunakan oleh pemilik kos.
 
-| Attributes | Details |
-| :--- | :--- |
-| **Nama Proyek** | Sistem Pengelolaan Kos Bude Frisda (*HomeeKost*) |
-| **Jenis Produk** | Web Dashboard Internal (Single-Role Admin Monolith SSR) |
-| **Target Penyelesaian** | 5 Minggu (Tugas Akhir PSAJ) |
-| **Dokumen Status** | Approved Specifications / Ready for Sprint Execution |
-| **Penulis** | Senior Product Manager & Technical Lead |
-| **Versi Dokumen** | v2.1.0 (Updated: OpenWA `rmyndharis/OpenWA` Gateway Port 2785, Docker Compose) |
-| **Terakhir Diperbarui**| 10 Agustus 2026 |
+## 1. Pernyataan Masalah
 
----
+Pengelolaan kos sering dilakukan melalui catatan manual, buku, pesan WhatsApp, atau beberapa file yang terpisah. Cara ini membuat pemilik kos kesulitan mengetahui kondisi usaha secara cepat dan menyeluruh.
 
-## 1. Executive Summary & Problem Statement
+Beberapa masalah yang sering muncul antara lain:
 
-### 1.1 Executive Summary
-**Sistem Pengelolaan Kos Bude Frisda** (*HomeeKost*) adalah aplikasi web *dashboard* internal berbasis *Monolith Server-Side Rendering* (SSR) yang dirancang khusus untuk memodernisasi dan mengotomatiskan seluruh operasional pengelolaan kos-kosan milik Bude Frisda.
+- Data kamar, penyewa, masa sewa, dan pembayaran tersebar di banyak tempat.
+- Pemilik kos sulit mengetahui kamar yang kosong, terisi, atau sedang diperbaiki.
+- Jadwal pembayaran dapat terlewat karena harus diperiksa satu per satu.
+- Pemasukan dan pengeluaran setiap lokasi kos berisiko tercampur.
+- Pembuatan tagihan dan laporan keuangan membutuhkan waktu.
+- Acara, pengumuman, dan ulang tahun penyewa mudah terlupakan.
 
-Pada fase saat ini, pengembangan **difokuskan penuh (100%) untuk akses Pengelola/Admin (Pemilik Kos)**. Akses portal khusus anak kos ditunda (*postponed for future release*) tanpa menghilangkan kesiapan struktur database multi-role.
+HomeeKost dibuat agar kegiatan tersebut dapat dikelola dalam satu aplikasi yang mudah dipahami dan digunakan oleh pemilik kos.
 
-Sistem mengotomatiskan penagihan sewa, pengiriman invoice PDF, reminder jatuh tempo, serta **Engagement Engine (Pengingat Ulang Tahun & Pengumuman Sederhana)** melalui integrasi **WhatsApp Gateway OpenWA (`rmyndharis/OpenWA`)** yang berjalan di dalam kontainer Docker terisolasi (`http://open-wa:2785/api`). Selain itu, sistem memanfaatkan **AI Engine (Gemini / Groq API)** untuk memproses data finansial bulanan dan menghasilkan **Laporan Keuangan Eksekutif** beserta analisis tren dan rekomendasi bisnis strategis.
+## 2. Target Pengguna
 
-### 1.2 Vision & Key Objectives
-* **Automasi WhatsApp 100% via OpenWA Gateway (`rmyndharis/OpenWA`)**: Mengirimkan invoice, reminder jatuh tempo, ucapan ulang tahun, dan pengumuman secara otomatis via REST API (`POST /api/sessions/{sessionId}/messages/send-text`) tanpa klik manual.
-* **OpenWA Embedded Web Dashboard**: Menyediakan dashboard bawaan OpenWA pada port `2785` untuk pemindaian QR Code dan pengelolaan sesi WhatsApp.
-* **Smart Financial Insight (Gemini / Groq API)**: Mengubah data finansial mentah PostgreSQL menjadi Laporan Keuangan Eksekutif PDF secara otomatis setiap tanggal 1 bulan berjalan.
-* **Multi-Role Database Readiness**: Skema DB dirancang fleksibel dengan tabel `Role` terpisah untuk mempermudah integrasi portal anak kos di masa depan.
-* **Infrastruktur Dockerized VPS (4GB RAM, 2 vCPU, 60GB SSD)**: Seluruh *stack* (App, PostgreSQL, dan OpenWA Docker) berjalan terorkestrasi via `docker-compose` di root.
+### Pengguna utama
 
----
+Pemilik kos yang mengelola satu atau beberapa lokasi kos dan bertanggung jawab atas kamar, penyewa, masa sewa, tagihan, keuangan, serta kegiatan kos.
 
-## 2. Target Audience & Roles
+### Pihak yang menerima manfaat
 
-### 2.1 User Profile (Fokus Utama: Admin / Pengelola)
-Sistem ini menggunakan arsitektur **Single-Role Access with Multi-Role Schema Readiness**. Saat ini hanya **Admin (Bude Frisda / Pengelola)** yang memiliki akses terotentikasi ke aplikasi web.
+Penyewa bukan pengguna langsung aplikasi. Penyewa menerima informasi penting, seperti tagihan, pengingat pembayaran, dan pengumuman, melalui WhatsApp.
 
-| Parameter | Deskripsi |
-| :--- | :--- |
-| **Role Active** | Admin / Pemilik Kos (Bude Frisda) |
-| **Perangkat Akses** | Desktop / Laptop (Utama), Tablet/Smartphone (Sekunder) |
-| **Kebutuhan Utama** | Antarmuka bersih (*Sage Green & Cream*), aksi cepat (*1-Click Actions*), visualisasi status kamar, pengiriman invoice PDF otomatis, WA Gateway otomatis, pengumuman kos, dan laporan keuangan AI. |
+Pada tahap awal, hanya pemilik kos yang dapat menggunakan aplikasi. Kemungkinan penambahan akun staf dapat dipertimbangkan pada pengembangan berikutnya apabila kebutuhan pengelolaan bertambah.
 
----
+## 3. Tujuan dan Bukan Tujuan
 
-## 3. Tech Stack & Architecture Overview
+### Tujuan
 
-### 3.1 Technology Stack & Infrastructure
+- Menyatukan data seluruh lokasi kos dalam satu tempat.
+- Membantu pemilik melihat kondisi kamar dan penyewa dengan cepat.
+- Memudahkan pencatatan masa sewa dan jadwal pembayaran.
+- Membantu pemilik mencatat pemasukan dan pengeluaran setiap kos secara terpisah.
+- Mengurangi risiko keterlambatan penagihan kepada penyewa.
+- Mempermudah pembuatan dan pengiriman tagihan.
+- Menyediakan ringkasan serta laporan keuangan bulanan.
+- Membantu pemilik mengingat acara, pengumuman, dan ulang tahun penyewa.
 
-```
-+---------------------------------------------------------------------------------+
-|                              VPS LINUX (4GB RAM, 2 vCPU, 60GB SSD)              |
-|                                                                                 |
-|  +---------------------------------------------------------------------------+  |
-|  |                        DOCKER COMPOSE ORCHESTRATION                       |  |
-|  |                                                                           |  |
-|  |  +----------------------------------+     +----------------------------+  |  |
-|  |  |  APP CONTAINER (TanStack Start)  |     |  OPENWA CONTAINER          |  |  |
-|  |  |  - Fullstack Monolith SSR        |     |  - NestJS 11 + Dashboard   |  |  |
-|  |  |  - Better-Auth (Admin Session)   |---->|  - REST API (:2785/api)    |  |  |
-|  |  |  - Cron Scheduler (Daily/Monthly)|     |  - Webhook Listener        |  |  |
-|  |  +----------------------------------+     +----------------------------+  |  |
-|  |                   |                                                     |  |
-|  |                   v                                                     |  |
-|  |  +----------------------------------+     +----------------------------+  |  |
-|  |  |  POSTGRESQL CONTAINER            |     |  GEMINI / GROQ LLM API     |  |  |
-|  |  |  - Prisma ORM Adapter            |     |  - Financial Analysis API  |  |  |
-|  |  +----------------------------------+     +----------------------------+  |  |
-|  +---------------------------------------------------------------------------+  |
-+---------------------------------------------------------------------------------+
-```
+### Bukan tujuan pada tahap awal
 
-| Layer | Teknologi | Alasan Pemilihan |
-| :--- | :--- | :--- |
-| **Framework Fullstack** | **TanStack Start + Vite** | Monolith SSR yang efisien, type-safe fullstack TypeScript, routing cepat, dan ramah memori. |
-| **UI & Styling** | **React 19 + Tailwind CSS v4** | Performa tinggi, kemudahan komponen modern, dan desain earth-tone *Sage Green & Cream* (`Design.md`). |
-| **Database & ORM** | **PostgreSQL + Prisma ORM** | Relational DB stabil dengan tabel `Role` terpisah dan migrasi type-safe. |
-| **WA Gateway** | **OpenWA (`ghcr.io/rmyndharis/openwa`)** | WhatsApp Gateway NestJS 11.x berbasis Docker yang menyediakan REST API (`:2785/api`) & Dashboard bawaan untuk pengiriman pesan otomatis 100%. |
-| **AI Integration** | **Google Gemini 1.5 / Groq API** | Memproses JSON keuangan bulanan untuk menghasilkan analisis naratif & rekomendasi bisnis. |
-| **Infrastruktur** | **Docker & Docker Compose (VPS 4GB RAM)** | Memudahkan konsistensi lingkungan *development* dan *production*. |
+- Menyediakan akun atau halaman khusus untuk penyewa.
+- Menyediakan aplikasi telepon genggam khusus.
+- Menerima pembayaran langsung melalui aplikasi.
+- Menyediakan percakapan langsung di dalam aplikasi.
+- Mengendalikan pintu atau fasilitas kos secara otomatis.
+- Menyediakan akun staf dan pembagian kewenangan. Kebutuhan ini dapat dipertimbangkan pada pengembangan berikutnya.
 
----
+## 4. Cerita Pengguna
 
-## 4. Detailed OpenWA REST API Endpoints
+- Pemilik kos ingin melihat ringkasan seluruh kos agar mengetahui kondisi usaha tanpa memeriksa catatan satu per satu.
+- Pemilik kos ingin mengelola beberapa lokasi kos agar semua data tetap rapi dan tidak tercampur.
+- Pemilik kos ingin mengetahui kamar yang kosong, terisi, atau sedang diperbaiki agar dapat mengambil keputusan dengan cepat.
+- Pemilik kos ingin menyimpan data penyewa agar informasi penghuni mudah ditemukan saat dibutuhkan.
+- Pemilik kos ingin mencatat masa sewa dan tanggal jatuh tempo agar tidak melewatkan jadwal pembayaran.
+- Pemilik kos ingin membuat tagihan dan mengirim pengingat melalui WhatsApp agar proses penagihan lebih cepat.
+- Pemilik kos ingin menandai tagihan yang sudah atau belum dibayar agar tunggakan mudah dipantau.
+- Pemilik kos ingin mengelola keuangan kos agar pemasukan, pengeluaran, dan hasil usaha setiap lokasi dapat diketahui dengan jelas.
+- Pemilik kos ingin menerima laporan keuangan bulanan agar dapat menilai kondisi usaha dan merencanakan langkah berikutnya.
+- Pemilik kos ingin mencatat acara dan pengumuman agar informasi penting tidak terlupakan.
+- Pemilik kos ingin mendapat pengingat ulang tahun penyewa agar hubungan dengan penghuni tetap baik.
 
-Aplikasi `app` (HomeeKost) akan berkomunikasi dengan kontainer `open-wa` (`http://open-wa:2785/api`) melalui HTTP client ter-autentikasi (`X-API-Key`):
+## 5. Daftar Fitur MVP
 
-1. **Check Session Health / Status**:
-   `GET http://open-wa:2785/api/sessions/{sessionId}`
-2. **Start Session & Get QR Code**:
-   * `POST http://open-wa:2785/api/sessions/{sessionId}/start`
-   * `GET http://open-wa:2785/api/sessions/{sessionId}/qr`
-3. **Send Automated Text Message**:
-   `POST http://open-wa:2785/api/sessions/{sessionId}/messages/send-text`
-   * **Header**: `X-API-Key: <OPEN_WA_API_KEY>`
-   * **Payload**:
-     ```json
-     {
-       "chatId": "628123456789@c.us",
-       "text": "Halo Kak Budi, berikut invoice sewa kos Kamar A-101..."
-     }
-     ```
-4. **Register Webhooks**:
-   `POST http://open-wa:2785/api/sessions/{sessionId}/webhooks`
+### 5.1 Ringkasan Utama
 
----
+Menampilkan gambaran kondisi usaha kos, meliputi:
 
-## 5. High-Level Database Schema (PostgreSQL / Prisma)
+- Jumlah lokasi dan kamar.
+- Jumlah kamar kosong, terisi, dan sedang diperbaiki.
+- Ringkasan pemasukan, pengeluaran, dan hasil bersih bulan berjalan.
+- Daftar penyewa yang perlu segera ditagih.
+- Transaksi terbaru.
+- Acara dan pengingat yang akan datang.
 
-```mermaid
-erDiagram
-    ROLE ||--o{ USER_ROLE : assigned_to
-    USER ||--o{ USER_ROLE : has
-    ROOM ||--o{ RENTAL_CONTRACT : has
-    TENANT ||--o{ RENTAL_CONTRACT : enters
-    RENTAL_CONTRACT ||--o{ INVOICE : generates
-    ROOM ||--o{ COMPLAINT : logs
-    COMPLAINT o|--o| EXPENSE : incurs
-    INVOICE o|--o| EXPENSE : tracks_cashflow
-    ANNOUNCEMENT
-    AI_FINANCIAL_REPORT
-```
+### 5.2 Pengelolaan Lokasi Kos
 
----
+Pemilik dapat menambah, melihat, memperbarui, dan menghapus data lokasi kos. Setiap lokasi memiliki informasi alamat, deskripsi, serta daftar kamar sendiri.
 
-## 6. Docker & Infrastructure Plan (VPS 4GB RAM)
+### 5.3 Pengelolaan Kamar
 
-### `docker-compose.yml` Structure:
-```yaml
-version: '3.8'
+Pemilik dapat:
 
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: homeekost_app
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:secret@db:5432/homeekost?schema=public
-      - OPEN_WA_API_URL=http://open-wa:2785/api
-      - OPEN_WA_API_KEY=${OPEN_WA_API_KEY}
-      - OPEN_WA_SESSION_ID=homeekost-session
-    depends_on:
-      db:
-        condition: service_healthy
-      open-wa:
-        condition: service_started
+- Menambah dan memperbarui informasi kamar.
+- Mencatat harga sewa dan fasilitas kamar.
+- Melihat apakah kamar kosong, terisi, atau sedang diperbaiki.
+- Melihat penyewa aktif dan riwayat sewa kamar.
 
-  db:
-    image: postgres:16-alpine
-    container_name: homeekost_db
-    ports:
-      - "5432:5432"
+### 5.4 Pengelolaan Penyewa
 
-  open-wa:
-    image: ghcr.io/rmyndharis/openwa:latest
-    container_name: homeekost_openwa
-    ports:
-      - "2785:2785"
-    environment:
-      - PORT=2785
-      - API_KEY=${OPEN_WA_API_KEY}
-    volumes:
-      - openwa_data:/app/data
+Pemilik dapat menyimpan dan memperbarui data penyewa, seperti nama, nomor identitas, tanggal lahir, nomor WhatsApp, alamat asal, pekerjaan, kamar yang ditempati, dan status penyewa.
 
-volumes:
-  pgdata:
-  openwa_data:
-```
+Data penyewa lama tetap dapat dilihat sebagai riwayat setelah penyewa keluar.
 
----
+### 5.5 Pengelolaan Masa Sewa
 
-## 7. Penutup
+Pemilik dapat:
 
-PRD v2.1.0 menyelaraskan arsitektur gateway WhatsApp menggunakan **OpenWA (`rmyndharis/OpenWA`)** port `2785` yang memiliki REST API mandiri dan web dashboard bawaan untuk pemindaian QR Code, berjalan terorkestrasi via Docker Compose di root project.
+- Menghubungkan penyewa dengan kamar yang ditempati.
+- Memilih masa pembayaran bulanan, tiga bulanan, enam bulanan, atau tahunan.
+- Menentukan tanggal mulai, tanggal selesai, dan tanggal jatuh tempo.
+- Memperbarui status kamar sesuai masa sewa.
+
+### 5.6 Tagihan dan Pengingat Pembayaran
+
+Pemilik dapat:
+
+- Melihat daftar seluruh tagihan.
+- Mengetahui tagihan yang belum dibayar, sudah dibayar, terlambat, atau dibatalkan.
+- Membuat dokumen tagihan yang memuat rincian sewa dan petunjuk pembayaran.
+- Memeriksa dan menandai pembayaran yang sudah diterima.
+- Mengirim tagihan serta pengingat pembayaran melalui WhatsApp.
+
+### 5.7 Pencatatan Keuangan
+
+Pemilik dapat mencatat pemasukan dan pengeluaran untuk setiap lokasi kos. Catatan dapat dicari berdasarkan lokasi, jenis transaksi, dan waktu agar keuangan antarlokasi tidak tercampur.
+
+### 5.8 Laporan Keuangan Bulanan
+
+Aplikasi menyiapkan laporan keuangan setiap bulan yang berisi:
+
+- Total pemasukan dan pengeluaran.
+- Hasil bersih usaha.
+- Pengeluaran terbesar.
+- Perbandingan kondisi keuangan dengan periode sebelumnya.
+- Ringkasan kondisi keuangan dan saran sederhana untuk pemilik.
+- Dokumen laporan yang dapat disimpan atau dicetak.
+
+### 5.9 Acara dan Pengingat
+
+Pemilik dapat mencatat acara, pengumuman, kerja bakti, pertemuan, dan kegiatan penting lainnya. Aplikasi juga menampilkan pengingat ulang tahun penyewa berdasarkan data yang tersimpan.
+
+## 6. Ukuran Keberhasilan
+
+Aplikasi dianggap berhasil pada tahap awal apabila:
+
+- Seluruh lokasi, kamar, dan penyewa aktif dapat dicatat dan ditemukan dengan mudah.
+- Pemilik dapat mengetahui kondisi kamar dan tagihan yang perlu ditindaklanjuti dalam waktu singkat.
+- Pemasukan dan pengeluaran setiap lokasi tercatat secara terpisah dan dapat diringkas setiap bulan.
+- Semua tagihan memiliki keadaan pembayaran yang jelas sehingga tunggakan tidak mudah terlewat.
+- Pengingat pembayaran dapat dikirim kepada penyewa tanpa membuat pesan satu per satu.
+- Laporan keuangan bulanan tersedia dan membantu pemilik memahami kondisi usaha.
+- Pemilik tidak lagi bergantung pada banyak buku, catatan, atau file terpisah untuk kegiatan utama pengelolaan kos.
+- Pemilik dapat menggunakan fitur utama tanpa bantuan terus-menerus.
+
+## 7. Pertanyaan Terbuka
+
+- Kapan pengingat pembayaran pertama harus dikirim, dan berapa kali pengingat perlu diulang?
+- Apakah setiap lokasi kos menggunakan rekening atau kode pembayaran yang sama?
+- Informasi apa saja yang wajib dicantumkan dalam dokumen tagihan?
+- Apakah penyewa perlu menerima pemberitahuan lain selain tagihan dan pengumuman?
+- Bagaimana pemilik ingin menangani pembayaran sebagian atau keterlambatan pembayaran?
+- Apakah laporan bulanan perlu dibuat untuk setiap lokasi secara terpisah, gabungan seluruh lokasi, atau keduanya?
+- Apakah data yang salah boleh dihapus sepenuhnya, atau tetap disimpan sebagai riwayat?
+- Jika akun staf ditambahkan pada masa mendatang, bagian apa saja yang boleh dilihat dan diubah oleh staf?

@@ -1,15 +1,22 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// ------------------------------------------------------
-// Enums
-// ------------------------------------------------------
+// ====================================================
+// ENUMS
+// ====================================================
+
+enum RoleName {
+  SUPER_ADMIN
+  ADMIN
+  TENANT
+  STAFF
+}
 
 enum RoomStatus {
   VACANT
@@ -22,6 +29,14 @@ enum TenantStatus {
   INACTIVE
 }
 
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  // SEMI_ANNUAL = 6 bulan
+  SEMI_ANNUAL 
+  ANNUALLY
+}
+
 enum ContractStatus {
   ACTIVE
   TERMINATED
@@ -32,6 +47,20 @@ enum InvoiceStatus {
   PAID
   OVERDUE
   CANCELLED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionCategory {
+  RENT
+  UTILITIES
+  INTERNET
+  MAINTENANCE
+  SALARY
+  OTHER
 }
 
 enum ComplaintCategory {
@@ -48,14 +77,6 @@ enum ComplaintStatus {
   DONE
 }
 
-enum ExpenseCategory {
-  UTILITIES
-  INTERNET
-  MAINTENANCE
-  SALARY
-  OTHER
-}
-
 enum AnnouncementCategory {
   KERJA_BAKTI
   MAINTENANCE
@@ -63,162 +84,312 @@ enum AnnouncementCategory {
   UMUM
 }
 
-// ------------------------------------------------------
-// User & Role Models (Multi-Role Readiness)
-// ------------------------------------------------------
+enum NotificationType {
+  DUE_DATE_REMINDER
+  BIRTHDAY_WISH
+  ANNOUNCEMENT
+  INVOICE
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+}
+
+// ====================================================
+// RBAC & USER MODELS (Compatible with Better-Auth)
+// ====================================================
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique // e.g. "ADMIN", "TENANT", "STAFF"
+  id          String   @id @default(cuid())
+  name        RoleName @unique
   description String?
+  users       User[]
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  users User[]
+  @@map("roles")
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  roleId       String
-  role         Role     @relation(fields: [roleId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  emailVerified       Boolean              @default(false)
+  image               String?
+  passwordHash        String?
+  roleId              String
+  role                Role                 @relation(fields: [roleId], references: [id])
+  assignedPropertyId  String?
+  assignedProperty    Property?            @relation("AssignedPropertyUsers", fields: [assignedPropertyId], references: [id], onDelete: SetNull)
+  propertyAccesses    UserPropertyAccess[]
+  createdTransactions Transaction[]        @relation("UserTransactions")
+  sessions            Session[]
+  accounts            Account[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@map("users")
 }
 
-// ------------------------------------------------------
-// Property & Tenant Models
-// ------------------------------------------------------
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verifications")
+}
+
+// ====================================================
+// MULTI-PROPERTY & ACCESS CONTROL
+// ====================================================
+
+model Property {
+  id                 String               @id @default(cuid())
+  name               String
+  address            String
+  description        String?
+  bankAccountInfo    String?
+  imageUrl           String?
+  rooms              Room[]
+  cctvDevices        CctvDevice[]
+  userAccesses       UserPropertyAccess[]
+  assignedUsers      User[]               @relation("AssignedPropertyUsers")
+  transactions       Transaction[]
+  announcements      Announcement[]
+  aiFinancialReports AiFinancialReport[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@map("properties")
+}
+
+model UserPropertyAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@map("user_property_accesses")
+}
+
+model CctvDevice {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name       String
+  streamUrl  String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("cctv_devices")
+}
+
+// ====================================================
+// ROOM, TENANT & RENTAL CONTRACT MODELS
+// ====================================================
 
 model Room {
-  id           String     @id @default(uuid())
-  roomNumber   String     @unique // e.g. "A-101"
-  type         String     // e.g. "Standard", "Deluxe"
-  monthlyPrice Decimal    @db.Decimal(12, 2)
-  facilities   String?
-  status       RoomStatus @default(VACANT)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id              String           @id @default(cuid())
+  propertyId      String
+  property        Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  roomNumber      String
+  type            String           @default("Standard")
+  price           Decimal          @default(0) @db.Decimal(12, 2)
+  monthlyPrice    Decimal          @default(0) @db.Decimal(12, 2)
+  facilities      String?
+  status          RoomStatus       @default(VACANT)
+  rentalContracts RentalContract[]
+  complaints      Complaint[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  contracts  RentalContract[]
-  complaints Complaint[]
+  @@unique([propertyId, roomNumber])
+  @@map("rooms")
 }
 
 model Tenant {
-  id                 String       @id @default(uuid())
+  id                 String           @id @default(cuid())
   name               String
-  whatsappNumber     String       // Format: "628xxx"
-  identityCardNumber String       // No KTP
+  NIK                String           @unique
+  identityCardNumber String?
+  phoneNumber        String
+  whatsappNumber     String?
+  email              String?
   birthDate          DateTime?
-  status             TenantStatus @default(ACTIVE)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  occupation         String?
+  originAddress      String?
+  status             TenantStatus     @default(ACTIVE)
+  rentalContracts    RentalContract[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
-  contracts RentalContract[]
+  @@map("tenants")
 }
 
 model RentalContract {
-  id         String         @id @default(uuid())
-  tenantId   String
-  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  roomId     String
-  room       Room           @relation(fields: [roomId], references: [id], onDelete: Restrict)
-  startDate  DateTime
-  dueDateDay Int            // Monthly due day (1-31)
-  status     ContractStatus @default(ACTIVE)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  roomId       String
+  room         Room           @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  billingCycle BillingCycle   @default(MONTHLY)
+  startDate    DateTime
+  endDate      DateTime?
+  dueDateDay   Int            @default(1)
+  status       ContractStatus @default(ACTIVE)
+  invoices     Invoice[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
-  invoices Invoice[]
+  @@map("rental_contracts")
 }
 
-// ------------------------------------------------------
-// Financial & Invoicing Models
-// ------------------------------------------------------
+// ====================================================
+// INVOICE & DIGITAL BILLING MODELS
+// ====================================================
 
 model Invoice {
-  id            String        @id @default(uuid())
-  invoiceNumber String        @unique // e.g. "INV/202609/0001"
+  id            String         @id @default(cuid())
   contractId    String
   contract      RentalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  periodMonth   Int
-  periodYear    Int
-  amount        Decimal       @db.Decimal(12, 2)
+  invoiceNumber String         @unique
+  periodMonth   Int?
+  periodYear    Int?
+  amount        Decimal        @db.Decimal(12, 2)
   dueDate       DateTime
-  status        InvoiceStatus @default(PENDING)
   paidAt        DateTime?
+  status        InvoiceStatus  @default(PENDING)
   pdfUrl        String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("invoices")
 }
 
-model Expense {
-  id              String          @id @default(uuid())
-  category        ExpenseCategory @default(OTHER)
-  amount          Decimal         @db.Decimal(12, 2)
-  description     String          @db.Text
-  transactionDate DateTime        @default(now())
+// ====================================================
+// CASHFLOW, EXPENSES & COMPLAINTS
+// ====================================================
+
+model Transaction {
+  id              String              @id @default(cuid())
+  propertyId      String
+  property        Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdBy       String
+  creator         User                @relation("UserTransactions", fields: [createdBy], references: [id], onDelete: Restrict)
   complaintId     String?
-  complaint       Complaint?      @relation(fields: [complaintId], references: [id], onDelete: SetNull)
-  createdAt       DateTime        @default(now())
-}
+  complaint       Complaint?          @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  type            TransactionType     @default(EXPENSE)
+  category        TransactionCategory @default(OTHER)
+  amount          Decimal             @db.Decimal(12, 2)
+  description     String?
+  transactionDate DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
-// ------------------------------------------------------
-// Maintenance & Complaints
-// ------------------------------------------------------
+  @@map("transactions")
+}
 
 model Complaint {
-  id           String            @id @default(uuid())
+  id           String            @id @default(cuid())
   roomId       String
   room         Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
   category     ComplaintCategory @default(OTHER)
-  description  String            @db.Text
+  description  String
   status       ComplaintStatus   @default(PENDING)
   reportedDate DateTime          @default(now())
   resolvedDate DateTime?
+  transactions Transaction[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
-  expenses Expense[]
+  @@map("complaints")
 }
 
-// ------------------------------------------------------
-// Engagement & Communication
-// ------------------------------------------------------
+// ====================================================
+// ENGAGEMENT, NOTIFICATIONS & AI REPORTING
+// ====================================================
 
 model Announcement {
-  id          String               @id @default(uuid())
+  id          String               @id @default(cuid())
+  propertyId  String?
+  property    Property?            @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   title       String
-  content     String               @db.Text
+  content     String
   category    AnnouncementCategory @default(UMUM)
   isBroadcast Boolean              @default(false)
   sentAt      DateTime?
   createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@map("announcements")
 }
 
 model NotificationLog {
-  id              String   @id @default(uuid())
+  id              String             @id @default(cuid())
   recipientNumber String
-  messageType     String   // e.g. "DUE_DATE_REMINDER", "BIRTHDAY_WISH", "ANNOUNCEMENT", "INVOICE"
-  status          String   // e.g. "SENT", "FAILED"
-  notes           String?  @db.Text
-  sentAt          DateTime @default(now())
+  messageType     NotificationType
+  status          NotificationStatus @default(SENT)
+  notes           String?
+  sentAt          DateTime           @default(now())
+
+  @@map("notification_logs")
 }
 
-// ------------------------------------------------------
-// AI Executive Reports
-// ------------------------------------------------------
-
 model AiFinancialReport {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(cuid())
+  propertyId         String?
+  property           Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   periodMonth        Int
   periodYear         Int
-  totalIncome        Decimal  @db.Decimal(12, 2)
-  totalExpense       Decimal  @db.Decimal(12, 2)
-  netProfit          Decimal  @db.Decimal(12, 2)
+  totalIncome        Decimal   @db.Decimal(12, 2)
+  totalExpense       Decimal   @db.Decimal(12, 2)
+  netProfit          Decimal   @db.Decimal(12, 2)
   occupancyRate      Float
   aiNarrativeSummary Json
   pdfFileUrl         String?
-  createdAt          DateTime @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("ai_financial_reports")
 }
