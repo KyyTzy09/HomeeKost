@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Building2, Upload } from "lucide-react";
+import { Building2, Loader2, Upload } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
@@ -16,6 +16,7 @@ import {
 	type PropertyFormValues,
 	propertySchema,
 } from "../../common/validations/property.schema.ts";
+import { useUploadImage } from "../../hooks/index.ts";
 import type { PropertyItem } from "./PropertyCard.tsx";
 
 interface PropertyFormDialogProps {
@@ -31,9 +32,17 @@ export function PropertyFormDialog({
 	editingProperty,
 	onSubmit,
 }: PropertyFormDialogProps) {
+	const uploadImageMutation = useUploadImage();
+
 	const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(
 		editingProperty?.imageUrl ?? null,
 	);
+	const [selectedFileDataUrl, setSelectedFileDataUrl] = useState<string | null>(
+		null,
+	);
+	const [isSubmittingWithUpload, setIsSubmittingWithUpload] =
+		useState<boolean>(false);
+	const [uploadError, setUploadError] = useState<string | null>(null);
 
 	const form = useForm({
 		defaultValues: {
@@ -47,7 +56,45 @@ export function PropertyFormDialog({
 		onSubmit: async ({ value }) => {
 			const result = propertySchema.safeParse(value);
 			if (!result.success) return;
-			onSubmit(result.data, imagePreviewUrl);
+
+			let finalImageUrl = editingProperty?.imageUrl || null;
+
+			// If a new local file was selected, upload it to storage first
+			if (selectedFileDataUrl) {
+				setIsSubmittingWithUpload(true);
+				setUploadError(null);
+				try {
+					const uploadRes = await uploadImageMutation.mutateAsync({
+						dataUrl: selectedFileDataUrl,
+						folder: "homeekost/properties",
+						filename: `prop-${value.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`,
+					});
+					finalImageUrl = uploadRes.url;
+				} catch (err) {
+					console.error("Gagal mengupload gambar:", err);
+					setUploadError(
+						err instanceof Error
+							? err.message
+							: "Gagal mengupload gambar ke storage",
+					);
+					setIsSubmittingWithUpload(false);
+					return;
+				} finally {
+					setIsSubmittingWithUpload(false);
+				}
+			} else if (imagePreviewUrl === null) {
+				// User explicitly removed the image
+				finalImageUrl = null;
+			}
+
+			onSubmit(
+				{
+					...result.data,
+					imageUrl: finalImageUrl || "",
+				},
+				finalImageUrl,
+			);
+			setSelectedFileDataUrl(null);
 			onOpenChange(false);
 		},
 	});
@@ -59,7 +106,8 @@ export function PropertyFormDialog({
 			reader.onload = () => {
 				const url = reader.result as string;
 				setImagePreviewUrl(url);
-				form.setFieldValue("imageUrl", url);
+				setSelectedFileDataUrl(url);
+				setUploadError(null);
 			};
 			reader.readAsDataURL(file);
 		}
@@ -67,8 +115,11 @@ export function PropertyFormDialog({
 
 	const handleRemoveImage = () => {
 		setImagePreviewUrl(null);
+		setSelectedFileDataUrl(null);
 		form.setFieldValue("imageUrl", "");
 	};
+
+	const isProcessing = isSubmittingWithUpload || uploadImageMutation.isPending;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,69 +178,6 @@ export function PropertyFormDialog({
 							</div>
 						)}
 					</form.Field>
-
-					{/* Grid: Jumlah Kamar & Rekening */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<form.Field
-							name="totalRooms"
-							validators={{
-								onChange: ({ value }) =>
-									!value || Number(value) < 1
-										? "Jumlah kamar minimal 1"
-										: undefined,
-							}}
-						>
-							{(field) => (
-								<div>
-									<Label
-										htmlFor={field.name}
-										className="block text-[11px] font-bold text-[#506257] mb-[6px]"
-									>
-										Jumlah Kamar <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										type="number"
-										min={1}
-										max={200}
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(Number(e.target.value))}
-										placeholder="12"
-										className="h-[43px] border-[#dfe7e0] rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
-									/>
-									{field.state.meta.errors.length > 0 && (
-										<p className="text-[10.5px] text-[#b66b68] mt-1 font-medium">
-											{field.state.meta.errors.join(", ")}
-										</p>
-									)}
-								</div>
-							)}
-						</form.Field>
-
-						<form.Field name="bankAccountInfo">
-							{(field) => (
-								<div>
-									<Label
-										htmlFor={field.name}
-										className="block text-[11px] font-bold text-[#506257] mb-[6px]"
-									>
-										Rekening Bank / QRIS
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(e.target.value)}
-										placeholder="BCA 829102910 a.n Frisda"
-										className="h-[43px] border-[#dfe7e0] rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
-									/>
-								</div>
-							)}
-						</form.Field>
-					</div>
 
 					{/* Field: Alamat Lengkap */}
 					<form.Field
@@ -306,12 +294,17 @@ export function PropertyFormDialog({
 										)}
 									</div>
 									<p className="text-[10px] text-[#8a958d] mt-1.5 m-0 leading-tight">
-										Gunakan gambar/logo kos. Gambar akan tersimpan pada kos yang
-										dipilih.
+										Gunakan gambar/logo kos (format PNG, JPG, WebP). Otomatis
+										diunggah ke storage cloud.
 									</p>
 								</div>
 							</div>
 						</div>
+						{uploadError && (
+							<p className="text-[10.5px] text-[#b66b68] mt-1 font-medium">
+								{uploadError}
+							</p>
+						)}
 					</div>
 
 					{/* Footer */}
@@ -320,15 +313,26 @@ export function PropertyFormDialog({
 							type="button"
 							variant="outline"
 							onClick={() => onOpenChange(false)}
+							disabled={isProcessing}
 							className="h-[38px] px-4 text-xs font-semibold rounded-[8px] border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3]"
 						>
 							Batal
 						</Button>
 						<Button
 							type="submit"
-							className="h-[38px] px-5 text-xs font-bold rounded-[8px] bg-[#4f6958] hover:bg-[#425949] text-white transition-colors"
+							disabled={isProcessing}
+							className="h-[38px] px-5 text-xs font-bold rounded-[8px] bg-[#4f6958] hover:bg-[#425949] text-white transition-colors flex items-center gap-1.5"
 						>
-							{editingProperty ? "Simpan Perubahan" : "Tambah Kos"}
+							{isProcessing ? (
+								<>
+									<Loader2 className="w-3.5 h-3.5 animate-spin" />
+									<span>Mengunggah...</span>
+								</>
+							) : editingProperty ? (
+								"Simpan Perubahan"
+							) : (
+								"Tambah Kos"
+							)}
 						</Button>
 					</DialogFooter>
 				</form>

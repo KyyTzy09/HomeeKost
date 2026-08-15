@@ -1,6 +1,6 @@
 generator client {
-  provider        = "prisma-client"
-  output          = "../src/generated/prisma"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -33,7 +33,7 @@ enum BillingCycle {
   MONTHLY
   QUARTERLY
   // SEMI_ANNUAL = 6 bulan
-  SEMI_ANNUAL 
+  SEMI_ANNUAL
   ANNUALLY
 }
 
@@ -52,6 +52,17 @@ enum InvoiceStatus {
 enum TransactionType {
   INCOME
   EXPENSE
+}
+
+enum PaymentMethod {
+  TRANSFER
+  CASH
+  QRIS
+}
+
+enum ExpenseClassification {
+  OPERATIONAL
+  INVESTMENT
 }
 
 enum TransactionCategory {
@@ -181,21 +192,21 @@ model Verification {
 // ====================================================
 
 model Property {
-  id                 String               @id @default(cuid())
-  name               String
-  address            String
-  description        String?
-  bankAccountInfo    String?
-  imageUrl           String?
-  rooms              Room[]
-  cctvDevices        CctvDevice[]
-  userAccesses       UserPropertyAccess[]
-  assignedUsers      User[]               @relation("AssignedPropertyUsers")
-  transactions       Transaction[]
-  announcements      Announcement[]
-  aiFinancialReports AiFinancialReport[]
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id                    String               @id @default(cuid())
+  name                  String
+  address               String
+  description           String?
+  imageUrl              String?              @db.Text
+  rooms                 Room[]
+  cctvDevices           CctvDevice[]
+  userAccesses          UserPropertyAccess[]
+  assignedUsers         User[]               @relation("AssignedPropertyUsers")
+  transactions          Transaction[]
+  sharedCostAllocations SharedCostProperty[]
+  announcements         Announcement[]
+  aiFinancialReports    AiFinancialReport[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   @@map("properties")
 }
@@ -252,13 +263,19 @@ model Tenant {
   id                 String           @id @default(cuid())
   name               String
   NIK                String           @unique
-  identityCardNumber String?
   phoneNumber        String
   whatsappNumber     String?
   email              String?
   birthDate          DateTime?
   occupation         String?
+  institution        String?
   originAddress      String?
+  emergencyName      String?
+  emergencyRelation  String?
+  emergencyPhone     String?
+  vehicle            String?
+  deposit            Decimal?         @default(0) @db.Decimal(12, 2)
+  notes              String?          @db.Text
   status             TenantStatus     @default(ACTIVE)
   rentalContracts    RentalContract[]
   createdAt          DateTime         @default(now())
@@ -301,6 +318,7 @@ model Invoice {
   paidAt        DateTime?
   status        InvoiceStatus  @default(PENDING)
   pdfUrl        String?
+  transactions  Transaction[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -312,22 +330,51 @@ model Invoice {
 // ====================================================
 
 model Transaction {
-  id              String              @id @default(cuid())
-  propertyId      String
-  property        Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  id              String                 @id @default(cuid())
+  propertyId      String?
+  property        Property?              @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   createdBy       String
-  creator         User                @relation("UserTransactions", fields: [createdBy], references: [id], onDelete: Restrict)
+  creator         User                   @relation("UserTransactions", fields: [createdBy], references: [id], onDelete: Restrict)
+  invoiceId       String?
+  invoice         Invoice?               @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   complaintId     String?
-  complaint       Complaint?          @relation(fields: [complaintId], references: [id], onDelete: SetNull)
-  type            TransactionType     @default(EXPENSE)
-  category        TransactionCategory @default(OTHER)
-  amount          Decimal             @db.Decimal(12, 2)
+  complaint       Complaint?             @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+  type            TransactionType        @default(EXPENSE)
+  category        TransactionCategory    @default(OTHER)
+  classification  ExpenseClassification? @default(OPERATIONAL)
+  paymentMethod   PaymentMethod          @default(TRANSFER)
+  amount          Decimal                @db.Decimal(12, 2)
   description     String?
-  transactionDate DateTime            @default(now())
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  transactionDate DateTime               @default(now())
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   @@map("transactions")
+}
+
+model SharedCost {
+  id          String               @id @default(cuid())
+  description String
+  amount      Decimal              @db.Decimal(12, 2)
+  splitMethod String               @default("Rata per kos")
+  allocations SharedCostProperty[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@map("shared_costs")
+}
+
+model SharedCostProperty {
+  id              String     @id @default(cuid())
+  sharedCostId    String
+  sharedCost      SharedCost @relation(fields: [sharedCostId], references: [id], onDelete: Cascade)
+  propertyId      String
+  property        Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  allocatedAmount Decimal?   @db.Decimal(12, 2)
+  createdAt       DateTime   @default(now())
+
+  @@unique([sharedCostId, propertyId])
+  @@map("shared_cost_properties")
 }
 
 model Complaint {

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, LogOut } from "lucide-react";
 import { useState } from "react";
 import type { PropertyItem } from "../../common/types/index.ts";
 import type { PropertyFormValues } from "../../common/validations/index.ts";
@@ -9,7 +9,13 @@ import {
 	PropertyDeleteDialog,
 	PropertyFormDialog,
 } from "../../components/property/index.ts";
-import { useSetActiveProperty } from "../../hooks/index.ts";
+import {
+	useCreateProperty,
+	useDeleteProperty,
+	useProperties,
+	useSetActiveProperty,
+	useUpdateProperty,
+} from "../../hooks/index.ts";
 import { authClient } from "../../lib/auth-client.ts";
 
 export const Route = createFileRoute("/dashboard/select-property")({
@@ -32,49 +38,22 @@ export const Route = createFileRoute("/dashboard/select-property")({
 	component: SelectPropertyPage,
 });
 
-// ─── Mock Data (akan diganti API call) ─────────────────────────────────────
-const MOCK_PROPERTIES: PropertyItem[] = [
-	{
-		id: "prop-a",
-		code: "A",
-		name: "Kos A",
-		address: "Jl. Kaliurang KM 5, Sleman, Yogyakarta",
-		description: "Kos eksklusif 2 lantai dekat kampus UGM",
-		bankAccountInfo: "BCA 829102910 a.n Frisda",
-		imageUrl: null,
-		rooms: 8,
-		tenants: 7,
-	},
-	{
-		id: "prop-b",
-		code: "B",
-		name: "Kos B",
-		address: "Jl. Malioboro No. 12, Yogyakarta",
-		description: "Kos strategis tengah kota Yogyakarta",
-		bankAccountInfo: "Mandiri 13700192839 a.n Frisda",
-		imageUrl: null,
-		rooms: 10,
-		tenants: 8,
-	},
-	{
-		id: "prop-c",
-		code: "C",
-		name: "Kos C",
-		address: "Jl. Solo KM 8, Yogyakarta",
-		description: "Kos tenang dengan area parkir luas",
-		bankAccountInfo: "BRI 019283910283 a.n Frisda",
-		imageUrl: null,
-		rooms: 12,
-		tenants: 9,
-	},
-];
-
-// ─── Page Component ─────────────────────────────────────────────────────────
 function SelectPropertyPage() {
 	const navigate = useNavigate();
 
-	const [properties, setProperties] = useState<PropertyItem[]>(MOCK_PROPERTIES);
+	// TanStack Query hooks
+	const {
+		data: properties = [],
+		isLoading,
+		error: queryError,
+	} = useProperties();
+	const createMutation = useCreateProperty();
+	const updateMutation = useUpdateProperty();
+	const deleteMutation = useDeleteProperty();
+	const setActivePropertyMutation = useSetActiveProperty();
+
 	const [toastMessage, setToastMessage] = useState<string | null>(null);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	// Dialog states
 	const [isFormOpen, setIsFormOpen] = useState(false);
@@ -85,13 +64,17 @@ function SelectPropertyPage() {
 		null,
 	);
 
-	// ─── Helpers ───────────────────────────────────────────────────────────
 	const showToast = (msg: string) => {
 		setToastMessage(msg);
 		setTimeout(() => setToastMessage(null), 3000);
 	};
 
-	// ─── Handlers ──────────────────────────────────────────────────────────
+	const showError = (msg: string) => {
+		setErrorMessage(msg);
+		setTimeout(() => setErrorMessage(null), 4000);
+	};
+
+	// Handlers
 	const handleOpenAdd = () => {
 		setEditingProperty(null);
 		setIsFormOpen(true);
@@ -106,62 +89,68 @@ function SelectPropertyPage() {
 		values: PropertyFormValues,
 		imageUrl: string | null,
 	) => {
-		if (editingProperty) {
-			setProperties((prev) =>
-				prev.map((p) =>
-					p.id === editingProperty.id
-						? {
-								...p,
-								name: values.name,
-								address: values.address,
-								description: values.description || null,
-								bankAccountInfo: values.bankAccountInfo || null,
-								imageUrl: imageUrl || values.imageUrl || null,
-								rooms: values.totalRooms,
-							}
-						: p,
-				),
-			);
-			showToast(`Properti "${values.name}" berhasil diperbarui`);
-		} else {
-			const nextCode =
-				values.name.trim().charAt(0).toUpperCase() ||
-				String.fromCharCode(65 + (properties.length % 26));
+		const payload: PropertyFormValues = {
+			...values,
+			imageUrl: imageUrl || values.imageUrl || "",
+		};
 
-			setProperties((prev) => [
-				...prev,
+		if (editingProperty) {
+			updateMutation.mutate(
+				{ id: editingProperty.id, data: payload },
 				{
-					id: `prop-${Date.now()}`,
-					code: nextCode,
-					name: values.name,
-					address: values.address,
-					description: values.description || null,
-					bankAccountInfo: values.bankAccountInfo || null,
-					imageUrl: imageUrl || values.imageUrl || null,
-					rooms: values.totalRooms,
-					tenants: 0,
+					onSuccess: (updated) => {
+						showToast(`Properti "${updated.name}" berhasil diperbarui`);
+						setIsFormOpen(false);
+						setEditingProperty(null);
+					},
+					onError: (err) => {
+						showError(
+							err instanceof Error ? err.message : "Gagal memperbarui properti",
+						);
+					},
 				},
-			]);
-			showToast(`Properti baru "${values.name}" berhasil ditambahkan`);
+			);
+		} else {
+			createMutation.mutate(payload, {
+				onSuccess: (created) => {
+					showToast(`Properti baru "${created.name}" berhasil ditambahkan`);
+					setIsFormOpen(false);
+				},
+				onError: (err) => {
+					showError(
+						err instanceof Error ? err.message : "Gagal menambahkan properti",
+					);
+				},
+			});
 		}
 	};
 
 	const handleDeleteConfirm = () => {
 		if (!deletingProperty) return;
-		setProperties((prev) => prev.filter((p) => p.id !== deletingProperty.id));
-		showToast(`Properti "${deletingProperty.name}" telah dihapus`);
-		setDeletingProperty(null);
+		deleteMutation.mutate(deletingProperty.id, {
+			onSuccess: () => {
+				showToast(`Properti "${deletingProperty.name}" telah dihapus`);
+				setDeletingProperty(null);
+			},
+			onError: (err) => {
+				showError(
+					err instanceof Error ? err.message : "Gagal menghapus properti",
+				);
+			},
+		});
 	};
 
-	const setActivePropertyMutation = useSetActiveProperty();
-
-	const handleEnterProperty = async (property: PropertyItem) => {
-		try {
-			await setActivePropertyMutation.mutateAsync({ propertyId: property.id });
-		} catch (e) {
-			console.error("Gagal memilih properti:", e);
-		}
-		navigate({ to: "/dashboard" });
+	const handleCardClick = (property: PropertyItem) => {
+		setActivePropertyMutation.mutate(
+			{ propertyId: property.id },
+			{
+				onSuccess: () => {
+					navigate({
+						to: "/dashboard",
+					});
+				},
+			},
+		);
 	};
 
 	const handleLogout = async () => {
@@ -173,17 +162,22 @@ function SelectPropertyPage() {
 		window.location.href = "/login";
 	};
 
-	// ─── Render ────────────────────────────────────────────────────────────
 	return (
 		<div className="p-6 max-w-[980px] mx-auto">
-			{/* Toast */}
-			<div
-				className={`toast ${toastMessage ? "show" : ""}`}
-				role="status"
-				aria-live="polite"
-			>
-				{toastMessage}
-			</div>
+			{/* Toast Notifications */}
+			{toastMessage && (
+				<div className="fixed bottom-6 right-6 z-50 bg-[#253129] text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+					<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
+					<span>{toastMessage}</span>
+				</div>
+			)}
+
+			{errorMessage && (
+				<div className="fixed bottom-6 right-6 z-50 bg-[#3a1d1a] border border-[#a45149] text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+					<AlertCircle className="w-4 h-4 text-[#e07d75]" />
+					<span>{errorMessage}</span>
+				</div>
+			)}
 
 			{/* Header */}
 			<div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-3">
@@ -200,23 +194,41 @@ function SelectPropertyPage() {
 					</p>
 				</div>
 				<div className="text-[11px] text-[#607066] bg-white border border-[#e2e9e3] px-3 py-2 rounded-[12px] font-medium shadow-xs self-start sm:self-auto">
-					Frisda · Owner
+					Owner / SuperAdmin
 				</div>
 			</div>
 
 			{/* Property Grid */}
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				{properties.map((prop) => (
-					<PropertyCard
-						key={prop.id}
-						property={prop}
-						onEnter={handleEnterProperty}
-						onEdit={handleOpenEdit}
-						onDelete={setDeletingProperty}
-					/>
-				))}
-				<AddPropertyCard onClick={handleOpenAdd} />
-			</div>
+			{isLoading || setActivePropertyMutation.isPending ? (
+				<div className="p-16 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-2 shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
+					<Loader2 className="w-7 h-7 text-[#4f6958] animate-spin" />
+					<p className="text-xs text-[#737873]">
+						{setActivePropertyMutation.isPending
+							? "Mengaktifkan properti terpilih..."
+							: "Memuat daftar properti kos..."}
+					</p>
+				</div>
+			) : queryError ? (
+				<div className="p-6 bg-[#fff7f6] border border-[#f5cfcc] rounded-2xl text-xs text-[#a45149]">
+					<b className="font-bold block mb-1">Gagal memuat data properti:</b>
+					{queryError instanceof Error
+						? queryError.message
+						: "Terjadi kesalahan pada server."}
+				</div>
+			) : (
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+					{properties.map((prop) => (
+						<PropertyCard
+							key={prop.id}
+							property={prop}
+							onEnter={handleCardClick}
+							onEdit={handleOpenEdit}
+							onDelete={setDeletingProperty}
+						/>
+					))}
+					<AddPropertyCard onClick={handleOpenAdd} />
+				</div>
+			)}
 
 			{/* Bottom Toolbar */}
 			<div className="flex items-center justify-between mt-5 pt-3 border-t border-[#edf1ed]">

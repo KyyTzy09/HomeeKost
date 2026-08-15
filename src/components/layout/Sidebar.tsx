@@ -154,29 +154,30 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 					))}
 				</nav>
 
-				{/* Bottom Area */}
+				{/* Bottom Profile Area */}
 				<div className="sidebar-bottom">
-					<div className="help">
-						<strong>Bantuan Cepat</strong>
-						WhatsApp support siap membantu operasional kos Anda.
-					</div>
-
 					<div
-						className="profile-mini cursor-pointer"
+						className="profile-mini cursor-pointer hover:bg-[#f4f8f4] transition-colors rounded-[10px]"
 						onClick={handleLogout}
 						title="Klik untuk keluar akun"
 					>
 						<div className="avatar">{initials}</div>
 						<div className="flex-1 min-w-0">
-							<strong className="truncate block">{user.name}</strong>
+							<strong className="truncate block text-[#252925] text-[12px] font-bold">
+								{user.name}
+							</strong>
 							<span className="truncate block text-[11px] text-[#737873]">
-								{isSuperAdmin ? "SuperAdmin (Owner)" : "Admin Staf"}
+								{isSuperAdmin ? "Owner" : "Admin Staf"}
 							</span>
 						</div>
-						<span className="text-[10px] text-[#a65f5b] font-bold flex items-center gap-1 shrink-0">
-							<LogOut className="w-3 h-3" />
-							Keluar
-						</span>
+						<button
+							type="button"
+							className="text-[10px] text-[#a65f5b] hover:text-[#8a4a46] font-semibold flex items-center gap-1 shrink-0 p-1.5 rounded-[6px] hover:bg-[#faeae8] transition-colors"
+							title="Keluar dari akun"
+						>
+							<LogOut className="w-3.5 h-3.5" />
+							<span className="hidden sm:inline">Keluar</span>
+						</button>
 					</div>
 				</div>
 			</aside>

@@ -7,15 +7,13 @@ export class PropertyRepository {
 	async findAll() {
 		return this.db.property.findMany({
 			orderBy: { name: "asc" },
-			select: {
-				id: true,
-				name: true,
-				address: true,
-				description: true,
-				bankAccountInfo: true,
-				imageUrl: true,
-				createdAt: true,
-				updatedAt: true,
+			include: {
+				rooms: {
+					select: {
+						id: true,
+						status: true,
+					},
+				},
 			},
 		});
 	}
@@ -23,15 +21,17 @@ export class PropertyRepository {
 	async findById(id: string) {
 		return this.db.property.findUnique({
 			where: { id },
-			select: {
-				id: true,
-				name: true,
-				address: true,
-				description: true,
-				bankAccountInfo: true,
-				imageUrl: true,
-				createdAt: true,
-				updatedAt: true,
+			include: {
+				rooms: {
+					include: {
+						rentalContracts: {
+							where: { status: "ACTIVE" },
+							include: {
+								tenant: true,
+							},
+						},
+					},
+				},
 			},
 		});
 	}
@@ -40,10 +40,28 @@ export class PropertyRepository {
 		const user = await this.db.user.findUnique({
 			where: { id: userId },
 			include: {
-				assignedProperty: true,
+				assignedProperty: {
+					include: {
+						rooms: {
+							select: {
+								id: true,
+								status: true,
+							},
+						},
+					},
+				},
 				propertyAccesses: {
 					include: {
-						property: true,
+						property: {
+							include: {
+								rooms: {
+									select: {
+										id: true,
+										status: true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -63,6 +81,56 @@ export class PropertyRepository {
 		}
 
 		return Array.from(propertiesMap.values());
+	}
+
+	async createProperty(data: {
+		name: string;
+		address: string;
+		description?: string | null;
+		imageUrl?: string | null;
+	}) {
+		return this.db.property.create({
+			data: {
+				name: data.name,
+				address: data.address,
+				description: data.description ?? null,
+				imageUrl: data.imageUrl ?? null,
+			},
+			include: {
+				rooms: true,
+			},
+		});
+	}
+
+	async updateProperty(
+		id: string,
+		data: {
+			name?: string;
+			address?: string;
+			description?: string | null;
+			imageUrl?: string | null;
+		},
+	) {
+		return this.db.property.update({
+			where: { id },
+			data: {
+				...(data.name !== undefined && { name: data.name }),
+				...(data.address !== undefined && { address: data.address }),
+				...(data.description !== undefined && {
+					description: data.description,
+				}),
+				...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+			},
+			include: {
+				rooms: true,
+			},
+		});
+	}
+
+	async deleteProperty(id: string) {
+		return this.db.property.delete({
+			where: { id },
+		});
 	}
 }
 
