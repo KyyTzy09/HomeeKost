@@ -1,31 +1,28 @@
-import { useState } from 'react'
-import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { Sidebar } from '../components/layout/Sidebar'
-import { Topbar } from '../components/layout/Topbar'
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useState } from "react";
+import { Sidebar } from "../components/layout/Sidebar";
+import { Topbar } from "../components/layout/Topbar";
 
-export const Route = createFileRoute('/dashboard')({
-  component: DashboardLayout,
-})
+export const Route = createFileRoute("/dashboard")({
+	component: DashboardLayout,
+});
 
 function DashboardLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+	const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  return (
-    <div className="app">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-      <main className="main">
-        <Topbar
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          currentTitle="Dashboard"
-          propertyName="Kost Melati Indah"
-        />
-        <div className="content" id="mainContent">
-          <Outlet />
-        </div>
-      </main>
-    </div>
-  )
+	return (
+		<div className="app">
+			<Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+			<main className="main">
+				<Topbar
+					onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+					currentTitle="Dashboard"
+					propertyName="Kost Melati Indah"
+				/>
+				<div className="content" id="mainContent">
+					<Outlet />
+				</div>
+			</main>
+		</div>
+	);
 }

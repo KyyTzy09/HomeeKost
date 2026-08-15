@@ -96,12 +96,12 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
   - Input Global Search dengan popup hasil pencarian
   - Tombol Notifikasi Popover & Avatar Profil Mini Popover
 - [x] 🔴 Layout Route `/dashboard` & Root Dashboard Page `/dashboard/index.tsx` (Desktop fixed sidebar 244px, sticky topbar 72px, max-width content 1550px)
-- [ ] 🔴 Komponen Reusable Primitives UI:
-  - `Button.tsx` (primary, secondary, destructive, icon-btn)
-  - `Input.tsx`, `Select.tsx`, `Badge.tsx` (`.hk-badge-green`, `.hk-badge-amber`, `.hk-badge-red`)
-  - `Card.tsx`, `Table.tsx`, `Pagination.tsx`
-  - `Modal.tsx` (Backdrop scrim `rgba(28,40,31,0.30)`, border-radius 20px, animasi halus)
-  - `Toast.tsx` (Notifikasi pojok kanan bawah `#253129`)
+- [x] 🔴 Komponen Reusable Primitives UI (Shadcn UI + Lucide React + Chart.js):
+  - `button.tsx` (default, outline, secondary, ghost, destructive, icon)
+  - `input.tsx`, `select.tsx`, `combobox.tsx`, `label.tsx`, `badge`
+  - `card.tsx`, `skeleton.tsx`, `separator.tsx`, `sheet.tsx`, `sidebar.tsx`
+  - `RevenueExpenseChart.tsx` & `OccupancyDonutChart.tsx` (Chart.js + react-chartjs-2)
+  - `Toast` notification popup & skeleton loader state
 
 ---
 
