@@ -1,6 +1,5 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { jwt } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { prisma } from "../db.ts";
 
@@ -12,17 +11,19 @@ export const auth = betterAuth({
 		enabled: true,
 	},
 	session: {
+		expiresIn: 60 * 60 * 24 * 7, // 7 hari
+		updateAge: 60 * 60 * 24, // Update token setiap 1 hari
 		cookieCache: {
 			enabled: true,
-			maxAge: 60 * 60 * 24 * 7, // 7 days cookie cache
+			maxAge: 60 * 60 * 24 * 7, // 7 hari
+			strategy: "jwt", // Stateless — session disimpan di cookie JWT, tidak query tabel sessions
+			refreshCache: true,
 		},
 	},
+	account: {
+		storeStateStrategy: "cookie",
+	},
 	plugins: [
-		jwt({
-			jwt: {
-				expirationTime: "7d",
-			},
-		}),
-		tanstackStartCookies(), // Must be the last plugin in the array
+		tanstackStartCookies(), // Harus plugin terakhir
 	],
 });

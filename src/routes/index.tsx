@@ -35,7 +35,7 @@ function SessionGatewayPage() {
 
 				// SuperAdmin with multi-property access
 				if (user.role === "SUPER_ADMIN") {
-					navigate({ to: "/select-property", replace: true });
+					navigate({ to: "/dashboard/select-property", replace: true });
 					return;
 				}
 

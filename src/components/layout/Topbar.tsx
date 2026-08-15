@@ -73,7 +73,7 @@ export function Topbar({
 					className="property-chip"
 					id="propertySwitcher"
 					type="button"
-					onClick={() => navigate({ to: "/select-property" })}
+					onClick={() => navigate({ to: "/dashboard/select-property" })}
 					title="Klik untuk ganti cabang kos"
 				>
 					<span className="property-dot"></span>

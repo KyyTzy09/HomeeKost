@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	BarChart3,
 	BedDouble,
@@ -18,12 +18,11 @@ import { authClient } from "../../lib/auth-client.ts";
 interface SidebarProps {
 	isOpen: boolean;
 	onClose: () => void;
+	setCurrentTitle?: (title: string) => void;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
 	const navigate = useNavigate();
-	const routerState = useRouterState();
-	const currentPath = routerState.location.pathname;
 
 	const handleLogout = async () => {
 		if (typeof window !== "undefined") {
@@ -36,15 +35,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
 	const navLinks = [
 		{
+			to: "/dashboard/select-property",
+			label: "Pilih Kos",
+			icon: <Building2 className="w-[17px] h-[17px]" />,
+		},
+		{
 			to: "/dashboard",
 			label: "Dashboard",
 			icon: <LayoutDashboard className="w-[17px] h-[17px]" />,
 			exact: true,
-		},
-		{
-			to: "/select-property",
-			label: "Pilih Kos",
-			icon: <Building2 className="w-[17px] h-[17px]" />,
 		},
 		{
 			to: "/dashboard/rooms",
@@ -111,24 +110,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
 				{/* Navigation */}
 				<nav className="nav">
-					{navLinks.map((item) => {
-						const isActive = item.exact
-							? currentPath === item.to || currentPath === `${item.to}/`
-							: currentPath.startsWith(item.to);
-
-						return (
-							<Link
-								key={item.to}
-								to={item.to}
-								onClick={onClose}
-								activeOptions={{ exact: item.exact ?? false }}
-								activeProps={{ className: "active" }}
-							>
-								<span className="icon">{item.icon}</span>
-								<span>{item.label}</span>
-							</Link>
-						);
-					})}
+					{navLinks.map((item) => (
+						<Link
+							key={item.to}
+							to={item.to}
+							onClick={onClose}
+							activeOptions={{ exact: item.exact ?? false }}
+							activeProps={{ className: "active" }}
+						>
+							<span className="icon">{item.icon}</span>
+							<span>{item.label}</span>
+						</Link>
+					))}
 				</nav>
 
 				{/* Bottom Area */}

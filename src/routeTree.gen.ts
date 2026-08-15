@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as SelectPropertyRouteImport } from './routes/select-property'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardCctvRouteImport } from './routes/dashboard/cctv'
 import { Route as DashboardEngagementRouteImport } from './routes/dashboard/engagement'
@@ -21,6 +20,7 @@ import { Route as DashboardInvoicesRouteImport } from './routes/dashboard/invoic
 import { Route as DashboardPaymentsRouteImport } from './routes/dashboard/payments'
 import { Route as DashboardReportsRouteImport } from './routes/dashboard/reports'
 import { Route as DashboardRoomsRouteImport } from './routes/dashboard/rooms'
+import { Route as DashboardSelectPropertyRouteImport } from './routes/dashboard/select-property'
 import { Route as DashboardTenantsRouteImport } from './routes/dashboard/tenants'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -38,11 +38,6 @@ const DashboardRoute = DashboardRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SelectPropertyRoute = SelectPropertyRouteImport.update({
-  id: '/select-property',
-  path: '/select-property',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -85,6 +80,11 @@ const DashboardRoomsRoute = DashboardRoomsRouteImport.update({
   path: '/rooms',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardSelectPropertyRoute = DashboardSelectPropertyRouteImport.update({
+  id: '/select-property',
+  path: '/select-property',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardTenantsRoute = DashboardTenantsRouteImport.update({
   id: '/tenants',
   path: '/tenants',
@@ -105,7 +105,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
-  '/select-property': typeof SelectPropertyRoute
   '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
@@ -113,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/payments': typeof DashboardPaymentsRoute
   '/dashboard/reports': typeof DashboardReportsRoute
   '/dashboard/rooms': typeof DashboardRoomsRoute
+  '/dashboard/select-property': typeof DashboardSelectPropertyRoute
   '/dashboard/tenants': typeof DashboardTenantsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -121,7 +121,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/select-property': typeof SelectPropertyRoute
   '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
@@ -129,6 +128,7 @@ export interface FileRoutesByTo {
   '/dashboard/payments': typeof DashboardPaymentsRoute
   '/dashboard/reports': typeof DashboardReportsRoute
   '/dashboard/rooms': typeof DashboardRoomsRoute
+  '/dashboard/select-property': typeof DashboardSelectPropertyRoute
   '/dashboard/tenants': typeof DashboardTenantsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -139,7 +139,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
-  '/select-property': typeof SelectPropertyRoute
   '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
@@ -147,6 +146,7 @@ export interface FileRoutesById {
   '/dashboard/payments': typeof DashboardPaymentsRoute
   '/dashboard/reports': typeof DashboardReportsRoute
   '/dashboard/rooms': typeof DashboardRoomsRoute
+  '/dashboard/select-property': typeof DashboardSelectPropertyRoute
   '/dashboard/tenants': typeof DashboardTenantsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -158,7 +158,6 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
-    | '/select-property'
     | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
@@ -166,6 +165,7 @@ export interface FileRouteTypes {
     | '/dashboard/payments'
     | '/dashboard/reports'
     | '/dashboard/rooms'
+    | '/dashboard/select-property'
     | '/dashboard/tenants'
     | '/dashboard/users'
     | '/dashboard/'
@@ -174,7 +174,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
-    | '/select-property'
     | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
@@ -182,6 +181,7 @@ export interface FileRouteTypes {
     | '/dashboard/payments'
     | '/dashboard/reports'
     | '/dashboard/rooms'
+    | '/dashboard/select-property'
     | '/dashboard/tenants'
     | '/dashboard/users'
     | '/dashboard'
@@ -191,7 +191,6 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
-    | '/select-property'
     | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
@@ -199,6 +198,7 @@ export interface FileRouteTypes {
     | '/dashboard/payments'
     | '/dashboard/reports'
     | '/dashboard/rooms'
+    | '/dashboard/select-property'
     | '/dashboard/tenants'
     | '/dashboard/users'
     | '/dashboard/'
@@ -209,7 +209,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
-  SelectPropertyRoute: typeof SelectPropertyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -234,13 +233,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/select-property': {
-      id: '/select-property'
-      path: '/select-property'
-      fullPath: '/select-property'
-      preLoaderRoute: typeof SelectPropertyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -299,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRoomsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/select-property': {
+      id: '/dashboard/select-property'
+      path: '/select-property'
+      fullPath: '/dashboard/select-property'
+      preLoaderRoute: typeof DashboardSelectPropertyRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/tenants': {
       id: '/dashboard/tenants'
       path: '/tenants'
@@ -331,6 +330,7 @@ interface DashboardRouteChildren {
   DashboardPaymentsRoute: typeof DashboardPaymentsRoute
   DashboardReportsRoute: typeof DashboardReportsRoute
   DashboardRoomsRoute: typeof DashboardRoomsRoute
+  DashboardSelectPropertyRoute: typeof DashboardSelectPropertyRoute
   DashboardTenantsRoute: typeof DashboardTenantsRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -344,6 +344,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardPaymentsRoute: DashboardPaymentsRoute,
   DashboardReportsRoute: DashboardReportsRoute,
   DashboardRoomsRoute: DashboardRoomsRoute,
+  DashboardSelectPropertyRoute: DashboardSelectPropertyRoute,
   DashboardTenantsRoute: DashboardTenantsRoute,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardIndexRoute: DashboardIndexRoute,
@@ -357,7 +358,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
-  SelectPropertyRoute: SelectPropertyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
