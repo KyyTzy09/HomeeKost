@@ -36,6 +36,13 @@ interface EngagementEventDialogProps {
 	isLoading?: boolean;
 }
 
+const CATEGORY_OPTIONS: { label: string; value: AnnouncementCategory }[] = [
+	{ label: "📢 Umum / Informasi", value: "UMUM" },
+	{ label: "🧹 Kerja Bakti & Kebersihan", value: "KERJA_BAKTI" },
+	{ label: "🔧 Maintenance & Fasilitas", value: "MAINTENANCE" },
+	{ label: "🎉 Acara / Kegiatan Bersama", value: "ACARA" },
+];
+
 export function EngagementEventDialog({
 	open,
 	onOpenChange,
@@ -46,6 +53,11 @@ export function EngagementEventDialog({
 	isLoading = false,
 }: EngagementEventDialogProps) {
 	const isAdmin = userRole === "ADMIN";
+
+	const propertyOptions = [
+		{ label: "📢 Semua Cabang Kos (Global)", value: "ALL" },
+		...properties.map((p) => ({ label: `🏠 ${p.name}`, value: p.id })),
+	];
 
 	const form = useForm({
 		defaultValues: {
@@ -163,87 +175,96 @@ export function EngagementEventDialog({
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
 						{/* Target Kos (RBAC Enforced) */}
 						<form.Field name="propertyId">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925] flex items-center justify-between">
-										<span>Target Cabang Kos</span>
-										{isAdmin && (
-											<span className="text-[10px] font-normal text-[#99773d] flex items-center gap-1">
-												<Lock className="w-3 h-3" />
-												Terkunci (Admin)
-											</span>
+							{(field) => {
+								const currentPropVal = field.state.value || "ALL";
+								const selectedPropOption = propertyOptions.find(
+									(opt) => opt.value === currentPropVal,
+								);
+
+								return (
+									<div className="space-y-1.5">
+										<Label className="text-xs font-semibold text-[#252925] flex items-center justify-between">
+											<span>Target Cabang Kos</span>
+											{isAdmin && (
+												<span className="text-[10px] font-normal text-[#99773d] flex items-center gap-1">
+													<Lock className="w-3 h-3" />
+													Terkunci (Admin)
+												</span>
+											)}
+										</Label>
+										{isAdmin ? (
+											<div className="border border-[#e4e9e4] bg-[#f5f8f5] text-xs h-10 px-3 flex items-center rounded-md font-medium text-[#252925]">
+												🏠 {assignedPropertyName}
+											</div>
+										) : (
+											<Select
+												value={currentPropVal}
+												onValueChange={(val) => {
+													if (val) field.handleChange(val);
+												}}
+											>
+												<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+													<SelectValue placeholder="Pilih Target Kos">
+														{selectedPropOption?.label}
+													</SelectValue>
+												</SelectTrigger>
+												<SelectContent className="bg-white border-[#e4e9e4]">
+													{propertyOptions.map((prop) => (
+														<SelectItem
+															key={prop.value}
+															value={prop.value}
+															className="text-xs"
+														>
+															{prop.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
 										)}
-									</Label>
-									{isAdmin ? (
-										<div className="border border-[#e4e9e4] bg-[#f5f8f5] text-xs h-10 px-3 flex items-center rounded-md font-medium text-[#252925]">
-											🏠 {assignedPropertyName}
-										</div>
-									) : (
-										<Select
-											value={field.state.value || "ALL"}
-											onValueChange={(val) => {
-												if (val) field.handleChange(val);
-											}}
-										>
-											<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-												<SelectValue placeholder="Pilih Target Kos" />
-											</SelectTrigger>
-											<SelectContent className="bg-white border-[#e4e9e4]">
-												<SelectItem
-													value="ALL"
-													className="text-xs font-semibold"
-												>
-													📢 Semua Cabang Kos (Global)
-												</SelectItem>
-												{properties.map((prop) => (
-													<SelectItem
-														key={prop.id}
-														value={prop.id}
-														className="text-xs"
-													>
-														🏠 {prop.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									)}
-								</div>
-							)}
+									</div>
+								);
+							}}
 						</form.Field>
 
 						{/* Kategori Pengumuman */}
 						<form.Field name="category">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Kategori Pengumuman
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) field.handleChange(val as AnnouncementCategory);
-										}}
-									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Kategori" />
-										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
-											<SelectItem value="UMUM" className="text-xs">
-												📢 Umum / Informasi
-											</SelectItem>
-											<SelectItem value="KERJA_BAKTI" className="text-xs">
-												🧹 Kerja Bakti & Kebersihan
-											</SelectItem>
-											<SelectItem value="MAINTENANCE" className="text-xs">
-												🔧 Maintenance & Fasilitas
-											</SelectItem>
-											<SelectItem value="ACARA" className="text-xs">
-												🎉 Acara / Kegiatan Bersama
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+							{(field) => {
+								const selectedCategoryOption = CATEGORY_OPTIONS.find(
+									(opt) => opt.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1.5">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Kategori Pengumuman
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) => {
+												if (val)
+													field.handleChange(val as AnnouncementCategory);
+											}}
+										>
+											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+												<SelectValue placeholder="Pilih Kategori">
+													{selectedCategoryOption?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent className="bg-white border-[#e4e9e4]">
+												{CATEGORY_OPTIONS.map((opt) => (
+													<SelectItem
+														key={opt.value}
+														value={opt.value}
+														className="text-xs"
+													>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								);
+							}}
 						</form.Field>
 					</div>
 

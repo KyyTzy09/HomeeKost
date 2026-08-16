@@ -45,7 +45,6 @@ export const Route = createFileRoute("/dashboard/finance")({
 
 function FinancePage() {
 	const dashboardContext = useDashboardContext();
-	1;
 	const activePropertyId = dashboardContext.activeProperty?.id;
 	const isSuperAdmin = dashboardContext.isSuperAdmin;
 	const currentUserId = dashboardContext.user?.id;

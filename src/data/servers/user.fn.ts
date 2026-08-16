@@ -1,7 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { AuditLogItem, UserItem } from "../../common/types/index.ts";
+import type {
+	AuditLogItem,
+	UserItem,
+	UserProfileDetail,
+} from "../../common/types/index.ts";
 import {
+	type ChangePasswordFormValues,
+	changePasswordSchema,
+	type ProfileUpdateFormValues,
+	profileUpdateSchema,
 	type UserFormValues,
 	userFormSchema,
 } from "../../common/validations/index.ts";
@@ -86,6 +94,57 @@ export const deleteUserServerFn = createServerFn({
 			);
 		},
 	);
+
+export const getMyProfileServerFn = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<UserProfileDetail> => {
+	return executeWithLogging(
+		"getMyProfileServerFn",
+		{},
+		(session) => userManagementService.getMyProfile(session.user.id),
+		{
+			method: "GET",
+			summary: (res) => `Profil ${res.name} (${res.role})`,
+		},
+	);
+});
+
+export const updateMyProfileServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: ProfileUpdateFormValues) => {
+		return profileUpdateSchema.parse(input);
+	})
+	.handler(async ({ data }): Promise<UserProfileDetail> => {
+		return executeWithLogging(
+			"updateMyProfileServerFn",
+			data,
+			(session) => userManagementService.updateMyProfile(session.user.id, data),
+			{
+				method: "POST",
+				summary: (res) => `Profil ${res.name} berhasil diperbarui`,
+			},
+		);
+	});
+
+export const changeMyPasswordServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: ChangePasswordFormValues) => {
+		return changePasswordSchema.parse(input);
+	})
+	.handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+		return executeWithLogging(
+			"changeMyPasswordServerFn",
+			{},
+			(session) =>
+				userManagementService.changeMyPassword(session.user.id, data),
+			{
+				method: "POST",
+				summary: (res) => res.message,
+			},
+		);
+	});
 
 export const getUserAuditLogsServerFn = createServerFn({
 	method: "GET",

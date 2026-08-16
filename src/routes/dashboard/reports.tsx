@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	AlertCircle,
 	Building2,
 	Calendar,
 	CheckCircle2,
-	Download,
+	Loader2,
+	Printer,
 	RefreshCw,
 	Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Select,
@@ -16,15 +18,23 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
-import type { AiMonthlyReportData } from "../../common/types/index.ts";
 import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import {
 	AutomationSettingsDialog,
 	ReportAiInsightPanel,
+	ReportAnnualMatrixCard,
 	ReportAutomationCard,
 	ReportKpiCards,
 	ReportRoomExpenseBreakdown,
 } from "../../components/report/index.ts";
+import {
+	useAnnualReportMatrix,
+	useDashboardContext,
+	useExportAnnualReportCsv,
+	useMonthlyReport,
+	useProperties,
+	useRegenerateAiInsight,
+} from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/reports")({
 	head: () => ({
@@ -38,133 +48,175 @@ export const Route = createFileRoute("/dashboard/reports")({
 	component: ReportsPage,
 });
 
-// ─── Initial Mock Report Data (Fokus 1 Cabang Kos Aktif: Kos A) ──────────────
-const INITIAL_REPORT: AiMonthlyReportData = {
-	id: 1,
-	propertyId: "kos-a",
-	propertyName: "Kos A (Kaliurang)",
-	periodMonth: "Juli",
-	periodYear: 2026,
-	isClosedPeriod: true, // Tutup Buku Bulan Lalu
-	totalIncome: 6_800_000,
-	totalExpense: 2_100_000,
-	netProfit: 4_700_000,
-	roomStatus: {
-		totalRooms: 8,
-		occupiedRooms: 7,
-		emptyRooms: 1,
-		maintenanceRooms: 0,
-		occupancyRate: 87.5,
-	},
-	narrativeSummary:
-		"Pada periode Juli 2026 (Tutup Buku), Kos A mencatatkan performa keuangan yang sangat stabil dengan laba bersih mencapai Rp4.700.000 (margin laba 69,1%). Seluruh pembayaran sewa kamar terbayar tepat waktu tanpa piutang tertunggak. Pengeluaran operasional terbesar dialokasikan untuk tagihan listrik PLN dan iuran sampah lingkungan.",
-	recommendations: [
-		{
-			id: 1,
-			code: "01",
-			title: "Pertahankan ketepatan penagihan sewa",
-			description:
-				"Tingkat ketepatan bayar penghuni Kos A mencapai 100% pada Juli. Jadwal WhatsApp reminder berkala (H-3 dan H-0) terbukti efektif.",
-			priority: "HIGH",
-		},
-		{
-			id: 2,
-			code: "02",
-			title: "Evaluasi efisiensi daya listrik AC",
-			description:
-				"Biaya listrik menyumbang 57% dari total pengeluaran kos bulan ini (Rp1,2 jt). Pertimbangkan servis cuci AC rutin untuk menjaga efisiensi konsumsi listrik.",
-			priority: "MEDIUM",
-		},
-		{
-			id: 3,
-			code: "03",
-			title: "Optimalisasi 1 kamar kosong (A-08)",
-			description:
-				"Tersisa 1 kamar kosong tipe Standard di lantai 2. Promosikan ke calon penghuni mahasiswa baru untuk mencapai target okupansi penuh 100%.",
-			priority: "LOW",
-		},
-	],
-	expenseBreakdown: [
-		{
-			id: 1,
-			category: "Listrik & Daya PLN",
-			amount: 1_200_000,
-			percentage: 57.1,
-			description: "Token listrik utama dan fasilitas bersama",
-		},
-		{
-			id: 2,
-			category: "Air Bersih PDAM",
-			amount: 350_000,
-			percentage: 16.7,
-			description: "Tagihan air bersih bulanan",
-		},
-		{
-			id: 3,
-			category: "Abonemen WiFi Indihome",
-			amount: 259_000,
-			percentage: 12.3,
-			description: "Porsi biaya bersama WiFi 100 Mbps",
-		},
-		{
-			id: 4,
-			category: "Kebersihan & Sampah",
-			amount: 150_000,
-			percentage: 7.1,
-			description: "Iuran retribusi sampah lingkungan RW",
-		},
-		{
-			id: 5,
-			category: "Maintenance Ringan",
-			amount: 141_000,
-			percentage: 6.8,
-			description: "Penggantian lampu koridor dan kran air",
-		},
-	],
-	generatedAt: "01 Agustus 2026, 08:00 WIB",
-	isAutomated: true,
-};
+interface SelectOption<T = string | number> {
+	label: string;
+	value: T;
+}
+
+const MONTHS: SelectOption<number>[] = [
+	{ value: 1, label: "Januari" },
+	{ value: 2, label: "Februari" },
+	{ value: 3, label: "Maret" },
+	{ value: 4, label: "April" },
+	{ value: 5, label: "Mei" },
+	{ value: 6, label: "Juni" },
+	{ value: 7, label: "Juli" },
+	{ value: 8, label: "Agustus" },
+	{ value: 9, label: "September" },
+	{ value: 10, label: "Oktober" },
+	{ value: 11, label: "November" },
+	{ value: 12, label: "Desember" },
+];
+
+const currentYearNum = new Date().getFullYear();
+const YEARS: SelectOption<number>[] = [
+	{ label: "2024", value: 2024 },
+	{ label: "2025", value: 2025 },
+	{ label: "2026", value: 2026 },
+	{ label: "2027", value: 2027 },
+];
+
+const DEFAULT_MONTH_OPTION = MONTHS[0];
+const DEFAULT_YEAR_OPTION = YEARS[2];
 
 function ReportsPage() {
-	const [report] = useState<AiMonthlyReportData>(INITIAL_REPORT);
-	const [selectedPeriod, setSelectedPeriod] = useState<string>(
-		"Juli 2026 (Tutup Buku)",
-	);
-	const [isGenerating, setIsGenerating] = useState<boolean>(false);
+	const { user, userRole, isSuperAdmin, activeProperty } =
+		useDashboardContext();
+	const { data: properties } = useProperties();
+
+	const now = new Date();
+	const currentMonthNumber = now.getMonth() + 1;
+	const initialMonth =
+		MONTHS.find((m) => m.value === currentMonthNumber) || DEFAULT_MONTH_OPTION;
+	const initialYear =
+		YEARS.find((y) => y.value === currentYearNum) || DEFAULT_YEAR_OPTION;
+
+	const [selectedMonth, setSelectedMonth] =
+		useState<SelectOption<number>>(initialMonth);
+	const [selectedYear, setSelectedYear] =
+		useState<SelectOption<number>>(initialYear);
+	const [selectedProperty, setSelectedProperty] = useState<
+		SelectOption<string>
+	>({
+		label: activeProperty?.name || "Semua Cabang Kos",
+		value: activeProperty?.id || "ALL",
+	});
 
 	// Automation settings state
 	const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 	const [automationSettings, setAutomationSettings] =
 		useState<AutomationSettingsFormValues>({
 			scheduleDay: 1,
-			aiModel: "gemini-1.5-flash",
+			aiModel: "gemini-3-flash",
 			autoSendWhatsApp: true,
 			targetPhone: "081234567890",
 		});
 
 	// Toast state
-	const [toastMessage, setToastMessage] = useState<string | null>(null);
+	const [toastMessage, setToastMessage] = useState<{
+		text: string;
+		type: "success" | "error";
+	} | null>(null);
 
-	const showToast = (msg: string) => {
-		setToastMessage(msg);
+	const showToast = (text: string, type: "success" | "error" = "success") => {
+		setToastMessage({ text, type });
 		setTimeout(() => {
 			setToastMessage(null);
-		}, 3000);
+		}, 3500);
 	};
 
-	// Actions
-	const handleRegenerateAi = () => {
-		setIsGenerating(true);
-		setTimeout(() => {
-			setIsGenerating(false);
+	// Effective Property ID based on RBAC
+	const effectivePropertyId = useMemo(() => {
+		if (userRole === "ADMIN" && user?.assignedPropertyId) {
+			return user.assignedPropertyId;
+		}
+		return selectedProperty.value === "ALL"
+			? undefined
+			: selectedProperty.value;
+	}, [userRole, user?.assignedPropertyId, selectedProperty.value]);
+
+	// 1. Query Laporan Bulanan & AI
+	const {
+		data: monthlyReport,
+		isLoading: isMonthlyLoading,
+		isError: isMonthlyError,
+		refetch: refetchMonthly,
+	} = useMonthlyReport(
+		effectivePropertyId,
+		selectedMonth.value,
+		selectedYear.value,
+	);
+
+	// 2. Query Matriks Tahunan (12 Bulan)
+	const {
+		data: annualMatrix,
+		isLoading: isAnnualLoading,
+		refetch: refetchAnnual,
+	} = useAnnualReportMatrix(selectedYear.value, effectivePropertyId);
+
+	// 3. Mutations
+	const regenerateAiMutation = useRegenerateAiInsight();
+	const exportCsvMutation = useExportAnnualReportCsv();
+
+	const handleRegenerateAi = async () => {
+		if (monthlyReport && monthlyReport.canRefreshToday === false) {
+			showToast(
+				"Batas regenerasi AI Insight telah tercapai (maksimal 2 kali per hari untuk periode ini). Silakan coba lagi besok.",
+				"error",
+			);
+			return;
+		}
+
+		try {
+			await regenerateAiMutation.mutateAsync({
+				propertyId: effectivePropertyId,
+				month: selectedMonth.value,
+				year: selectedYear.value,
+			});
+			await Promise.all([refetchMonthly(), refetchAnnual()]);
 			showToast("Analisis wawasan eksekutif AI berhasil diperbarui!");
-		}, 1200);
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Gagal memperbarui AI Insight.",
+				"error",
+			);
+		}
 	};
 
-	const handleDownloadPdf = () => {
-		showToast(
-			`Dokumen PDF resmi laporan ${report.propertyName} periode ${selectedPeriod} siap diunduh!`,
-		);
+	const handleExportAnnualCsv = async () => {
+		try {
+			const result = await exportCsvMutation.mutateAsync({
+				year: selectedYear.value,
+				propertyId: effectivePropertyId,
+			});
+
+			if (result?.csvContent) {
+				const blob = new Blob([result.csvContent], {
+					type: "text/csv;charset=utf-8;",
+				});
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement("a");
+				link.setAttribute("href", url);
+				link.setAttribute("download", result.filename);
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				URL.revokeObjectURL(url);
+
+				showToast(
+					`File CSV ${result.filename} berhasil diunduh dan siap dibuka di Excel!`,
+				);
+			}
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Gagal mengekspor laporan CSV.",
+				"error",
+			);
+		}
+	};
+
+	const handlePrintPdf = () => {
+		window.print();
 	};
 
 	const handleSaveAutomationSettings = (
@@ -172,17 +224,27 @@ function ReportsPage() {
 	) => {
 		setAutomationSettings(values);
 		showToast(
-			`Pengaturan automasi laporan berhasil disimpan (Setiap tanggal ${values.scheduleDay})`,
+			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay})`,
 		);
 	};
+
+	const periodLabel = `${selectedMonth.label} ${selectedYear.label}`;
 
 	return (
 		<div className="space-y-6">
 			{/* Toast Notification */}
 			{toastMessage && (
-				<div className="fixed bottom-6 right-6 z-50 bg-[#253129] text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-					<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
-					<span>{toastMessage}</span>
+				<div
+					className={`fixed bottom-6 right-6 z-50 text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${
+						toastMessage.type === "error" ? "bg-[#7d2d2a]" : "bg-[#253129]"
+					}`}
+				>
+					{toastMessage.type === "error" ? (
+						<AlertCircle className="w-4 h-4 text-[#f09a96]" />
+					) : (
+						<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
+					)}
+					<span>{toastMessage.text}</span>
 				</div>
 			)}
 
@@ -192,112 +254,239 @@ function ReportsPage() {
 					<div className="flex items-center gap-2 mb-1">
 						<span className="text-[11px] font-semibold text-[#4f6958] bg-[#eef3ee] px-2.5 py-0.5 rounded-md flex items-center gap-1.5 border border-[#d6dfd7]">
 							<Building2 className="w-3.5 h-3.5" />
-							{report.propertyName}
+							{monthlyReport?.propertyName || selectedProperty.label}
 						</span>
-						<span className="text-[11px] text-[#737873]">· Properti Aktif</span>
+						<span className="text-[11px] text-[#737873]">
+							· Laporan Finansial
+						</span>
 					</div>
 					<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
-						Laporan & Insight
+						Laporan & AI Insight
 					</h1>
 					<p className="text-xs text-[#737873] mt-0.5">
-						Ringkasan eksekutif bulanan dan analisis wawasan bisnis AI untuk{" "}
-						{report.propertyName}.
+						Evaluasi kesehatan arus kas bulanan berbasis AI dan rekapitulasi
+						tahunan lengkap untuk kos-kosan Anda.
 					</p>
 				</div>
 
+				{/* Filter & Action Controls */}
 				<div className="flex flex-wrap items-center gap-2.5">
-					{/* Period Selector */}
-					<div className="w-56">
+					{/* Property Filter (SuperAdmin Only) */}
+					{isSuperAdmin && properties && (
+						<div className="w-48">
+							<Select
+								value={selectedProperty.value}
+								onValueChange={(val) => {
+									if (val === "ALL") {
+										setSelectedProperty({
+											label: "Semua Cabang Kos",
+											value: "ALL",
+										});
+									} else {
+										const matched = properties.find((p) => p.id === val);
+										if (matched) {
+											setSelectedProperty({
+												label: matched.name,
+												value: matched.id,
+											});
+										}
+									}
+								}}
+							>
+								<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594]">
+									<Building2 className="w-3.5 h-3.5 mr-1.5 text-[#4f6958]" />
+									<SelectValue placeholder="Semua Cabang Kos">
+										{selectedProperty.label}
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent className="bg-white border-[#e4e9e4]">
+									<SelectItem value="ALL" className="text-xs font-semibold">
+										Semua Cabang Kos
+									</SelectItem>
+									{properties.map((p) => (
+										<SelectItem key={p.id} value={p.id} className="text-xs">
+											{p.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					)}
+
+					{/* Month Selector */}
+					<div className="w-36">
 						<Select
-							value={selectedPeriod}
+							value={selectedMonth.value.toString()}
 							onValueChange={(val) => {
-								if (val) {
-									setSelectedPeriod(val);
-									showToast(`Periode laporan diubah ke ${val}`);
-								}
+								const matched = MONTHS.find((m) => m.value.toString() === val);
+								if (matched) setSelectedMonth(matched);
 							}}
 						>
-							<SelectTrigger className="border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594] w-full">
+							<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594]">
 								<Calendar className="w-3.5 h-3.5 mr-1.5 text-[#4f6958]" />
-								<SelectValue placeholder="Pilih Periode" />
+								<SelectValue placeholder="Pilih Bulan">
+									{selectedMonth.label}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent className="bg-white border-[#e4e9e4]">
-								<SelectItem value="Juli 2026" className="text-xs font-semibold">
-									Juli 2026
-								</SelectItem>
-								<SelectItem value="Agustus 2026" className="text-xs">
-									Agustus 2026
-								</SelectItem>
-								<SelectItem value="Juni 2026" className="text-xs">
-									Juni 2026
-								</SelectItem>
-								<SelectItem value="Mei 2026" className="text-xs">
-									Mei 2026
-								</SelectItem>
+								{MONTHS.map((m) => (
+									<SelectItem
+										key={m.value}
+										value={m.value.toString()}
+										className="text-xs"
+									>
+										{m.label}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>
 
-					{/* Generate Ulang AI Button */}
+					{/* Year Selector */}
+					<div className="w-28">
+						<Select
+							value={selectedYear.value.toString()}
+							onValueChange={(val) => {
+								const matched = YEARS.find((y) => y.value.toString() === val);
+								if (matched) setSelectedYear(matched);
+							}}
+						>
+							<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594]">
+								<SelectValue placeholder="Tahun">
+									{selectedYear.label}
+								</SelectValue>
+							</SelectTrigger>
+							<SelectContent className="bg-white border-[#e4e9e4]">
+								{YEARS.map((y) => (
+									<SelectItem
+										key={y.value}
+										value={y.value.toString()}
+										className="text-xs font-mono"
+									>
+										{y.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					{/* Generate Ulang AI Button dengan Indikator Kuota Harian (Maks 2x / hari) */}
 					<Button
 						type="button"
 						variant="outline"
-						className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-3.5 h-9 shadow-sm"
+						className={`border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-3.5 h-9 shadow-2xs ${
+							monthlyReport &&
+							monthlyReport.canRefreshToday === false &&
+							!regenerateAiMutation.isPending
+								? "opacity-60 cursor-not-allowed bg-[#f7faf7]"
+								: ""
+						}`}
 						onClick={handleRegenerateAi}
-						disabled={isGenerating}
+						disabled={
+							regenerateAiMutation.isPending ||
+							isMonthlyLoading ||
+							(monthlyReport ? monthlyReport.canRefreshToday === false : false)
+						}
+						title={
+							monthlyReport?.remainingRefreshesToday !== undefined
+								? `Sisa kuota refresh AI hari ini: ${monthlyReport.remainingRefreshesToday}/2`
+								: "Refresh analisis AI (Maksimal 2x per hari)"
+						}
 					>
-						{isGenerating ? (
+						{regenerateAiMutation.isPending ? (
 							<RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin text-[#4f6958]" />
 						) : (
 							<Sparkles className="w-3.5 h-3.5 mr-1.5 text-[#4f6958]" />
 						)}
-						{isGenerating ? "Menganalisis..." : "Generate AI"}
+						{regenerateAiMutation.isPending
+							? "Menganalisis..."
+							: `Refresh AI (${monthlyReport?.remainingRefreshesToday ?? 2}/2)`}
 					</Button>
 
-					{/* Download PDF Button */}
+					{/* Cetak / Download PDF Button */}
 					<Button
 						type="button"
-						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm flex items-center gap-1.5"
-						onClick={handleDownloadPdf}
+						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-9 shadow-2xs flex items-center gap-1.5"
+						onClick={handlePrintPdf}
 					>
-						<Download className="w-3.5 h-3.5" />
-						Download Laporan PDF
+						<Printer className="w-3.5 h-3.5" />
+						Cetak PDF
 					</Button>
 				</div>
 			</div>
 
-			{/* 3 Top Stat KPI Cards */}
-			<ReportKpiCards
-				totalIncome={report.totalIncome}
-				totalExpense={report.totalExpense}
-				occupancyRate={report.roomStatus.occupancyRate}
-				occupiedRooms={report.roomStatus.occupiedRooms}
-				totalRooms={report.roomStatus.totalRooms}
-				periodLabel={selectedPeriod}
-			/>
+			{/* Loading State */}
+			{isMonthlyLoading && (
+				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-3">
+					<Loader2 className="w-6 h-6 animate-spin text-[#4f6958]" />
+					<p className="text-xs text-[#737873] font-medium">
+						Menghitung data keuangan deterministik & menyusun AI Insight...
+					</p>
+				</div>
+			)}
 
-			{/* Executive AI Narrative Insight & Strategic Recommendations (Clean Advisory) */}
-			<ReportAiInsightPanel
-				periodLabel={selectedPeriod}
-				propertyName={report.propertyName}
-				isClosedPeriod={report.isClosedPeriod}
-				narrativeSummary={report.narrativeSummary}
-				recommendations={report.recommendations}
-			/>
+			{/* Error State */}
+			{isMonthlyError && !isMonthlyLoading && (
+				<div className="p-6 bg-[#fdf4f4] border border-[#f0c3c1] rounded-xl flex items-center gap-3 text-xs text-[#a45149]">
+					<AlertCircle className="w-5 h-5 shrink-0" />
+					<span>
+						Gagal memuat laporan untuk periode {periodLabel}. Silakan coba
+						beberapa saat lagi.
+					</span>
+				</div>
+			)}
 
-			{/* Room Status & Expense Breakdown for Active Property */}
-			<ReportRoomExpenseBreakdown
-				propertyName={report.propertyName}
-				roomStatus={report.roomStatus}
-				expenses={report.expenseBreakdown}
-			/>
+			{/* Loaded Report Content */}
+			{monthlyReport && !isMonthlyLoading && (
+				<>
+					{/* 4 Top Stat KPI Cards */}
+					<ReportKpiCards
+						totalIncome={monthlyReport.totalIncome}
+						totalExpense={monthlyReport.totalExpense}
+						netProfit={monthlyReport.netProfit}
+						profitMarginPercentage={monthlyReport.profitMarginPercentage}
+						occupancyRate={monthlyReport.roomStatus.occupancyRate}
+						occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
+						totalRooms={monthlyReport.roomStatus.totalRooms}
+						periodLabel={periodLabel}
+					/>
 
-			{/* Automasi Laporan Bulanan Card */}
-			<ReportAutomationCard
-				scheduleDay={automationSettings.scheduleDay}
-				aiModel={automationSettings.aiModel}
-				onOpenSettings={() => setIsSettingsOpen(true)}
-			/>
+					{/* Executive AI Narrative Insight & Strategic Recommendations */}
+					<ReportAiInsightPanel
+						periodLabel={periodLabel}
+						propertyName={monthlyReport.propertyName}
+						isClosedPeriod={monthlyReport.isClosedPeriod}
+						financialHealthGrade={monthlyReport.financialHealthGrade}
+						narrativeSummary={monthlyReport.narrativeSummary}
+						trendAnalysis={monthlyReport.trendAnalysis}
+						complaintCostImpact={monthlyReport.complaintCostImpact}
+						recommendations={monthlyReport.recommendations}
+						aiProviderUsed={monthlyReport.aiProviderUsed}
+					/>
+
+					{/* Room Status & Expense Breakdown */}
+					<ReportRoomExpenseBreakdown
+						propertyName={monthlyReport.propertyName}
+						roomStatus={monthlyReport.roomStatus}
+						expenses={monthlyReport.expenseBreakdown}
+					/>
+
+					{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor CSV */}
+					<ReportAnnualMatrixCard
+						data={annualMatrix}
+						isLoading={isAnnualLoading}
+						onExportCsv={handleExportAnnualCsv}
+						isExporting={exportCsvMutation.isPending}
+					/>
+
+					{/* Automasi Laporan Bulanan Card */}
+					<ReportAutomationCard
+						scheduleDay={automationSettings.scheduleDay}
+						aiModel={automationSettings.aiModel}
+						onOpenSettings={() => setIsSettingsOpen(true)}
+					/>
+				</>
+			)}
 
 			{/* Automation Settings Dialog */}
 			<AutomationSettingsDialog

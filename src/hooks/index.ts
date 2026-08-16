@@ -4,6 +4,7 @@ export * from "./use-get-dashboard-data.ts";
 export * from "./use-mobile.ts";
 export * from "./use-payments.ts";
 export * from "./use-properties.ts";
+export * from "./use-reports.ts";
 export * from "./use-rooms.ts";
 export * from "./use-set-active-property.ts";
 export * from "./use-storage.ts";

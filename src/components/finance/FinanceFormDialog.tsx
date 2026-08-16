@@ -49,6 +49,17 @@ export const CATEGORY_FORM_OPTIONS = [
 	{ label: "Pengeluaran Lain-lain", value: "OTHER", type: "EXPENSE" },
 ];
 
+const CLASSIFICATION_OPTIONS = [
+	{ label: "Biaya Operasional Rutin", value: "OPERATIONAL" },
+	{ label: "Investasi / Aset Baru", value: "INVESTMENT" },
+];
+
+const METHOD_OPTIONS = [
+	{ label: "Transfer Bank", value: "Transfer" },
+	{ label: "Tunai (Cash)", value: "Cash" },
+	{ label: "QRIS", value: "QRIS" },
+];
+
 export function FinanceFormDialog({
 	open,
 	onOpenChange,
@@ -145,6 +156,17 @@ export function FinanceFormDialog({
 		);
 	}, [formData.type]);
 
+	const selectedProperty = properties.find((p) => p.id === formData.propertyId);
+	const selectedCategory = availableCategories.find(
+		(c) => c.value === formData.category,
+	);
+	const selectedClassification = CLASSIFICATION_OPTIONS.find(
+		(c) => c.value === formData.classification,
+	);
+	const selectedMethod = METHOD_OPTIONS.find(
+		(m) => m.value === formData.method,
+	);
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
@@ -213,7 +235,9 @@ export function FinanceFormDialog({
 							}}
 						>
 							<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-								<SelectValue placeholder="Pilih Cabang Kos" />
+								<SelectValue placeholder="Pilih Cabang Kos">
+									{selectedProperty?.name}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 								{properties.map((p) => (
@@ -244,8 +268,10 @@ export function FinanceFormDialog({
 									}
 								}}
 							>
-								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] w-full">
-									<SelectValue placeholder="Pilih Kategori" />
+								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Pilih Kategori">
+										{selectedCategory?.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 									{availableCategories.map((c) => (
@@ -273,16 +299,17 @@ export function FinanceFormDialog({
 										}
 									}}
 								>
-									<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] w-full">
-										<SelectValue placeholder="Klasifikasi" />
+									<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+										<SelectValue placeholder="Klasifikasi">
+											{selectedClassification?.label}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-										<SelectItem value="OPERATIONAL">
-											Biaya Operasional Rutin
-										</SelectItem>
-										<SelectItem value="INVESTMENT">
-											Investasi / Aset Baru
-										</SelectItem>
+										{CLASSIFICATION_OPTIONS.map((opt) => (
+											<SelectItem key={opt.value} value={opt.value}>
+												{opt.label}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</div>
@@ -306,13 +333,17 @@ export function FinanceFormDialog({
 										}
 									}}
 								>
-									<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-										<SelectValue placeholder="Metode Bayar" />
+									<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+										<SelectValue placeholder="Metode Bayar">
+											{selectedMethod?.label}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-										<SelectItem value="Transfer">Transfer Bank</SelectItem>
-										<SelectItem value="Cash">Tunai (Cash)</SelectItem>
-										<SelectItem value="QRIS">QRIS</SelectItem>
+										{METHOD_OPTIONS.map((opt) => (
+											<SelectItem key={opt.value} value={opt.value}>
+												{opt.label}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</div>
@@ -367,9 +398,10 @@ export function FinanceFormDialog({
 					{/* Description */}
 					<div>
 						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-							Keterangan / Deskripsi Pembayaran *
+							Keterangan / Catatan Tambahan
 						</Label>
-						<Input
+						<textarea
+							rows={3}
 							value={formData.description}
 							onChange={(e) =>
 								setFormData((prev) => ({
@@ -377,8 +409,8 @@ export function FinanceFormDialog({
 									description: e.target.value,
 								}))
 							}
-							placeholder="Contoh: Pembayaran WiFi IndiHome Bulan Mei"
-							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+							placeholder="Tuliskan rincian transaksi (misal: Token listrik kamar 101, Pembayaran sewa 1 bulan, dsb)"
+							className="w-full border border-[#e4e9e4] rounded-xl p-3 text-xs bg-[#fbfcfb] outline-none focus:border-[#4f6958] focus:ring-1 focus:ring-[#4f6958] resize-none"
 						/>
 						{errors.description && (
 							<p className="text-[11px] text-[#a65f5b] mt-1">
@@ -391,22 +423,22 @@ export function FinanceFormDialog({
 						<Button
 							type="button"
 							variant="outline"
-							className="h-9 px-4 text-xs font-semibold border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9"
 							onClick={() => onOpenChange(false)}
+							disabled={isSubmitting}
 						>
 							Batal
 						</Button>
-
 						<Button
 							type="submit"
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
 							disabled={isSubmitting}
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
 						>
 							<Save className="w-3.5 h-3.5 mr-1.5" />
 							{isSubmitting
 								? "Menyimpan..."
 								: editingTransaction
-									? "Simpan Perubahan"
+									? "Perbarui Transaksi"
 									: "Simpan Transaksi"}
 						</Button>
 					</DialogFooter>

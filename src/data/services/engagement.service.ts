@@ -3,6 +3,7 @@ import type { BroadcastAnnouncementInput } from "../../common/validations/index.
 import type {
 	AnnouncementCategory,
 	NotificationStatus,
+	NotificationType,
 } from "../../generated/prisma/client.js";
 import { formatDate, formatRentalPeriod } from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
@@ -117,7 +118,7 @@ export class EngagementService {
 	}
 
 	/**
-	 * Broadcast Pengumuman Kos ke Seluruh / Sebagian Penghuni Aktif
+	 * Broadcast Pengumuman Kos ke Seluruh / Sebagian Penghuni Aktif (Batch Insert Log)
 	 */
 	async broadcastAnnouncement(
 		input: BroadcastAnnouncementInput,
@@ -153,6 +154,13 @@ export class EngagementService {
 			const recipients =
 				await this.repo.getActiveTenantsForBroadcast(targetPropertyId);
 
+			const notificationLogs: Array<{
+				recipientNumber: string;
+				messageType: NotificationType;
+				status: NotificationStatus;
+				notes?: string | null;
+			}> = [];
+
 			for (const r of recipients) {
 				const message = whatsappTemplates.announcement({
 					category: input.category,
@@ -171,12 +179,12 @@ export class EngagementService {
 					});
 
 					const status: NotificationStatus = res.status ? "SENT" : "FAILED";
-					await this.repo.recordNotificationLog(
-						sanitizedPhone,
-						"ANNOUNCEMENT",
+					notificationLogs.push({
+						recipientNumber: sanitizedPhone,
+						messageType: "ANNOUNCEMENT",
 						status,
-						`Broadcast: ${input.title} (Kamar ${r.roomNumber} - ${r.name})`,
-					);
+						notes: `Broadcast: ${input.title} (Kamar ${r.roomNumber} - ${r.name})`,
+					});
 
 					if (res.status) sentCount++;
 					else failedCount++;
@@ -185,8 +193,19 @@ export class EngagementService {
 						`[EngagementService] Gagal broadcast ke ${r.phone}:`,
 						err,
 					);
+					notificationLogs.push({
+						recipientNumber: sanitizedPhone,
+						messageType: "ANNOUNCEMENT",
+						status: "FAILED",
+						notes: `Broadcast Error: ${input.title} (Kamar ${r.roomNumber} - ${r.name})`,
+					});
 					failedCount++;
 				}
+			}
+
+			// Batch Insert semua log notifikasi broadcast sekaligus (Zero N+1 Query)
+			if (notificationLogs.length > 0) {
+				await this.repo.recordNotificationLogsBatch(notificationLogs);
 			}
 		}
 
@@ -208,7 +227,7 @@ export class EngagementService {
 	}
 
 	/**
-	 * Engine Otomasi Cron Harian (Pemeriksaan Jatuh Tempo & Ucapan Ulang Tahun)
+	 * Engine Otomasi Cron Harian (Pemeriksaan Jatuh Tempo & Ucapan Ulang Tahun Teroptimasi via Map)
 	 */
 	async runDailyCronTasks() {
 		const startTime = Date.now();
@@ -216,9 +235,35 @@ export class EngagementService {
 		let dueRemindersSent = 0;
 		let birthdayWishesSent = 0;
 
+		const notificationLogsToBatch: Array<{
+			recipientNumber: string;
+			messageType: NotificationType;
+			status: NotificationStatus;
+			notes?: string | null;
+		}> = [];
+
 		// ─── Task 1: Pemeriksaan Tagihan Jatuh Tempo (H-3, H-0, Overdue) ─
 		const dueReminders = await this.repo.getDueInvoicesForReminder();
 		const overdueInvoiceIds: string[] = [];
+
+		// Map untuk deduplikasi per nomor telepon & pengelompokan penagihan
+		const reminderQueue = new Map<
+			string,
+			{
+				phone: string;
+				tenantName: string;
+				propertyName: string;
+				roomNumber: string;
+				invoiceNumber: string;
+				period: string;
+				dueDateStr: string;
+				daysRemaining: number;
+				amount: number;
+				documentUrl: string;
+			}
+		>();
+
+		const appUrl = process.env.APP_URL || "http://localhost:3000";
 
 		for (const item of dueReminders) {
 			const inv = item.invoice;
@@ -230,6 +275,9 @@ export class EngagementService {
 			}
 
 			if (phone) {
+				const sanitizedPhone = sanitizePhoneNumber(phone);
+				if (!sanitizedPhone) continue;
+
 				const dueDate = new Date(inv.dueDate);
 				const period = formatRentalPeriod({
 					periodMonth: inv.periodMonth,
@@ -239,43 +287,71 @@ export class EngagementService {
 					billingCycle: inv.contract.billingCycle,
 				});
 
-				const appUrl = process.env.APP_URL || "http://localhost:3000";
 				const documentUrl =
 					inv.pdfUrl || `${appUrl}/api/invoices/${inv.id}/document`;
 
-				const message = whatsappTemplates.dueReminder({
+				// Simpan ke antrean reminder Map keyed by invoice ID
+				reminderQueue.set(inv.id, {
+					phone: sanitizedPhone,
 					tenantName: tenant.name,
 					propertyName: inv.contract.room.property.name,
 					roomNumber: inv.contract.room.roomNumber,
 					invoiceNumber: inv.invoiceNumber,
 					period,
-					dueDate: formatDate(dueDate),
+					dueDateStr: formatDate(dueDate),
 					daysRemaining: item.daysRemaining,
 					amount: Number(inv.amount),
-					bankAccount: "8735081290",
-					accountHolder: "Bude Frisda",
 					documentUrl,
 				});
+			}
+		}
 
-				const sanitizedPhone = sanitizePhoneNumber(phone);
+		// Eksekusi pengiriman pesan WhatsApp untuk tagihan jatuh tempo
+		for (const [invId, rem] of reminderQueue.entries()) {
+			const message = whatsappTemplates.dueReminder({
+				tenantName: rem.tenantName,
+				propertyName: rem.propertyName,
+				roomNumber: rem.roomNumber,
+				invoiceNumber: rem.invoiceNumber,
+				period: rem.period,
+				dueDate: rem.dueDateStr,
+				daysRemaining: rem.daysRemaining,
+				amount: rem.amount,
+				bankAccount: "8735081290",
+				accountHolder: "Bude Frisda",
+				documentUrl: rem.documentUrl,
+			});
+
+			try {
 				const res = await this.fonnte.sendText({
-					target: sanitizedPhone,
+					target: rem.phone,
 					message,
 				});
 
 				const status: NotificationStatus = res.status ? "SENT" : "FAILED";
-				await this.repo.recordNotificationLog(
-					sanitizedPhone,
-					"DUE_DATE_REMINDER",
+				notificationLogsToBatch.push({
+					recipientNumber: rem.phone,
+					messageType: "DUE_DATE_REMINDER",
 					status,
-					`Cron Reminder H${item.daysRemaining >= 0 ? `-${item.daysRemaining}` : `+${Math.abs(item.daysRemaining)}`} (#${inv.invoiceNumber})`,
-				);
+					notes: `Cron Reminder H${rem.daysRemaining >= 0 ? `-${rem.daysRemaining}` : `+${Math.abs(rem.daysRemaining)}`} (#${rem.invoiceNumber}) [${invId}]`,
+				});
 
 				if (res.status) dueRemindersSent++;
+			} catch (err) {
+				console.error(
+					`[EngagementService] Gagal kirim reminder ke ${rem.phone}:`,
+					err,
+				);
+				notificationLogsToBatch.push({
+					recipientNumber: rem.phone,
+					messageType: "DUE_DATE_REMINDER",
+					status: "FAILED",
+					notes: `Error Cron Reminder (#${rem.invoiceNumber})`,
+				});
 			}
 		}
 
-		// Update massal status invoice OVERDUE
+		// Update massal status invoice OVERDUE dalam 1 query
 		if (overdueInvoiceIds.length > 0) {
 			const updateRes =
 				await this.repo.updateOverdueInvoices(overdueInvoiceIds);
@@ -284,30 +360,56 @@ export class EngagementService {
 
 		// ─── Task 2: Birthday Reminder Engine (Hari H) ─────────────────
 		const todaysBirthdays = await this.repo.getTodaysBirthdays();
+		const birthdayQueue = new Map<string, (typeof todaysBirthdays)[0]>();
 
+		// Map deduplikasi untuk memastikan 1 penyewa hanya dapat 1 ucapan jika punya multi-kamar
 		for (const bday of todaysBirthdays) {
-			if (bday.phone) {
-				const message = whatsappTemplates.birthdayWish({
-					tenantName: bday.name,
-					propertyName: bday.propertyName,
-				});
+			if (bday.phone && !birthdayQueue.has(bday.tenantId)) {
+				birthdayQueue.set(bday.tenantId, bday);
+			}
+		}
 
-				const sanitizedPhone = sanitizePhoneNumber(bday.phone);
+		for (const bday of birthdayQueue.values()) {
+			const sanitizedPhone = sanitizePhoneNumber(bday.phone);
+			if (!sanitizedPhone) continue;
+
+			const message = whatsappTemplates.birthdayWish({
+				tenantName: bday.name,
+				propertyName: bday.propertyName,
+			});
+
+			try {
 				const res = await this.fonnte.sendText({
 					target: sanitizedPhone,
 					message,
 				});
 
 				const status: NotificationStatus = res.status ? "SENT" : "FAILED";
-				await this.repo.recordNotificationLog(
-					sanitizedPhone,
-					"BIRTHDAY_WISH",
+				notificationLogsToBatch.push({
+					recipientNumber: sanitizedPhone,
+					messageType: "BIRTHDAY_WISH",
 					status,
-					`Cron Ultah Kak ${bday.name} (${bday.propertyName})`,
-				);
+					notes: `Cron Ultah Kak ${bday.name} (${bday.propertyName})`,
+				});
 
 				if (res.status) birthdayWishesSent++;
+			} catch (err) {
+				console.error(
+					`[EngagementService] Gagal kirim ucapan ultah ke ${sanitizedPhone}:`,
+					err,
+				);
+				notificationLogsToBatch.push({
+					recipientNumber: sanitizedPhone,
+					messageType: "BIRTHDAY_WISH",
+					status: "FAILED",
+					notes: `Error Cron Ultah Kak ${bday.name}`,
+				});
 			}
+		}
+
+		// ─── Task 3: Batch Insert Semua Log Notifikasi dalam 1 Query ──
+		if (notificationLogsToBatch.length > 0) {
+			await this.repo.recordNotificationLogsBatch(notificationLogsToBatch);
 		}
 
 		const durationMs = Date.now() - startTime;
@@ -318,7 +420,8 @@ export class EngagementService {
 			dueRemindersSent,
 			birthdayWishesSent,
 			totalProcessedInvoices: dueReminders.length,
-			totalTodaysBirthdays: todaysBirthdays.length,
+			totalTodaysBirthdays: birthdayQueue.size,
+			totalLogsRecorded: notificationLogsToBatch.length,
 			durationMs,
 			timestamp: new Date().toISOString(),
 		};

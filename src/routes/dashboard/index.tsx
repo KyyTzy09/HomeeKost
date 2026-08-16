@@ -1,12 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
+	AlertCircle,
 	ArrowDownRight,
 	BedDouble,
 	Cake,
 	Calendar,
+	CheckCircle2,
 	CircleDollarSign,
 	Clock,
 	CreditCard,
+	ExternalLink,
 	MessageSquare,
 	Wrench,
 } from "lucide-react";
@@ -25,7 +28,7 @@ import { OccupancyDonutChart } from "../../components/dashboard/OccupancyDonutCh
 import { RevenueExpenseChart } from "../../components/dashboard/RevenueExpenseChart.tsx";
 import { UpcomingPaymentsTable } from "../../components/dashboard/UpcomingPaymentsTable.tsx";
 import { DashboardSkeleton } from "../../components/layout/DashboardSkeleton.tsx";
-import { useGetDashboardData } from "../../hooks/index.ts";
+import { useDashboardContext, useGetDashboardData } from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/")({
 	head: () => ({
@@ -38,184 +41,85 @@ export const Route = createFileRoute("/dashboard/")({
 	component: DashboardHomePage,
 });
 
-function DashboardHomePage() {
+export function DashboardHomePage() {
 	const navigate = useNavigate();
+	const { userName, activeProperty } = useDashboardContext();
 	const { data: dashboardData, isLoading } = useGetDashboardData();
-	const [toastMessage, setToastMessage] = useState<string | null>(null);
-	const [chartPeriod, setChartPeriod] = useState("6 Bulan");
+	const [toastMessage, setToastMessage] = useState<{
+		text: string;
+		type: "success" | "error";
+	} | null>(null);
+	const [chartPeriod, setChartPeriod] = useState<{
+		label: string;
+		value: string;
+	}>({ label: "6 Bulan", value: "6 Bulan" });
 
-	const showToast = (msg: string) => {
-		setToastMessage(msg);
+	const showToast = (text: string, type: "success" | "error" = "success") => {
+		setToastMessage({ text, type });
 		setTimeout(() => {
 			setToastMessage(null);
 		}, 3000);
 	};
 
 	const stats = dashboardData?.stats || {
-		totalRooms: 12,
-		occupiedRooms: 10,
-		vacantRooms: 2,
-		monthlyIncome: "Rp6,8 jt",
-		incomeGrowth: "8,2%",
-		dueCount: 4,
-		dueAmount: "Rp3,2 jt",
-		monthlyExpense: "Rp2,1 jt",
+		totalRooms: 0,
+		occupiedRooms: 0,
+		vacantRooms: 0,
+		maintenanceRooms: 0,
+		occupancyRate: 0,
+		monthlyIncome: "Rp0",
+		monthlyIncomeRaw: 0,
+		incomeGrowth: "0%",
+		dueCount: 0,
+		dueAmount: "Rp0",
+		dueAmountRaw: 0,
+		monthlyExpense: "Rp0",
+		monthlyExpenseRaw: 0,
 	};
 
 	const upcomingPayments: UpcomingPaymentItem[] =
-		dashboardData?.upcomingPayments || [
-			{
-				id: "p1",
-				tenant: "Alya Putri",
-				room: "A-03",
-				dueDate: "10 Agu",
-				amount: "Rp850.000",
-				badgeText: "3 hari lagi",
-				badgeClass: "amber",
-				actionText: "Reminder",
-			},
-			{
-				id: "p2",
-				tenant: "Nabila Putri",
-				room: "B-02",
-				dueDate: "12 Agu",
-				amount: "Rp950.000",
-				badgeText: "5 hari lagi",
-				badgeClass: "green",
-				actionText: "Invoice",
-			},
-			{
-				id: "p3",
-				tenant: "Fira Aulia",
-				room: "A-07",
-				dueDate: "08 Agu",
-				amount: "Rp850.000",
-				badgeText: "Terlambat",
-				badgeClass: "red",
-				actionText: "Reminder",
-			},
-			{
-				id: "p4",
-				tenant: "Sarah Anindita",
-				room: "C-01",
-				dueDate: "15 Agu",
-				amount: "Rp1.200.000",
-				badgeText: "8 hari lagi",
-				badgeClass: "green",
-				actionText: "Invoice",
-			},
-		];
+		dashboardData?.upcomingPayments || [];
 
-	const todayAttentions = [
-		{
-			id: "att1",
-			icon: <Cake className="w-4 h-4 text-[#b18a4b]" />,
-			title: "Sarah ulang tahun besok",
-			desc: "Kirim ucapan personal untuk menjaga engagement.",
-			route: "/dashboard/engagement",
-		},
-		{
-			id: "att2",
-			icon: <CreditCard className="w-4 h-4 text-[#4f6958]" />,
-			title: "3 pembayaran mendekati jatuh tempo",
-			desc: "Pengingat otomatis akan berjalan sesuai jadwal.",
-			route: "/dashboard/payments",
-		},
-		{
-			id: "att3",
-			icon: <Wrench className="w-4 h-4 text-[#718b78]" />,
-			title: "Maintenance kamar B-04",
-			desc: "Keluhan: lampu kamar perlu diganti.",
-			route: "/dashboard/rooms",
-		},
-		{
-			id: "att4",
-			icon: <MessageSquare className="w-4 h-4 text-[#5f896d]" />,
-			title: "2 penghuni perlu diperhatikan",
-			desc: "Ada pertanyaan dari penghuni terkait perpanjangan sewa.",
-			route: "/dashboard/tenants",
-		},
-	];
-
-	const recentExpenses = [
-		{
-			id: "e1",
-			title: "Abonemen WiFi",
-			date: "03 Agu · Semua Kost",
-			amount: "Rp777.000",
-		},
-		{
-			id: "e2",
-			title: "Listrik",
-			date: "05 Agu · Kos A",
-			amount: "Rp1.250.000",
-		},
-		{
-			id: "e3",
-			title: "Maintenance",
-			date: "07 Agu · Kos B",
-			amount: "Rp450.000",
-		},
-	];
-
-	const propertySummary = [
-		{
-			id: "ps1",
-			name: "Kost Melati Indah",
-			rooms: "10 kamar",
-			dueBadge: "3 mendekati",
-			badgeColor: "amber",
-		},
-		{
-			id: "ps2",
-			name: "Kost Mawar Residence",
-			rooms: "12 kamar",
-			dueBadge: "4 mendekati",
-			badgeColor: "amber",
-		},
-		{
-			id: "ps3",
-			name: "Kost Graha Asri",
-			rooms: "9 kamar",
-			dueBadge: "2 mendekati",
-			badgeColor: "green",
-		},
-	];
-
-	const recentActivities = [
-		{
-			id: "a1",
-			time: "10 menit lalu",
-			desc: "Invoice #INV-0021 dikirim ke Alya Putri via WhatsApp.",
-			route: "/dashboard/invoices",
-		},
-		{
-			id: "a2",
-			time: "1 jam lalu",
-			desc: "Pembayaran Rp850.000 dari Dinda Maharani diterima.",
-			route: "/dashboard/payments",
-		},
-		{
-			id: "a3",
-			time: "2 jam lalu",
-			desc: "Kamar A-05 diubah menjadi status kosong.",
-			route: "/dashboard/rooms",
-		},
-		{
-			id: "a4",
-			time: "Hari ini, 08:40",
-			desc: "Pengeluaran listrik Rp1.250.000 dicatat.",
-			route: "/dashboard/finance",
-		},
-	];
+	const todayAttentions = dashboardData?.todayAttentions || [];
+	const recentExpenses = dashboardData?.recentExpenses || [];
+	const propertySummary = dashboardData?.propertySummaries || [];
+	const recentActivities = dashboardData?.recentActivities || [];
 
 	const handlePaymentAction = (item: UpcomingPaymentItem) => {
-		if (item.actionText === "Reminder") {
-			showToast(`Reminder WhatsApp dikirim ke ${item.tenant}`);
+		if (item.phone) {
+			const cleanPhone = item.phone.replace(/[^0-9]/g, "");
+			const waTarget = cleanPhone.startsWith("0")
+				? `62${cleanPhone.slice(1)}`
+				: cleanPhone;
+			const msg = encodeURIComponent(
+				`Halo ${item.tenant}, pengingat tagihan sewa kamar ${item.room} sebesar ${item.amount} jatuh tempo pada ${item.dueDate}. Mohon konfirmasi jika telah melakukan pembayaran. Terima kasih.`,
+			);
+			window.open(`https://wa.me/${waTarget}?text=${msg}`, "_blank");
+			showToast(`Membuka WhatsApp untuk mengirim pengingat ke ${item.tenant}`);
 		} else {
-			showToast(`Invoice dibuka untuk ${item.tenant}`);
+			navigate({ to: "/dashboard/invoices" });
+			showToast(`Membuka halaman invoice untuk ${item.tenant}`);
 		}
 	};
+
+	const getAttentionIcon = (type: string) => {
+		switch (type) {
+			case "birthday":
+				return <Cake className="w-4 h-4 text-[#b18a4b]" />;
+			case "due":
+				return <CreditCard className="w-4 h-4 text-[#4f6958]" />;
+			case "maintenance":
+				return <Wrench className="w-4 h-4 text-[#718b78]" />;
+			default:
+				return <MessageSquare className="w-4 h-4 text-[#5f896d]" />;
+		}
+	};
+
+	const todayFormatted = new Date().toLocaleDateString("id-ID", {
+		day: "2-digit",
+		month: "long",
+		year: "numeric",
+	});
 
 	if (isLoading) {
 		return <DashboardSkeleton />;
@@ -223,20 +127,34 @@ function DashboardHomePage() {
 
 	return (
 		<>
-			{/* Toast Popup Notification */}
-			<div className={`toast ${toastMessage ? "show" : ""}`} role="status">
-				{toastMessage}
-			</div>
+			{/* Toast Notification */}
+			{toastMessage && (
+				<div
+					className={`fixed bottom-6 right-6 z-50 text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${
+						toastMessage.type === "error" ? "bg-[#7d2d2a]" : "bg-[#253129]"
+					}`}
+				>
+					{toastMessage.type === "error" ? (
+						<AlertCircle className="w-4 h-4 text-[#f09a96]" />
+					) : (
+						<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
+					)}
+					<span>{toastMessage.text}</span>
+				</div>
+			)}
 
 			{/* Page Header */}
 			<div className="page-head">
 				<div>
 					<h1>
-						Selamat pagi, Frisda <span className="emoji">👋</span>
+						Selamat datang, {userName || "Pengelola"}{" "}
+						<span className="emoji">👋</span>
 					</h1>
 					<p>
-						<b id="dashboardPropertyName">Kost Melati Indah</b> · Berikut
-						ringkasan kondisi kos hari ini.
+						<b id="dashboardPropertyName">
+							{activeProperty?.name || "Semua Cabang Kos"}
+						</b>{" "}
+						· Ringkasan operasional dan kondisi hunian hari ini.
 					</p>
 				</div>
 				<div className="actions">
@@ -247,8 +165,7 @@ function DashboardHomePage() {
 						id="dashboardDateBtn"
 					>
 						<Calendar className="w-3.5 h-3.5 text-[#4f6958]" />
-						<span>09 Agustus 2026</span>
-						<span className="text-[10px] text-[#737873]">▾</span>
+						<span>{todayFormatted}</span>
 					</Button>
 				</div>
 			</div>
@@ -269,6 +186,8 @@ function DashboardHomePage() {
 					<div className="stat-sub">
 						<span className="up">{stats.occupiedRooms} terisi</span> ·{" "}
 						{stats.vacantRooms} kosong
+						{stats.maintenanceRooms > 0 &&
+							` · ${stats.maintenanceRooms} perbaikan`}
 					</div>
 				</Card>
 
@@ -284,13 +203,13 @@ function DashboardHomePage() {
 					</div>
 					<div className="stat-value">{stats.monthlyIncome}</div>
 					<div className="stat-sub">
-						<span className="up">↑ {stats.incomeGrowth}</span> dari bulan lalu
+						<span className="up">{stats.incomeGrowth}</span> dari bulan lalu
 					</div>
 				</Card>
 
 				<Card
 					className="stat clickable p-[18px_19px] ring-0 border-[#e4e9e4] rounded-[10px]"
-					onClick={() => navigate({ to: "/dashboard/payments" })}
+					onClick={() => navigate({ to: "/dashboard/invoices" })}
 				>
 					<div className="stat-top">
 						<span>Jatuh Tempo</span>
@@ -300,8 +219,7 @@ function DashboardHomePage() {
 					</div>
 					<div className="stat-value">{stats.dueCount}</div>
 					<div className="stat-sub">
-						<span className="warn">{stats.dueAmount}</span> perlu
-						ditindaklanjuti
+						<span className="warn">{stats.dueAmount}</span> belum lunas
 					</div>
 				</Card>
 
@@ -320,9 +238,9 @@ function DashboardHomePage() {
 				</Card>
 			</div>
 
-			{/* Main Grid: Chart.js Line & Donut */}
+			{/* Main Grid: Line Chart & Donut Chart */}
 			<div className="grid-main">
-				{/* Income & Expense Chart.js Area/Line Panel */}
+				{/* Income & Expense Chart Panel */}
 				<Card
 					className="panel clickable p-[19px] ring-0 border-[#e4e9e4] rounded-[10px]"
 					onClick={() => navigate({ to: "/dashboard/finance" })}
@@ -330,15 +248,17 @@ function DashboardHomePage() {
 					<div className="panel-head">
 						<div>
 							<h2>Pendapatan & Pengeluaran</h2>
-							<p>Perbandingan {chartPeriod} terakhir</p>
+							<p>Perbandingan arus kas {chartPeriod.label} terakhir</p>
 						</div>
-						<div onClick={(e) => e.stopPropagation()}>
+						<div onClick={(e) => e.stopPropagation()} className="w-32">
 							<Select
-								value={chartPeriod}
-								onValueChange={(val) => val && setChartPeriod(val)}
+								value={chartPeriod.value}
+								onValueChange={(val) =>
+									val && setChartPeriod({ label: val, value: val })
+								}
 							>
-								<SelectTrigger className="h-[30px] text-[11px] px-2.5 rounded-[7px] border-[#e4e9e4] bg-white text-[#737873]">
-									<SelectValue>{chartPeriod}</SelectValue>
+								<SelectTrigger className="w-full h-[30px] text-[11px] px-2.5 rounded-[7px] border-[#e4e9e4] bg-white text-[#737873]">
+									<SelectValue>{chartPeriod.label}</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-[#252925] text-xs">
 									<SelectItem value="6 Bulan">6 Bulan</SelectItem>
@@ -349,7 +269,10 @@ function DashboardHomePage() {
 					</div>
 
 					<div className="chart-wrap">
-						<RevenueExpenseChart period={chartPeriod} />
+						<RevenueExpenseChart
+							period={chartPeriod.value}
+							chartData={dashboardData?.chartData}
+						/>
 					</div>
 
 					<div className="legend">
@@ -362,7 +285,7 @@ function DashboardHomePage() {
 					</div>
 				</Card>
 
-				{/* Room Status & Occupancy Donut Panel with Chart.js */}
+				{/* Room Status & Occupancy Donut Panel */}
 				<Card
 					className="panel clickable p-[19px] ring-0 border-[#e4e9e4] rounded-[10px]"
 					onClick={() => navigate({ to: "/dashboard/rooms" })}
@@ -370,13 +293,17 @@ function DashboardHomePage() {
 					<div className="panel-head">
 						<div>
 							<h2>Status Kamar</h2>
-							<p>Occupancy hari ini</p>
+							<p>Okupansi: {stats.occupancyRate}%</p>
 						</div>
 						<span className="mini-link">Lihat semua</span>
 					</div>
 
 					<div className="occupancy">
-						<OccupancyDonutChart occupied={18} vacant={6} maintenance={0} />
+						<OccupancyDonutChart
+							occupied={stats.occupiedRooms}
+							vacant={stats.vacantRooms}
+							maintenance={stats.maintenanceRooms}
+						/>
 
 						<div className="occ-list">
 							<div className="occ-row">
@@ -391,7 +318,7 @@ function DashboardHomePage() {
 									/>
 									Terisi
 								</span>
-								<b>18</b>
+								<b>{stats.occupiedRooms}</b>
 							</div>
 							<div className="occ-row">
 								<span className="occ-name">
@@ -405,7 +332,7 @@ function DashboardHomePage() {
 									/>
 									Kosong
 								</span>
-								<b>6</b>
+								<b>{stats.vacantRooms}</b>
 							</div>
 							<div className="occ-row">
 								<span className="occ-name">
@@ -419,10 +346,14 @@ function DashboardHomePage() {
 									/>
 									Maintenance
 								</span>
-								<b>0</b>
+								<b>{stats.maintenanceRooms}</b>
 							</div>
 							<div className="bar">
-								<i style={{ width: "75%" }} />
+								<i
+									style={{
+										width: `${stats.occupancyRate}%`,
+									}}
+								/>
 							</div>
 						</div>
 					</div>
@@ -434,14 +365,16 @@ function DashboardHomePage() {
 				{/* Upcoming Payments TanStack Table */}
 				<Card
 					className="panel clickable p-[19px] ring-0 border-[#e4e9e4] rounded-[10px]"
-					onClick={() => navigate({ to: "/dashboard/payments" })}
+					onClick={() => navigate({ to: "/dashboard/invoices" })}
 				>
 					<div className="panel-head">
 						<div>
 							<h2>Pembayaran Terdekat</h2>
-							<p>Yang perlu diperhatikan minggu ini</p>
+							<p>Tagihan jatuh tempo yang perlu diperhatikan</p>
 						</div>
-						<span className="mini-link">Kelola pembayaran</span>
+						<span className="mini-link flex items-center gap-1">
+							Kelola tagihan <ExternalLink className="w-3 h-3" />
+						</span>
 					</div>
 
 					<UpcomingPaymentsTable
@@ -455,13 +388,13 @@ function DashboardHomePage() {
 					<div className="panel-head">
 						<div>
 							<h2>Perhatian Hari Ini</h2>
-							<p>Hal kecil yang perlu ditindaklanjuti</p>
+							<p>Agenda & pengingat operasional penting</p>
 						</div>
 					</div>
 
 					{todayAttentions.length === 0 ? (
-						<div className="empty-state-box">
-							Tidak ada perhatian khusus hari ini
+						<div className="empty-state-box p-6 text-center text-xs text-[#737873]">
+							Semua pembayaran dan agenda kos hari ini dalam kondisi prima ✨
 						</div>
 					) : (
 						<div className="attention">
@@ -471,7 +404,7 @@ function DashboardHomePage() {
 									className="attention-item clickable"
 									onClick={() => navigate({ to: att.route })}
 								>
-									<div className="att-icon">{att.icon}</div>
+									<div className="att-icon">{getAttentionIcon(att.type)}</div>
 									<div>
 										<strong>{att.title}</strong>
 										<span>{att.desc}</span>
@@ -490,10 +423,10 @@ function DashboardHomePage() {
 					<div className="panel-head">
 						<div>
 							<h2>Pengeluaran Terakhir</h2>
-							<p>Transaksi biaya terbaru</p>
+							<p>Transaksi biaya kas keluar terbaru</p>
 						</div>
 						<span
-							className="mini-link"
+							className="mini-link cursor-pointer"
 							onClick={() => navigate({ to: "/dashboard/finance" })}
 						>
 							Lihat semua
@@ -501,7 +434,7 @@ function DashboardHomePage() {
 					</div>
 
 					{recentExpenses.length === 0 ? (
-						<div className="empty-state-box">
+						<div className="empty-state-box p-6 text-center text-xs text-[#737873]">
 							Belum ada transaksi pengeluaran bulan ini
 						</div>
 					) : (
@@ -512,7 +445,9 @@ function DashboardHomePage() {
 										<b>{exp.title}</b>
 										<span>{exp.date}</span>
 									</div>
-									<strong>{exp.amount}</strong>
+									<strong className="text-[#a45149] font-mono">
+										{exp.amount}
+									</strong>
 								</div>
 							))}
 						</div>
@@ -524,27 +459,35 @@ function DashboardHomePage() {
 					<div className="panel-head">
 						<div>
 							<h2>Kamar Mendekati Pembayaran</h2>
-							<p>Ringkasan per kost</p>
+							<p>Ringkasan per cabang kos</p>
 						</div>
 						<span
-							className="mini-link"
-							onClick={() => navigate({ to: "/dashboard/payments" })}
+							className="mini-link cursor-pointer"
+							onClick={() => navigate({ to: "/dashboard/invoices" })}
 						>
 							Lihat semua
 						</span>
 					</div>
 
-					<div className="mini-list">
-						{propertySummary.map((ps) => (
-							<div key={ps.id} className="mini-list-row">
-								<div>
-									<b>{ps.name}</b>
-									<span>{ps.rooms}</span>
+					{propertySummary.length === 0 ? (
+						<div className="empty-state-box p-6 text-center text-xs text-[#737873]">
+							Belum ada data properti terdaftar
+						</div>
+					) : (
+						<div className="mini-list">
+							{propertySummary.map((ps) => (
+								<div key={ps.id} className="mini-list-row">
+									<div>
+										<b>{ps.name}</b>
+										<span>{ps.rooms}</span>
+									</div>
+									<span className={`badge ${ps.badgeColor}`}>
+										{ps.dueBadge}
+									</span>
 								</div>
-								<span className={`badge ${ps.badgeColor}`}>{ps.dueBadge}</span>
-							</div>
-						))}
-					</div>
+							))}
+						</div>
+					)}
 				</Card>
 			</div>
 
@@ -552,15 +495,20 @@ function DashboardHomePage() {
 			<Card className="activity panel p-[19px] ring-0 border-[#e4e9e4] rounded-[10px]">
 				<div className="panel-head">
 					<div>
-						<h2>Aktivitas Terbaru</h2>
-						<p>Perubahan terakhir di HomeeKost</p>
+						<h2>Aktivitas & Log Notifikasi</h2>
+						<p>Audit riwayat pesan WhatsApp & mutasi terbaru</p>
 					</div>
-					<span className="mini-link">Lihat semua</span>
+					<span
+						className="mini-link cursor-pointer"
+						onClick={() => navigate({ to: "/dashboard/engagement" })}
+					>
+						Lihat log
+					</span>
 				</div>
 
 				{recentActivities.length === 0 ? (
-					<div className="empty-state-box">
-						Belum ada aktivitas tercatat hari ini
+					<div className="empty-state-box p-6 text-center text-xs text-[#737873]">
+						Belum ada log notifikasi WhatsApp yang tercatat
 					</div>
 				) : (
 					<div className="activity-list">

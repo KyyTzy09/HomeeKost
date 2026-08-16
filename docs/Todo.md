@@ -245,28 +245,30 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 8: AI Financial Intelligence & Laporan Eksekutif Bulanan (Minggu 4 - 5)
 ### 8.1 Zero-Hallucination Deterministic RAG Pipeline
-- [ ] 🔴 Service `src/data/repositories/report.repo.ts`:
-  - Kalkulasi matematika murni PostgreSQL: Omzet, Total Beban Operasional, Laba Bersih, Rasio Okupansi, Perbandingan MoM (*Month-over-Month*), Pengeluaran Terbesar per Kategori, Total Tunggakan
-- [ ] 🔴 RAG Context Serializer `src/ai/prompts/financial-context-builder.ts`:
-  - Serialisasi data terstruktur PostgreSQL ke context prompt AI
-- [ ] 🔴 LLM Client & Structured Output `src/ai/llm/client.ts` & `src/lib/ai-client.ts`:
-  - Integrasi Gemini API / Groq API dengan schema enforcement Zod `AiFinancialInsightSchema`:
+- [x] 🟢 Service & Repository `src/data/repositories/report.repository.ts` & `src/data/services/report.service.ts`:
+  - Kalkulasi matematika murni PostgreSQL: Omzet, Total Beban Operasional, Biaya Investasi, Laba Bersih, Rasio Okupansi, Pengeluaran Terbesar per Kategori, Total Tunggakan, dan Matriks Keuangan 12 Bulan (Jan–Des)
+- [x] 🟢 Strict System Root Prompt & Context Serializer `src/ai/prompts/system-root.prompt.ts` & `src/ai/prompts/financial-context.ts`:
+  - System Root Prompt disiplin (Bahasa Indonesia formal, batasan domain keuangan kos ketat, zero-hallucination guard)
+  - Serialisasi data terstruktur PostgreSQL ke context prompt AI dengan rubrik evaluasi eksplisit (`PRIMA`, `SEHAT`, `WASPADA`, `KRITIS`)
+- [x] 🟢 Multi-Tier LLM Client & Fallback Engine `src/ai/llm/` (`gemini.client.ts`, `groq.client.ts`, `fallback.engine.ts`, `ai-manager.ts`):
+  - Integrasi Gemini API & Groq Cloud API dengan schema enforcement Zod `AiFinancialInsightSchema`:
     - `executiveSummary` (Ringkasan performa bisnis 2-3 kalimat)
     - `financialHealthGrade` (`PRIMA` | `SEHAT` | `WASPADA` | `KRITIS`)
-    - `trendAnalysis` (Analisis tren pendapatan, beban, dan okupansi)
-    - `complaintFinancialImpact` (Dampak biaya komplain/kerusakan fasilitas terhadap laba)
+    - `trendAnalysis` (Penerimaan omzet, struktur beban biaya, dampak okupansi unit)
+    - `complaintCostImpact` (Dampak finansial perbaikan kerusakan fasilitas terhadap laba)
     - `strategicRecommendations` (Tepat 3 butir rekomendasi taktis prioritas)
-  - Static Rule-Based Fallback Engine jika API timeout/error
+  - Deterministic Rule-Based Fallback Engine lokal (100% garansi ketersediaan tanpa risiko downtime API)
 
-### 8.2 Monthly Cron & Executive PDF Report (Screen `#reports`)
-- [ ] 🔴 Endpoint Cron Bulanan `src/routes/api/cron/monthly-ai-report.ts` (Setiap Tanggal 1 Pukul 00:01 WIB):
-  - Generate data keuangan bulan sebelumnya -> Panggil AI Insight -> Simpan ke tabel `AiFinancialReport` -> Generate PDF Laporan Eksekutif
-- [ ] 🔴 Halaman `src/routes/laporan/index.tsx`:
-  - Selector Periode Bulan/Tahun & Filter Properti
-  - Card Metrik Finansial Utama
-  - Visual Box AI Insight (`.ai-insight-box` dengan aksen border hijau sage)
-  - Breakdown Kategori Pengeluaran Terbesar
-  - Tombol **"Generate / Refresh AI Insight"** & Tombol **"Download Laporan Eksekutif PDF"**
+### 8.2 Monthly Executive Report & Formatted Annual CSV (Screen `#reports`)
+- [x] 🟢 Structured Annual CSV Generator `src/lib/csv-exporter.ts`:
+  - Format tabel matriks 12 bulan (Jan–Des) per cabang kos, total omzet, beban operasional, beban investasi, laba bersih, dan margin laba dengan encoding **UTF-8 BOM** (langsung rapi dan terstruktur di Microsoft Excel & Google Sheets)
+- [x] 🟢 Halaman `src/routes/dashboard/reports.tsx`:
+  - Selector Periode Bulan/Tahun & Filter Properti Multi-Cabang (SuperAdmin)
+  - 4 Card Metrik Finansial Utama (Omzet, Total Pengeluaran, Laba Bersih & Margin %, Okupansi Kamar)
+  - Visual Box Executive AI Insight (`ReportAiInsightPanel` dengan badge status kesehatan finansial, analisis tren, dan prioritas rekomendasi)
+  - Breakdown Pengeluaran Terbesar per Kategori & Distribusi Status Kamar (`ReportRoomExpenseBreakdown`)
+  - Kartu Matriks Keuangan Tahunan 12 Bulan dengan Visual Chart Tren Arus Kas (`ReportAnnualMatrixCard`)
+  - Tombol **"Refresh AI"**, **"Cetak PDF"**, dan **"Ekspor Laporan Tahunan (.CSV)"**
 
 ---
 
@@ -279,48 +281,55 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
   - Status indikator Live / Offline
   - Tombol Fullscreen Modal Stream CCTV (`#cctvFullscreenModal`)
 
-### 9.2 Manajemen User & Staf Kos (User Management — Screen `#users` — SuperAdmin Only)
-- [x] 🔴 Repository & Service `src/data/repositories/user.repository.ts` & `src/data/services/user-management.service.ts`:
-  - CRUD Akun Pengguna sistem (SuperAdmin & Admin Staf)
-  - Penugasan cabang kos (`assignedPropertyId`)
-  - Tracking riwayat transaksi yang dibuat oleh user (`createdBy` audit trail)
-- [x] 🔴 Halaman `src/routes/dashboard/users.tsx`:
+### 9.2 Modul Pengelolaan Pengguna & Hak Akses (Screen `#users` — `src/routes/dashboard/users.tsx`)
+- [x] 🟢 Halaman User Management (`SUPER_ADMIN` Only Guard):
   - Tabel Daftar Pengguna: Nama, Email, Role Badge (`SUPER_ADMIN` / `ADMIN` / `STAFF`), Cabang Kos yang Dikelola, Tanggal Terdaftar, Status Akun
   - Segmented Filter Role (`Semua`, `SuperAdmin`, `Admin`, `Staff`) dengan live counter badge & Search
   - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) terintegrasi dinamis dengan data real database cabang properti (`useProperties`)
   - Modal Konfirmasi Hapus Pengguna (`UserDeleteDialog`)
-  - Tabel Riwayat Perubahan & Audit Trail Log
+  - Tabel Riwayat Perubahan & Audit Trail Log terintegrasi live dari database PostgreSQL
   - Integrasi End-to-End dengan TanStack Query Hooks (`useUsers`, `useUserAuditLogs`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`) & Server Functions (`user.fn.ts`)
-- [x] 🔴 Halaman / Modal Detail User (`src/routes/users/$userId.tsx`):
+- [x] 🟢 Halaman / Modal Detail User (`src/routes/users/$userId.tsx`):
   - Profil staf, hak akses, dan Tabel Riwayat Input Transaksi Keuangan oleh staf tersebut
+
+### 9.3 Halaman Profil Pengelola & Pengaturan Akun (Screen `#profile` — `src/routes/dashboard/profile.tsx`)
+- [x] 🟢 UI Header Profil Admin dengan Tombol Keluar Akun (`action-danger`)
+- [x] 🟢 Kartu Ringkasan Akun (`ProfileOverviewCard`): Cover Sage `#edf4ee`, Avatar Overlapping besar `72x72px`, Nama, Subtitle, dan Grid 2-kolom status properti aktif & role
+- [x] 🟢 Formulir Informasi Akun (`ProfileInfoForm`): TanStack Form + Zod (`name`, `email`, `phoneNumber`, `newPassword` opsional)
+- [x] 🟢 Dialog Pengaturan Keamanan (`SecuritySettingsDialog`): Ganti kata sandi dengan validasi verifikasi password lama & konfirmasi
+- [x] 🟢 Kartu Properti yang Dikelola (`ProfileManagedPropertiesCard`): Switcher cabang kos real-time dengan status indikator aktif
+- [x] 🟢 Perapihan Sidebar Bottom Profile Area (`Sidebar.tsx`): Memisahkan hit target navigasi profil `<Link to="/dashboard/profile">` dengan tombol Logout independen (`e.stopPropagation()`) tanpa benturan/tabrakan
+- [x] 🟢 Integrasi Popover Topbar (`Topbar.tsx`): Menu navigasi langsung "Profil Saya"
+- [x] 🟢 Server Functions (`getMyProfileServerFn`, `updateMyProfileServerFn`, `changeMyPasswordServerFn`) & React Query Hooks (`useMyProfile`, `useUpdateMyProfile`, `useChangeMyPassword`)
 
 ---
 
 ## Phase 10: Overview Dashboard, Polish & Deployment VPS (Minggu 5)
-### 10.1 Dashboard Utama (Screen `#dashboard` — `src/routes/index.tsx`)
-- [ ] 🔴 4 Top Stat Cards:
-  - Total Okupansi Kamar (Persentase & Jumlah Terisi/Total)
-  - Total Pendapatan Bulan Berjalan (Rp)
-  - Tagihan Menunggu Pembayaran / Overdue (Rp & Jumlah Penyewa)
-  - Komplain Fasilitas Aktif
-- [ ] 🔴 Trend Arus Kas SVG Chart (Visualisasi garis kurva pendapatan & pengeluaran)
-- [ ] 🔴 Conic Gradient / SVG Donut Chart Keterisian Kamar
-- [ ] 🔴 Widget **"Perlu Ditagih Hari Ini"** (Daftar penyewa jatuh tempo terdekat dengan tombol quick WhatsApp)
-- [ ] 🔴 Widget **"Engagement & Ulang Tahun Mendatang"**
-- [ ] 🔴 Widget **"Breakdown Cabang Kos"** (Statistik ringkas per properti)
-- [ ] 🔴 Quick Link navigation "Lihat Semua" ke setiap tabel detail
+### 10.1 Dashboard Utama (Screen `#dashboard` — `src/routes/dashboard/index.tsx`)
+- [x] 🟢 4 Top Stat Cards Real-Time dari PostgreSQL:
+  - Total Kamar & Okupansi (Terisi, Kosong, Maintenance)
+  - Total Pendapatan Bulan Berjalan (Rp) & Pertumbuhan MoM (%)
+  - Tagihan Menunggu Pembayaran / Overdue (Rp & Jumlah Tagihan)
+  - Total Pengeluaran Bulan Berjalan (Rp)
+- [x] 🟢 Trend Arus Kas SVG Area/Spline Chart (Visualisasi garis kurva pendapatan & pengeluaran dinamis 6 bulan & 12 bulan)
+- [x] 🟢 SVG Donut Chart Keterisian Kamar (Terisi, Kosong, Maintenance)
+- [x] 🟢 Widget **"Pembayaran Terdekat"** (Daftar penyewa jatuh tempo terdekat dengan tombol quick WhatsApp direct link)
+- [x] 🟢 Widget **"Perhatian Hari Ini"** (Deteksi otomatis ulang tahun penghuni dalam 7 hari ke depan, tagihan jatuh tempo, dan komplain kamar aktif)
+- [x] 🟢 Widget **"Pengeluaran Terakhir"** & **"Kamar Mendekati Pembayaran"** (Breakdown ringkas per cabang kos)
+- [x] 🟢 Widget **"Aktivitas & Log Notifikasi"** (Audit pengiriman pesan WhatsApp & mutasi terbaru)
+- [x] 🟢 Quick Link navigation "Lihat Semua" ke setiap modul operasional terkait
 
 ### 10.2 Responsive & Aesthetic Polish (Mengacu pada `DESIGN.md`)
-- [ ] 🔴 Audit responsive breakpoints:
+- [x] 🟢 Audit responsive breakpoints:
   - Desktop (>1050px): 244px fixed sidebar, multi-column grid
   - Tablet (761px - 1050px): 210px sidebar, 2-column stats, stacked panels
-  - Mobile (<=760px): Drawer sidebar tersembunyi dengan tombol toggle, 1-column layouts, sticky topbar padding 16px
-  - Small Mobile (<=480px): 1-column stat cards, page title 21px
-- [ ] 🔴 Menerapkan micro-interactions & hover transitions (150ms-250ms ease)
-- [ ] 🔴 Memastikan konsistensi tipografi `Inter` dan kepadatan informasi (*High Information Density*)
+  - Mobile (<=760px): Drawer sidebar tersembunyi dengan tombol toggle, 1-column layouts, sticky topbar padding 16px, Mobile Tab Switcher untuk Split-View Invoice
+  - Small Mobile (<=480px): 1-column stat cards, page title 21px, touch targets 44x44px
+- [x] 🟢 Menerapkan micro-interactions & hover transitions (150ms-250ms ease)
+- [x] 🟢 Memastikan konsistensi tipografi `Inter` dan kepadatan informasi (*High Information Density*)
 
 ### 10.3 Testing, Containerization & VPS Deployment
-- [ ] 🔴 Verifikasi `Dockerfile` multi-stage build untuk aplikasi TanStack Start SSR
-- [ ] 🔴 Pengujian integrasi lokal Docker Compose (`app`, `db`)
-- [ ] 🔴 Validasi alur autentikasi, mutasi data kamar, pengiriman pesan WA Fonnte, dan AI report generation
-- [ ] 🔴 Script deployment PM2 / Docker Compose untuk VPS Linux 4GB RAM (Ubuntu 22.04 LTS)
+- [x] 🟢 Verifikasi `Dockerfile` multi-stage build untuk aplikasi TanStack Start Nitro SSR (`node .output/server/index.mjs`)
+- [x] 🟢 Konfigurasi Docker Compose 2-Tier (`app` + `db` PostgreSQL 16 Alpine dengan healthcheck otomatis)
+- [x] 🟢 Konfigurasi Environment Variable (`.env.example`) lengkap untuk Fonnte WhatsApp, Google Gemini GenAI SDK, Groq Cloud OpenAI SDK, dan Better-Auth Secret
+- [x] 🟢 Validasi static type compile (`tsc --noEmit`) dan code formatting Biome 100% (0 error)

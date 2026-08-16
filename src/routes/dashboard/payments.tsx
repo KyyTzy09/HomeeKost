@@ -9,8 +9,10 @@ import type {
 	GenerateMonthlyInvoicesInput,
 } from "../../common/validations/index.ts";
 import {
+	PAYMENT_STATUS_OPTIONS,
 	PaymentConfirmDialog,
 	PaymentDeleteDialog,
+	type PaymentFilterOption,
 	PaymentFormDialog,
 	PaymentGenerateDialog,
 	PaymentMetrics,
@@ -40,6 +42,8 @@ export const Route = createFileRoute("/dashboard/payments")({
 	component: PaymentsPage,
 });
 
+const DEFAULT_PAYMENT_STATUS_OPTION = PAYMENT_STATUS_OPTIONS[0];
+
 function PaymentsPage() {
 	const dashboardContext = useDashboardContext();
 	const activePropertyId = dashboardContext.activeProperty?.id;
@@ -53,7 +57,9 @@ function PaymentsPage() {
 
 	// Filter and Sort states
 	const [searchQuery, setSearchQuery] = useState<string>("");
-	const [statusFilter, setStatusFilter] = useState<string>("ALL");
+	const [statusFilter, setStatusFilter] = useState<PaymentFilterOption>(
+		DEFAULT_PAYMENT_STATUS_OPTION,
+	);
 	const [sortBy, setSortBy] = useState<"dueDate" | "amount" | "createdAt">(
 		"dueDate",
 	);
@@ -80,7 +86,7 @@ function PaymentsPage() {
 	// Queries
 	const { data: paymentsData, isLoading: isLoadingPayments } = usePayments({
 		propertyId: activePropertyId,
-		status: statusFilter as "ALL" | "PENDING" | "PAID" | "OVERDUE",
+		status: statusFilter.value as "ALL" | "PENDING" | "PAID" | "OVERDUE",
 		month: selectedMonth,
 		year: selectedYear,
 		search: searchQuery,

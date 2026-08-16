@@ -1,12 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	CheckCircle2,
-	MessageSquare,
-	Play,
-	Plus,
-	Send,
-	Sparkles,
-} from "lucide-react";
+import { CheckCircle2, MessageSquare, Play, Plus, Send } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
@@ -300,10 +293,6 @@ function EngagementPage() {
 						<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
 							Engagement Hub & Pengumuman
 						</h1>
-						<span className="text-[10px] font-bold text-[#4f6958] bg-[#e8f0ea] px-2 py-0.5 rounded-full flex items-center gap-1">
-							<Sparkles className="w-3 h-3" />
-							Fonnte Gateway
-						</span>
 					</div>
 					<p className="text-xs text-[#737873] mt-1">
 						Otomasi pesan WhatsApp ramah, ucapan ulang tahun anak kos, dan

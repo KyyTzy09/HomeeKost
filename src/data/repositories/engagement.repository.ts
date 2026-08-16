@@ -28,11 +28,26 @@ export interface BroadcastRecipient {
 	roomNumber: string;
 }
 
+const MONTH_NAMES = [
+	"Januari",
+	"Februari",
+	"Maret",
+	"April",
+	"Mei",
+	"Juni",
+	"Juli",
+	"Agustus",
+	"September",
+	"Oktober",
+	"November",
+	"Desember",
+];
+
 export class EngagementRepository {
 	constructor(private readonly db: PrismaClient = prisma) {}
 
 	/**
-	 * Dapatkan daftar penghuni aktif yang berulang tahun dalam N hari ke depan
+	 * Dapatkan daftar penghuni aktif yang berulang tahun dalam N hari ke depan (Deduplikasi via Map)
 	 */
 	async getUpcomingBirthdays(
 		propertyIds?: string[],
@@ -67,7 +82,7 @@ export class EngagementRepository {
 		now.setHours(0, 0, 0, 0);
 		const currentYear = now.getFullYear();
 
-		const results: UpcomingBirthdayResult[] = [];
+		const birthdayMap = new Map<string, UpcomingBirthdayResult>();
 
 		for (const contract of contracts) {
 			const bdate = contract.tenant.birthDate;
@@ -94,54 +109,48 @@ export class EngagementRepository {
 				if (daysRemaining === 0) relativeLabel = "Hari ini 🎉";
 				else if (daysRemaining === 1) relativeLabel = "Besok";
 
-				const monthNames = [
-					"Januari",
-					"Februari",
-					"Maret",
-					"April",
-					"Mei",
-					"Juni",
-					"Juli",
-					"Agustus",
-					"September",
-					"Oktober",
-					"November",
-					"Desember",
-				];
-
 				const phone =
 					contract.tenant.whatsappNumber || contract.tenant.phoneNumber || "";
 
-				results.push({
-					id: `${contract.tenant.id}-${contract.id}`,
-					tenantId: contract.tenant.id,
-					name: contract.tenant.name,
-					roomNumber: contract.room.roomNumber,
-					propertyName: contract.room.property.name,
-					propertyId: contract.room.property.id,
-					birthDate: `${birthDay} ${monthNames[birthMonth]}`,
-					rawBirthDate: bdate.toISOString(),
-					daysRemaining,
-					relativeLabel,
-					phone,
-				});
+				const tenantId = contract.tenant.id;
+				// Deduplikasi via Map: simpan atau pertahankan yang hari tersisa paling sedikit
+				if (
+					!birthdayMap.has(tenantId) ||
+					(birthdayMap.get(tenantId)?.daysRemaining ?? 999) > daysRemaining
+				) {
+					birthdayMap.set(tenantId, {
+						id: `${contract.tenant.id}-${contract.id}`,
+						tenantId: contract.tenant.id,
+						name: contract.tenant.name,
+						roomNumber: contract.room.roomNumber,
+						propertyName: contract.room.property.name,
+						propertyId: contract.room.property.id,
+						birthDate: `${birthDay} ${MONTH_NAMES[birthMonth]}`,
+						rawBirthDate: bdate.toISOString(),
+						daysRemaining,
+						relativeLabel,
+						phone,
+					});
+				}
 			}
 		}
 
 		// Urutkan berdasarkan yang paling dekat
-		return results.sort((a, b) => a.daysRemaining - b.daysRemaining);
+		return Array.from(birthdayMap.values()).sort(
+			(a, b) => a.daysRemaining - b.daysRemaining,
+		);
 	}
 
 	/**
 	 * Dapatkan penghuni aktif yang tepat berulang tahun HARI INI
 	 */
-	async getTodaysBirthdays() {
-		const allUpcoming = await this.getUpcomingBirthdays(undefined, 0);
+	async getTodaysBirthdays(propertyIds?: string[]) {
+		const allUpcoming = await this.getUpcomingBirthdays(propertyIds, 0);
 		return allUpcoming.filter((item) => item.daysRemaining === 0);
 	}
 
 	/**
-	 * Dapatkan daftar nomor telepon penyewa aktif untuk broadcast pengumuman
+	 * Dapatkan daftar nomor telepon penyewa aktif untuk broadcast pengumuman (Deduplikasi via Map)
 	 */
 	async getActiveTenantsForBroadcast(
 		propertyId?: string | null,
@@ -337,7 +346,7 @@ export class EngagementRepository {
 	}
 
 	/**
-	 * Catat log notifikasi ke database
+	 * Catat log notifikasi ke database (Single)
 	 */
 	async recordNotificationLog(
 		recipientNumber: string,
@@ -353,6 +362,30 @@ export class EngagementRepository {
 				notes: notes ? notes.slice(0, 500) : null,
 				sentAt: new Date(),
 			},
+		});
+	}
+
+	/**
+	 * Catat log notifikasi secara Batch / Massal (Mencegah N+1 INSERT Query)
+	 */
+	async recordNotificationLogsBatch(
+		logs: Array<{
+			recipientNumber: string;
+			messageType: NotificationType;
+			status: NotificationStatus;
+			notes?: string | null;
+			sentAt?: Date;
+		}>,
+	) {
+		if (logs.length === 0) return { count: 0 };
+		return this.db.notificationLog.createMany({
+			data: logs.map((l) => ({
+				recipientNumber: l.recipientNumber,
+				messageType: l.messageType,
+				status: l.status,
+				notes: l.notes ? l.notes.slice(0, 500) : null,
+				sentAt: l.sentAt || new Date(),
+			})),
 		});
 	}
 }

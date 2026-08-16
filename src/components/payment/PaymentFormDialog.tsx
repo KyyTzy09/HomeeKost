@@ -107,7 +107,23 @@ export function PaymentFormDialog({
 		});
 	};
 
-	const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
+	const yearOptions = [
+		{ label: String(currentYear - 1), value: currentYear - 1 },
+		{ label: String(currentYear), value: currentYear },
+		{ label: String(currentYear + 1), value: currentYear + 1 },
+	];
+
+	const selectedTenant = activeTenantsWithRoom.find(
+		(t) => (t.contractId || t.id) === contractId,
+	);
+	const selectedTenantLabel = selectedTenant
+		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${selectedTenant.rent}/bln)`
+		: undefined;
+
+	const selectedMonthOption = MONTH_OPTIONS.find(
+		(m) => m.value === periodMonth,
+	);
+	const selectedYearOption = yearOptions.find((y) => y.value === periodYear);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,8 +164,10 @@ export function PaymentFormDialog({
 								}
 							}}
 						>
-							<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-								<SelectValue placeholder="Pilih Penghuni & Kamar" />
+							<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+								<SelectValue placeholder="Pilih Penghuni & Kamar">
+									{selectedTenantLabel}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 								{activeTenantsWithRoom.map((t) => (
@@ -178,8 +196,10 @@ export function PaymentFormDialog({
 									if (val) setPeriodMonth(Number(val));
 								}}
 							>
-								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-									<SelectValue placeholder="Bulan" />
+								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Bulan">
+										{selectedMonthOption?.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 									{MONTH_OPTIONS.map((m) => (
@@ -201,13 +221,15 @@ export function PaymentFormDialog({
 									if (val) setPeriodYear(Number(val));
 								}}
 							>
-								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-									<SelectValue placeholder="Tahun" />
+								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Tahun">
+										{selectedYearOption?.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 									{yearOptions.map((y) => (
-										<SelectItem key={y} value={String(y)}>
-											{y}
+										<SelectItem key={y.value} value={String(y.value)}>
+											{y.label}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -227,7 +249,7 @@ export function PaymentFormDialog({
 								step="1000"
 								value={amount || ""}
 								onChange={(e) => setAmount(Number(e.target.value) || 0)}
-								placeholder="Contoh: 850000"
+								placeholder="Contoh: 1200000"
 								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 							/>
 							{errors.amount && (
@@ -239,7 +261,7 @@ export function PaymentFormDialog({
 
 						<div>
 							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-								Tanggal Jatuh Tempo *
+								Jatuh Tempo Pembayaran *
 							</Label>
 							<Input
 								type="date"
@@ -258,12 +280,12 @@ export function PaymentFormDialog({
 					{/* Notes */}
 					<div>
 						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-							Keterangan Tambahan (Opsional)
+							Catatan Tagihan (Opsional)
 						</Label>
 						<Input
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
-							placeholder="Contoh: Biaya sewa + deposit kunci"
+							placeholder="Contoh: Termasuk biaya tambahan listrik AC"
 							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 					</div>
@@ -271,22 +293,22 @@ export function PaymentFormDialog({
 					{/* Checkbox Send WhatsApp */}
 					<div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4]">
 						<Checkbox
-							id="sendInvoiceWa"
+							id="sendWhatsApp"
 							checked={sendWhatsApp}
 							onCheckedChange={(checked) => setSendWhatsApp(checked === true)}
 							className="mt-0.5"
 						/>
 						<label
-							htmlFor="sendInvoiceWa"
-							className="text-xs text-[#252925] cursor-pointer select-none leading-relaxed"
+							htmlFor="sendWhatsApp"
+							className="text-xs text-[#252925] leading-relaxed cursor-pointer"
 						>
-							<span className="font-semibold flex items-center gap-1">
-								<MessageSquare className="w-3.5 h-3.5 text-[#568062]" />
-								Kirim Tagihan via WhatsApp Langsung
+							<span className="font-semibold flex items-center gap-1.5">
+								<MessageSquare className="w-3.5 h-3.5 text-[#4f6958]" />
+								Kirim Tagihan Otomatis ke WhatsApp Penghuni
 							</span>
-							<span className="text-[11px] text-[#737873] block mt-0.5">
-								Pemberitahuan invoice akan langsung dikirimkan ke nomor WhatsApp
-								penyewa via Fonnte Gateway.
+							<span className="text-[#737873] block mt-0.5 text-[11px]">
+								Penghuni akan menerima rincian tagihan resmi dan instruksi
+								pembayaran via pesan Fonnte.
 							</span>
 						</label>
 					</div>
@@ -295,19 +317,19 @@ export function PaymentFormDialog({
 						<Button
 							type="button"
 							variant="outline"
-							className="h-9 px-4 text-xs font-semibold border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9"
 							onClick={() => onOpenChange(false)}
+							disabled={isSubmitting}
 						>
 							Batal
 						</Button>
-
 						<Button
 							type="submit"
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
 							disabled={isSubmitting}
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
 						>
 							<Save className="w-3.5 h-3.5 mr-1.5" />
-							{isSubmitting ? "Menyimpan..." : "Buat Tagihan"}
+							{isSubmitting ? "Menerbitkan..." : "Terbitkan Invoice"}
 						</Button>
 					</DialogFooter>
 				</form>

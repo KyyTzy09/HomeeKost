@@ -32,6 +32,17 @@ interface AutomationSettingsDialogProps {
 	onSubmit: (values: AutomationSettingsFormValues) => void;
 }
 
+const AI_MODEL_OPTIONS = [
+	{
+		label: "Google Gemini 1.5 Flash (Cepat & Akurat)",
+		value: "gemini-1.5-flash",
+	},
+	{
+		label: "Groq Cloud LLaMA 3.3 70B (High Speed LLM)",
+		value: "llama-3.3-70b-versatile",
+	},
+];
+
 export function AutomationSettingsDialog({
 	open,
 	onOpenChange,
@@ -133,37 +144,45 @@ export function AutomationSettingsDialog({
 
 					{/* Model AI LLM */}
 					<form.Field name="aiModel">
-						{(field) => (
-							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold text-[#252925]">
-									Engine AI Analysis
-								</Label>
-								<Select
-									value={field.state.value}
-									onValueChange={(val) => {
-										if (val)
-											field.handleChange(
-												val as "gemini-1.5-flash" | "llama-3.3-70b-versatile",
-											);
-									}}
-								>
-									<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-										<SelectValue placeholder="Pilih Engine AI" />
-									</SelectTrigger>
-									<SelectContent className="bg-white border-[#e4e9e4]">
-										<SelectItem value="gemini-1.5-flash" className="text-xs">
-											Google Gemini 1.5 Flash (Cepat & Akurat)
-										</SelectItem>
-										<SelectItem
-											value="llama-3.3-70b-versatile"
-											className="text-xs"
-										>
-											Groq Cloud LLaMA 3.3 70B (High Speed LLM)
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-						)}
+						{(field) => {
+							const selectedModelOption = AI_MODEL_OPTIONS.find(
+								(m) => m.value === field.state.value,
+							);
+
+							return (
+								<div className="space-y-1.5">
+									<Label className="text-xs font-semibold text-[#252925]">
+										Engine AI Analysis
+									</Label>
+									<Select
+										value={field.state.value}
+										onValueChange={(val) => {
+											if (val)
+												field.handleChange(
+													val as "gemini-1.5-flash" | "llama-3.3-70b-versatile",
+												);
+										}}
+									>
+										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+											<SelectValue placeholder="Pilih Engine AI">
+												{selectedModelOption?.label}
+											</SelectValue>
+										</SelectTrigger>
+										<SelectContent className="bg-white border-[#e4e9e4]">
+											{AI_MODEL_OPTIONS.map((opt) => (
+												<SelectItem
+													key={opt.value}
+													value={opt.value}
+													className="text-xs"
+												>
+													{opt.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							);
+						}}
 					</form.Field>
 
 					{/* Nomor WhatsApp Penerima */}
@@ -175,8 +194,12 @@ export function AutomationSettingsDialog({
 								</Label>
 								<Input
 									placeholder="081234567890"
+									inputMode="tel"
 									value={field.state.value}
-									onChange={(e) => field.handleChange(e.target.value)}
+									onChange={(e) => {
+										const cleaned = e.target.value.replace(/[^0-9+]/g, "");
+										field.handleChange(cleaned);
+									}}
 									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
 								/>
 								{field.state.meta.errors?.[0] && (
@@ -188,10 +211,10 @@ export function AutomationSettingsDialog({
 						)}
 					</form.Field>
 
-					{/* Checkbox Kirim Otomatis */}
+					{/* Checkbox Kirim WhatsApp Otomatis */}
 					<form.Field name="autoSendWhatsApp">
 						{(field) => (
-							<div className="flex items-center gap-2 p-3 bg-[#f7faf7] border border-[#e5ece5] rounded-xl">
+							<div className="flex items-center gap-2.5 p-3 bg-[#f7faf7] border border-[#e5ece5] rounded-xl">
 								<Checkbox
 									id="autoSendWhatsApp"
 									checked={field.state.value}
@@ -203,8 +226,8 @@ export function AutomationSettingsDialog({
 									htmlFor="autoSendWhatsApp"
 									className="text-xs text-[#252925] font-medium cursor-pointer"
 								>
-									Kirimkan ringkasan PDF laporan bulanan ke WhatsApp Owner
-									secara otomatis setelah digenerate.
+									Kirim ringkasan laporan eksekutif otomatis via WhatsApp ke
+									nomor owner/manajer setiap jadwal pembuatan selesai.
 								</label>
 							</div>
 						)}

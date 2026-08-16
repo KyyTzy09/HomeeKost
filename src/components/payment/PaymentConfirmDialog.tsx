@@ -32,6 +32,17 @@ interface PaymentConfirmDialogProps {
 	isSubmitting?: boolean;
 }
 
+const PAYMENT_METHOD_OPTIONS: {
+	label: string;
+	value: "TRANSFER" | "CASH" | "QRIS";
+}[] = [
+	{ label: "Transfer Bank", value: "TRANSFER" },
+	{ label: "Tunai (Cash)", value: "CASH" },
+	{ label: "QRIS", value: "QRIS" },
+];
+
+const DEFAULT_PAYMENT_METHOD_OPTION = PAYMENT_METHOD_OPTIONS[0];
+
 export function PaymentConfirmDialog({
 	open,
 	onOpenChange,
@@ -42,16 +53,17 @@ export function PaymentConfirmDialog({
 	const todayStr = useMemo(() => getTodayDateString(), []);
 
 	const [paidDate, setPaidDate] = useState<string>(todayStr);
-	const [paymentMethod, setPaymentMethod] = useState<
-		"TRANSFER" | "CASH" | "QRIS"
-	>("TRANSFER");
+	const [paymentMethod, setPaymentMethod] = useState<{
+		label: string;
+		value: "TRANSFER" | "CASH" | "QRIS";
+	}>(DEFAULT_PAYMENT_METHOD_OPTION);
 	const [notes, setNotes] = useState<string>("");
 	const [sendReceiptWhatsApp, setSendReceiptWhatsApp] = useState<boolean>(true);
 
 	useEffect(() => {
 		if (open) {
 			setPaidDate(todayStr);
-			setPaymentMethod("TRANSFER");
+			setPaymentMethod(DEFAULT_PAYMENT_METHOD_OPTION);
 			setNotes("");
 			setSendReceiptWhatsApp(true);
 		}
@@ -63,7 +75,7 @@ export function PaymentConfirmDialog({
 		e.preventDefault();
 		onConfirm({
 			invoiceId: payment.id,
-			paymentMethod,
+			paymentMethod: paymentMethod.value,
 			paidDate,
 			notes: notes.trim() || undefined,
 			sendReceiptWhatsApp,
@@ -123,20 +135,25 @@ export function PaymentConfirmDialog({
 								Metode Pembayaran *
 							</Label>
 							<Select
-								value={paymentMethod}
+								value={paymentMethod.value}
 								onValueChange={(val) => {
-									if (val === "TRANSFER" || val === "CASH" || val === "QRIS") {
-										setPaymentMethod(val);
-									}
+									const matched = PAYMENT_METHOD_OPTIONS.find(
+										(p) => p.value === val,
+									);
+									if (matched) setPaymentMethod(matched);
 								}}
 							>
-								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-									<SelectValue placeholder="Pilih Metode" />
+								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Pilih Metode">
+										{paymentMethod.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-									<SelectItem value="TRANSFER">Transfer Bank</SelectItem>
-									<SelectItem value="CASH">Tunai (Cash)</SelectItem>
-									<SelectItem value="QRIS">QRIS</SelectItem>
+									{PAYMENT_METHOD_OPTIONS.map((opt) => (
+										<SelectItem key={opt.value} value={opt.value}>
+											{opt.label}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</div>
@@ -179,15 +196,15 @@ export function PaymentConfirmDialog({
 						/>
 						<label
 							htmlFor="sendReceipt"
-							className="text-xs text-[#252925] cursor-pointer select-none leading-relaxed"
+							className="text-xs text-[#252925] leading-relaxed cursor-pointer"
 						>
-							<span className="font-semibold flex items-center gap-1">
-								<MessageSquare className="w-3.5 h-3.5 text-[#568062]" />
-								Kirim Kwitansi Lunas via WhatsApp Otomatis
+							<span className="font-semibold flex items-center gap-1.5">
+								<MessageSquare className="w-3.5 h-3.5 text-[#4f6958]" />
+								Kirim Kwitansi Resmi Otomatis via WhatsApp
 							</span>
-							<span className="text-[11px] text-[#737873] block mt-0.5">
-								Notifikasi pelunasan resmi akan langsung dikirim ke nomor{" "}
-								<b>{payment.tenantPhone || "anak kos"}</b> via Fonnte Gateway.
+							<span className="text-[#737873] block mt-0.5 text-[11px]">
+								Penghuni akan menerima konfirmasi pembayaran lunas dan tautan
+								kwitansi digital resmi secara instan.
 							</span>
 						</label>
 					</div>
@@ -196,16 +213,16 @@ export function PaymentConfirmDialog({
 						<Button
 							type="button"
 							variant="outline"
-							className="h-9 px-4 text-xs font-semibold border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9"
 							onClick={() => onOpenChange(false)}
+							disabled={isSubmitting}
 						>
 							Batal
 						</Button>
-
 						<Button
 							type="submit"
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
 							disabled={isSubmitting}
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
 						>
 							<Save className="w-3.5 h-3.5 mr-1.5" />
 							{isSubmitting ? "Menyimpan..." : "Konfirmasi Lunas"}

@@ -34,6 +34,15 @@ export const Route = createFileRoute("/dashboard/invoices")({
 	component: InvoicesPage,
 });
 
+const STATUS_OPTIONS = [
+	{ label: "Semua Dokumen", value: "ALL" },
+	{ label: "Menunggu Bayar", value: "PENDING" },
+	{ label: "Sudah Lunas", value: "PAID" },
+	{ label: "Terlambat", value: "OVERDUE" },
+];
+
+const DEFAULT_STATUS_OPTION = STATUS_OPTIONS[0];
+
 function InvoicesPage() {
 	const dashboardContext = useDashboardContext();
 	const activeProperty = dashboardContext.activeProperty;
@@ -43,8 +52,12 @@ function InvoicesPage() {
 
 	// Filters & Search states
 	const [searchQuery, setSearchQuery] = useState<string>("");
-	const [statusFilter, setStatusFilter] = useState<string>("ALL");
+	const [statusFilter, setStatusFilter] = useState<{
+		label: string;
+		value: string;
+	}>(DEFAULT_STATUS_OPTION);
 	const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
+	const [mobileTab, setMobileTab] = useState<"list" | "preview">("list");
 	const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 	const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -58,7 +71,7 @@ function InvoicesPage() {
 	// Query invoices from database
 	const { data: paymentsData, isLoading: isLoadingInvoices } = usePayments({
 		propertyId: activePropertyId,
-		status: statusFilter as "ALL" | "PENDING" | "PAID" | "OVERDUE",
+		status: statusFilter.value as "ALL" | "PENDING" | "PAID" | "OVERDUE",
 		search: searchQuery,
 		limit: 50,
 	});
@@ -133,7 +146,7 @@ function InvoicesPage() {
 				</div>
 				<Button
 					type="button"
-					className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 rounded-xl shadow-sm"
+					className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 rounded-xl shadow-sm cursor-pointer"
 					onClick={() => setIsFormOpen(true)}
 				>
 					<Plus className="w-4 h-4 mr-1.5" />
@@ -141,10 +154,41 @@ function InvoicesPage() {
 				</Button>
 			</div>
 
+			{/* Mobile/Tablet Segmented Switcher (Visible on < lg screens) */}
+			<div className="flex lg:hidden bg-[#e8f0ea] p-1 rounded-xl gap-1 border border-[#d2e0d5] print:hidden">
+				<button
+					type="button"
+					onClick={() => setMobileTab("list")}
+					className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+						mobileTab === "list"
+							? "bg-white text-[#4f6958] shadow-sm"
+							: "text-[#737873] hover:text-[#252925]"
+					}`}
+				>
+					Daftar Tagihan ({invoices.length})
+				</button>
+				<button
+					type="button"
+					onClick={() => setMobileTab("preview")}
+					className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+						mobileTab === "preview"
+							? "bg-white text-[#4f6958] shadow-sm"
+							: "text-[#737873] hover:text-[#252925]"
+					}`}
+				>
+					Pratinjau Dokumen{" "}
+					{selectedInvoice ? `(${selectedInvoice.number})` : ""}
+				</button>
+			</div>
+
 			{/* Invoice Preview Split View */}
 			<div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 items-start">
 				{/* Left Column: List of Invoices & Search Filters */}
-				<Card className="bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] overflow-hidden print:hidden">
+				<Card
+					className={`bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] overflow-hidden print:hidden ${
+						mobileTab === "list" ? "block" : "hidden lg:block"
+					}`}
+				>
 					{/* Search & Filter Toolbar */}
 					<div className="p-3.5 border-b border-[#e4e9e4] space-y-2.5 bg-[#fbfcfb]">
 						<div className="relative">
@@ -168,19 +212,23 @@ function InvoicesPage() {
 
 						<div className="flex items-center justify-between gap-2">
 							<Select
-								value={statusFilter}
+								value={statusFilter.value}
 								onValueChange={(val) => {
-									if (val) setStatusFilter(val);
+									const matched = STATUS_OPTIONS.find((s) => s.value === val);
+									if (matched) setStatusFilter(matched);
 								}}
 							>
 								<SelectTrigger className="h-7.5 text-[11px] border-[#e4e9e4] bg-white w-full">
-									<SelectValue placeholder="Semua Status" />
+									<SelectValue placeholder="Semua Status">
+										{statusFilter.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-									<SelectItem value="ALL">Semua Dokumen</SelectItem>
-									<SelectItem value="PENDING">Menunggu Bayar</SelectItem>
-									<SelectItem value="PAID">Sudah Lunas</SelectItem>
-									<SelectItem value="OVERDUE">Terlambat</SelectItem>
+									{STATUS_OPTIONS.map((opt) => (
+										<SelectItem key={opt.value} value={opt.value}>
+											{opt.label}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 
@@ -213,7 +261,10 @@ function InvoicesPage() {
 									<button
 										key={inv.id}
 										type="button"
-										onClick={() => setSelectedInvoiceId(inv.id)}
+										onClick={() => {
+											setSelectedInvoiceId(inv.id);
+											setMobileTab("preview");
+										}}
 										className={`w-full text-left p-3.5 flex items-start justify-between gap-3 transition-colors cursor-pointer ${
 											isSelected
 												? "bg-[#e8f0ea]/70 border-l-4 border-l-[#4f6958]"
@@ -266,11 +317,15 @@ function InvoicesPage() {
 				</Card>
 
 				{/* Right Column: Live Document Preview */}
-				<InvoiceDocPreview
-					invoice={selectedInvoice}
-					propertyName={activeProperty?.name || "HomeeKost Management"}
-					onDownloadPdf={handleDownloadPdf}
-				/>
+				<div
+					className={`w-full ${mobileTab === "preview" ? "block" : "hidden lg:block"}`}
+				>
+					<InvoiceDocPreview
+						invoice={selectedInvoice}
+						propertyName={activeProperty?.name || "HomeeKost Management"}
+						onDownloadPdf={handleDownloadPdf}
+					/>
+				</div>
 			</div>
 
 			{/* Modal Form Dialog */}

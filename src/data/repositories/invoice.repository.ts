@@ -350,12 +350,13 @@ export class InvoiceRepository {
 						periodMonth,
 						periodYear,
 					},
+					select: { id: true },
 				},
 			},
 		});
 
-		const createdInvoices = [];
 		const timestamp = Date.now().toString().slice(-4);
+		const toCreate = [];
 
 		for (let i = 0; i < contracts.length; i++) {
 			const contract = contracts[i];
@@ -370,34 +371,42 @@ export class InvoiceRepository {
 			const amount =
 				Number(contract.room.monthlyPrice) || Number(contract.room.price);
 
-			const newInvoice = await this.db.invoice.create({
-				data: {
-					contractId: contract.id,
-					invoiceNumber,
-					periodMonth,
-					periodYear,
-					amount,
-					dueDate,
-					status: "PENDING",
-				},
-				include: {
-					contract: {
-						include: {
-							tenant: true,
-							room: {
-								include: {
-									property: true,
-								},
+			toCreate.push({
+				contractId: contract.id,
+				invoiceNumber,
+				periodMonth,
+				periodYear,
+				amount,
+				dueDate,
+				status: "PENDING" as const,
+			});
+		}
+
+		if (toCreate.length === 0) return [];
+
+		await this.db.invoice.createMany({
+			data: toCreate,
+		});
+
+		return this.db.invoice.findMany({
+			where: {
+				contractId: { in: toCreate.map((c) => c.contractId) },
+				periodMonth,
+				periodYear,
+			},
+			include: {
+				contract: {
+					include: {
+						tenant: true,
+						room: {
+							include: {
+								property: true,
 							},
 						},
 					},
 				},
-			});
-
-			createdInvoices.push(newInvoice);
-		}
-
-		return createdInvoices;
+			},
+		});
 	}
 
 	async deleteInvoice(id: string) {

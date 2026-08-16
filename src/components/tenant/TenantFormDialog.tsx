@@ -560,7 +560,14 @@ export function TenantFormDialog({
 											</Label>
 											<Input
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												inputMode="tel"
+												onChange={(e) => {
+													const cleaned = e.target.value.replace(
+														/[^0-9+]/g,
+														"",
+													);
+													field.handleChange(cleaned);
+												}}
 												placeholder="08xxxxxxxxxx"
 												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${
 													hasError
@@ -888,7 +895,16 @@ export function TenantFormDialog({
 												</div>
 												<Input
 													value={field.state.value}
-													onChange={(e) => field.handleChange(e.target.value)}
+													inputMode="numeric"
+													onChange={(e) => {
+														const digits = e.target.value.replace(
+															/[^0-9]/g,
+															"",
+														);
+														field.handleChange(
+															digits ? formatRupiah(Number(digits)) : "",
+														);
+													}}
 													placeholder="Rp850.000"
 													className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${
 														hasError
@@ -1011,7 +1027,13 @@ export function TenantFormDialog({
 											</Label>
 											<Input
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												inputMode="numeric"
+												onChange={(e) => {
+													const digits = e.target.value.replace(/[^0-9]/g, "");
+													field.handleChange(
+														digits ? formatRupiah(Number(digits)) : "",
+													);
+												}}
 												placeholder="Rp500.000"
 												className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
 											/>
@@ -1072,7 +1094,11 @@ export function TenantFormDialog({
 										</Label>
 										<Input
 											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
+											inputMode="tel"
+											onChange={(e) => {
+												const cleaned = e.target.value.replace(/[^0-9+]/g, "");
+												field.handleChange(cleaned);
+											}}
 											placeholder="08xxxxxxxxxx"
 											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
 										/>

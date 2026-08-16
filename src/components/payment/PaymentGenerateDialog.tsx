@@ -77,7 +77,15 @@ export function PaymentGenerateDialog({
 		});
 	};
 
-	const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
+	const yearOptions = [
+		{ label: String(currentYear - 1), value: currentYear - 1 },
+		{ label: String(currentYear), value: currentYear },
+		{ label: String(currentYear + 1), value: currentYear + 1 },
+	];
+
+	const selectedProperty = properties.find((p) => p.id === propertyId);
+	const selectedMonth = MONTH_OPTIONS.find((m) => m.value === periodMonth);
+	const selectedYear = yearOptions.find((y) => y.value === periodYear);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,8 +119,10 @@ export function PaymentGenerateDialog({
 								if (val) setPropertyId(val);
 							}}
 						>
-							<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-								<SelectValue placeholder="Pilih Cabang Kos" />
+							<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+								<SelectValue placeholder="Pilih Cabang Kos">
+									{selectedProperty?.name}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 								{properties.map((p) => (
@@ -136,8 +146,10 @@ export function PaymentGenerateDialog({
 									if (val) setPeriodMonth(Number(val));
 								}}
 							>
-								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-									<SelectValue placeholder="Bulan" />
+								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Bulan">
+										{selectedMonth?.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 									{MONTH_OPTIONS.map((m) => (
@@ -159,13 +171,15 @@ export function PaymentGenerateDialog({
 									if (val) setPeriodYear(Number(val));
 								}}
 							>
-								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-									<SelectValue placeholder="Tahun" />
+								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Tahun">
+										{selectedYear?.label}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 									{yearOptions.map((y) => (
-										<SelectItem key={y} value={String(y)}>
-											{y}
+										<SelectItem key={y.value} value={String(y.value)}>
+											{y.label}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -181,14 +195,14 @@ export function PaymentGenerateDialog({
 						<Input
 							type="number"
 							min="1"
-							max="31"
+							max="28"
 							value={dueDateDay}
 							onChange={(e) => setDueDateDay(Number(e.target.value) || 10)}
 							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 						<p className="text-[11px] text-[#737873] mt-1">
-							Contoh: Tanggal 10 = Batas bayar adalah tanggal 10 pada bulan
-							periode tersebut.
+							Misal: Isi 10 jika jatuh tempo setiap tanggal 10 pada bulan
+							berjalan.
 						</p>
 					</div>
 
@@ -196,19 +210,19 @@ export function PaymentGenerateDialog({
 						<Button
 							type="button"
 							variant="outline"
-							className="h-9 px-4 text-xs font-semibold border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9"
 							onClick={() => onOpenChange(false)}
+							disabled={isGenerating}
 						>
 							Batal
 						</Button>
-
 						<Button
 							type="submit"
-							disabled={isGenerating || !propertyId}
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
+							disabled={isGenerating}
 						>
 							<CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-							{isGenerating ? "Memproses..." : "Generate Tagihan"}
+							{isGenerating ? "Menerbitkan..." : "Terbitkan Tagihan Massal"}
 						</Button>
 					</DialogFooter>
 				</form>

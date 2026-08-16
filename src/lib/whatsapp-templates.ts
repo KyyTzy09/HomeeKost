@@ -178,4 +178,37 @@ ${p.message}
 _Mohon diperhatikan oleh seluruh penghuni demi kenyamanan bersama. Terima kasih!_ 🙏
 _— Manajemen Pengelola Kos_`;
 	},
+
+	/**
+	 * Template Pengingat Notifikasi Laporan Keuangan Eksekutif (Teks Saja - Tanpa File PDF)
+	 */
+	executiveReportReminder(p: {
+		propertyName: string;
+		periodMonth: string;
+		periodYear: number;
+		totalIncome: number;
+		totalExpense: number;
+		netProfit: number;
+		profitMarginPercentage: number;
+		occupancyRate: number;
+		financialHealthGrade: string;
+		dashboardUrl?: string;
+	}): string {
+		return `📊 *LAPORAN KEUANGAN KOST HOMEEKOST* 📊
+━━━━━━━━━━━━━━━━━━━━━
+Halo Bapak/Ibu Pengelola,
+Laporan Keuangan Eksekutif untuk *${p.propertyName}* periode *${p.periodMonth} ${p.periodYear}* telah selesai dibuat dan dianalisis oleh AI.
+
+💰 *Ringkasan Keuangan:*
+• Total Pemasukan: *${formatRupiah(p.totalIncome)}*
+• Total Pengeluaran: *${formatRupiah(p.totalExpense)}*
+• Laba Bersih: *${formatRupiah(p.netProfit)}* (Margin: ${p.profitMarginPercentage}%)
+• Status Finansial: *${p.financialHealthGrade}*
+• Okupansi Kamar: *${p.occupancyRate}%*
+
+Silakan buka Web Dashboard HomeeKost untuk melihat rincian laporan dan wawasan bisnis lengkap:
+🔗 ${p.dashboardUrl || "https://app.homeekost.id/dashboard/reports"}
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan otomatis dari Sistem Manajemen HomeeKost_`;
+	},
 };

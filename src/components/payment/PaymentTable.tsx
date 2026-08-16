@@ -40,7 +40,12 @@ import {
 import type { PaymentItem, PaymentStatus } from "../../common/types/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 
-export const PAYMENT_STATUS_OPTIONS = [
+export interface PaymentFilterOption {
+	label: string;
+	value: string;
+}
+
+export const PAYMENT_STATUS_OPTIONS: PaymentFilterOption[] = [
 	{ label: "Semua Status", value: "ALL" },
 	{ label: "Menunggu Bayar", value: "PENDING" },
 	{ label: "Sudah Bayar (Lunas)", value: "PAID" },
@@ -55,8 +60,8 @@ interface PaymentTableProps {
 	pageSize?: number;
 	searchQuery: string;
 	onSearchChange: (q: string) => void;
-	statusFilter: string;
-	onStatusFilterChange: (status: string) => void;
+	statusFilter: PaymentFilterOption;
+	onStatusFilterChange: (status: PaymentFilterOption) => void;
 	sortBy: "dueDate" | "amount" | "createdAt";
 	sortOrder: "asc" | "desc";
 	onSortToggle: (sortBy: "dueDate" | "amount" | "createdAt") => void;
@@ -174,27 +179,24 @@ export function PaymentTable({
 				),
 				cell: (info) => {
 					const item = info.row.original;
-					const badge = item.dueStatusBadge;
-
-					let badgeStyle = "bg-[#f3f7f3] text-[#4f6958]";
-					if (badge.variant === "green") {
-						badgeStyle = "bg-[#e8f2ea] text-[#568062]";
-					} else if (badge.variant === "amber") {
-						badgeStyle = "bg-[#fbf4e6] text-[#b18a4b]";
-					} else if (badge.variant === "red") {
-						badgeStyle = "bg-[#f7e9e8] text-[#a65f5b]";
-					}
-
 					return (
 						<div>
-							<span className="text-xs font-semibold text-[#252925] block whitespace-nowrap">
+							<span className="text-xs text-[#252925] font-medium block whitespace-nowrap">
 								{info.getValue()}
 							</span>
-							<span
-								className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${badgeStyle}`}
-							>
-								{badge.text}
-							</span>
+							{item.dueStatusBadge?.text && (
+								<span
+									className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
+										item.dueStatusBadge.variant === "red"
+											? "bg-[#fdf0ed] text-[#b8382e]"
+											: item.dueStatusBadge.variant === "green"
+												? "bg-[#e8f0ea] text-[#4f6958]"
+												: "bg-[#fbf4ea] text-[#99773d]"
+									}`}
+								>
+									{item.dueStatusBadge.text}
+								</span>
+							)}
 						</div>
 					);
 				},
@@ -202,120 +204,121 @@ export function PaymentTable({
 			columnHelper.accessor("amount", {
 				id: "amount",
 				header: () => (
-					<div className="flex justify-end w-full">
-						<button
-							type="button"
-							onClick={() => onSortToggle("amount")}
-							className="flex items-center gap-1.5 hover:text-[#252925] transition-colors"
-						>
-							<span>Nominal</span>
-							{sortBy === "amount" ? (
-								sortOrder === "asc" ? (
-									<ArrowUp className="w-3 h-3 text-[#4f6958]" />
-								) : (
-									<ArrowDown className="w-3 h-3 text-[#4f6958]" />
-								)
+					<button
+						type="button"
+						onClick={() => onSortToggle("amount")}
+						className="flex items-center gap-1.5 hover:text-[#252925] transition-colors ml-auto"
+					>
+						<span>Total Tagihan</span>
+						{sortBy === "amount" ? (
+							sortOrder === "asc" ? (
+								<ArrowUp className="w-3 h-3 text-[#4f6958]" />
 							) : (
-								<ArrowDownUp className="w-3 h-3 text-[#8fa594]" />
-							)}
-						</button>
-					</div>
+								<ArrowDown className="w-3 h-3 text-[#4f6958]" />
+							)
+						) : (
+							<ArrowDownUp className="w-3 h-3 text-[#8fa594]" />
+						)}
+					</button>
 				),
 				cell: (info) => (
-					<div className="text-xs font-bold text-right text-[#252925] whitespace-nowrap">
-						{formatRupiah(info.getValue())}
+					<div className="text-right">
+						<span className="text-xs font-bold text-[#252925] whitespace-nowrap font-mono">
+							{formatRupiah(info.getValue())}
+						</span>
 					</div>
 				),
 			}),
 			columnHelper.accessor("status", {
 				id: "status",
-				header: () => "Status",
+				header: () => "Status Pembayaran",
 				cell: (info) => {
 					const status = info.getValue() as PaymentStatus;
-					if (status === "PAID") {
-						return (
-							<span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#e8f2ea] text-[#568062] whitespace-nowrap">
-								<CheckCircle2 className="w-3 h-3" />
-								Lunas
-							</span>
-						);
-					}
-					if (status === "OVERDUE") {
-						return (
-							<span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f7e9e8] text-[#a65f5b] whitespace-nowrap">
-								<Clock className="w-3 h-3" />
-								Terlambat
-							</span>
-						);
-					}
+					const badgeColors: Record<PaymentStatus, string> = {
+						PAID: "bg-[#e8f0ea] text-[#4f6958] border-[#c8dacb]",
+						PENDING: "bg-[#fbf4ea] text-[#99773d] border-[#ebd8bc]",
+						OVERDUE: "bg-[#fdf0ed] text-[#b8382e] border-[#f5c6c2]",
+						CANCELLED: "bg-[#f0f2f0] text-[#737873] border-[#d6dfd7]",
+					};
+					const statusLabels: Record<PaymentStatus, string> = {
+						PAID: "✓ Lunas",
+						PENDING: "⏳ Menunggu",
+						OVERDUE: "⚠️ Terlambat",
+						CANCELLED: "✕ Dibatalkan",
+					};
+
 					return (
-						<span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#fbf4e6] text-[#b18a4b] whitespace-nowrap">
-							<Clock className="w-3 h-3" />
-							Menunggu
+						<span
+							className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border ${badgeColors[status] || badgeColors.PENDING}`}
+						>
+							{statusLabels[status] || status}
 						</span>
 					);
 				},
 			}),
 			columnHelper.display({
 				id: "actions",
-				header: () => <div className="text-right">Aksi & WhatsApp</div>,
-				cell: ({ row }) => {
-					const item = row.original;
+				header: () => <div className="text-right">Aksi Cepat</div>,
+				cell: (info) => {
+					const item = info.row.original;
 					const isPaid = item.status === "PAID";
 
 					return (
-						<div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-							{/* Tombol Verifikasi Bayar jika belum lunas */}
-							{!isPaid && (
+						<div className="flex items-center justify-end gap-1.5">
+							{/* Konfirmasi Pembayaran Lunas */}
+							{!isPaid ? (
 								<Button
 									type="button"
 									size="sm"
+									className="h-7 px-2.5 text-[11px] font-semibold bg-[#4f6958] hover:bg-[#425949] text-white shadow-2xs rounded-lg"
 									onClick={() => onConfirmPayment(item)}
-									className="h-7.5 px-2.5 text-[11px] font-semibold bg-[#4f6958] hover:bg-[#425949] text-white shadow-xs rounded-lg"
+									title="Verifikasi Pembayaran & Tandai Lunas"
 								>
 									<CheckCircle2 className="w-3 h-3 mr-1" />
-									Verifikasi Bayar
+									Konfirmasi
+								</Button>
+							) : (
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									className="h-7 px-2.5 text-[11px] font-semibold text-[#4f6958] border-[#c8dacb] bg-[#f5f9f6] rounded-lg"
+									onClick={() => onSendWhatsApp(item)}
+									title="Kirim Ulang Kwitansi Lunas via WhatsApp"
+									disabled={isSendingWhatsApp}
+								>
+									<MessageCircle className="w-3 h-3 mr-1 text-[#568062]" />
+									Kwitansi
 								</Button>
 							)}
 
-							{/* Tombol Kirim Tagihan / Kwitansi via Fonnte WA */}
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								disabled={isSendingWhatsApp}
-								onClick={() => onSendWhatsApp(item)}
-								className="h-7.5 px-2.5 text-[11px] font-semibold border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea] shadow-xs rounded-lg"
-								title="Kirim Pesan WhatsApp Otomatis via Fonnte API"
-							>
-								<Send className="w-3 h-3 mr-1 text-[#568062]" />
-								{isPaid ? "Kirim Kwitansi WA" : "Kirim WA"}
-							</Button>
-
-							{/* Tombol Direct Link wa.me */}
-							<a
-								href={item.directWhatsAppUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="inline-flex items-center justify-center w-7.5 h-7.5 rounded-lg border border-[#e4e9e4] text-[#568062] hover:bg-[#e8f0ea] transition-colors"
-								title="Buka di WhatsApp Web / App (Manual)"
-							>
-								<MessageCircle className="w-3.5 h-3.5" />
-							</a>
-
-							{/* Tombol Hapus jika belum lunas */}
+							{/* Kirim Pengingat / Tagihan WhatsApp */}
 							{!isPaid && (
 								<Button
 									type="button"
-									variant="ghost"
-									size="icon"
-									onClick={() => onDelete(item)}
-									className="w-7.5 h-7.5 text-[#737873] hover:text-[#a65f5b] hover:bg-[#f7e9e8] rounded-lg"
-									title="Hapus Tagihan"
+									variant="outline"
+									size="sm"
+									className="h-7 px-2.5 text-[11px] font-semibold text-[#568062] border-[#e4e9e4] hover:bg-[#e8f0ea] rounded-lg"
+									onClick={() => onSendWhatsApp(item)}
+									title="Kirim Pesan Penagihan ke WhatsApp Penghuni"
+									disabled={isSendingWhatsApp}
 								>
-									<Trash2 className="w-3.5 h-3.5" />
+									<Send className="w-3 h-3 mr-1" />
+									Kirim WA
 								</Button>
 							)}
+
+							{/* Hapus Tagihan */}
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								className="w-7 h-7 text-[#737873] hover:text-[#a65f5b] hover:bg-[#f7e9e8] rounded-lg"
+								onClick={() => onDelete(item)}
+								title="Hapus Tagihan"
+							>
+								<Trash2 className="w-3.5 h-3.5" />
+							</Button>
 						</div>
 					);
 				},
@@ -410,13 +413,18 @@ export function PaymentTable({
 				{/* Status Filter */}
 				<div className="sm:col-span-4">
 					<Select
-						value={statusFilter}
+						value={statusFilter.value}
 						onValueChange={(val) => {
-							if (val) onStatusFilterChange(val);
+							const matched = PAYMENT_STATUS_OPTIONS.find(
+								(opt) => opt.value === val,
+							);
+							if (matched) onStatusFilterChange(matched);
 						}}
 					>
-						<SelectTrigger className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] w-full">
-							<SelectValue placeholder="Pilih Status Tagihan" />
+						<SelectTrigger className="w-full h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+							<SelectValue placeholder="Pilih Status Tagihan">
+								{statusFilter.label}
+							</SelectValue>
 						</SelectTrigger>
 						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 							{PAYMENT_STATUS_OPTIONS.map((opt) => (
@@ -459,11 +467,11 @@ export function PaymentTable({
 							<TableRow>
 								<TableCell
 									colSpan={columns.length}
-									className="py-8 text-center text-xs text-[#737873]"
+									className="py-12 text-center text-xs text-[#737873]"
 								>
 									<div className="flex items-center justify-center gap-2">
 										<div className="w-4 h-4 border-2 border-[#4f6958] border-t-transparent rounded-full animate-spin" />
-										<span>Memuat daftar tagihan...</span>
+										<span>Memuat daftar tagihan & riwayat pembayaran...</span>
 									</div>
 								</TableCell>
 							</TableRow>
@@ -471,22 +479,20 @@ export function PaymentTable({
 							<TableRow>
 								<TableCell
 									colSpan={columns.length}
-									className="py-8 text-center text-xs text-[#737873]"
+									className="py-12 text-center text-xs text-[#737873]"
 								>
-									Belum ada catatan tagihan sewa yang sesuai dengan filter.
+									Tidak ada tagihan atau pembayaran yang sesuai dengan kriteria
+									pencarian.
 								</TableCell>
 							</TableRow>
 						) : (
 							table.getRowModel().rows.map((row) => (
 								<TableRow
 									key={row.id}
-									className="hover:bg-[#fbfcfb] transition-colors"
+									className="hover:bg-[#fbfcfb] transition-colors border-b border-[#edf0ed]"
 								>
 									{row.getVisibleCells().map((cell) => (
-										<TableCell
-											key={cell.id}
-											className="py-3 px-3.5 text-xs text-[#252925]"
-										>
+										<TableCell key={cell.id} className="py-3 px-3.5">
 											{flexRender(
 												cell.column.columnDef.cell,
 												cell.getContext(),
@@ -500,35 +506,34 @@ export function PaymentTable({
 				</Table>
 			</div>
 
-			{/* ─── Pagination Bar ───────────────────────────────────────────── */}
-			<div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#e4e9e4] mt-4">
-				<div className="text-[11px] text-[#737873]">
-					Menampilkan Halaman <b className="text-[#252925]">{currentPage}</b>{" "}
-					dari <b className="text-[#252925]">{totalPages}</b> ({totalCount}{" "}
-					total tagihan)
+			{/* ─── Pagination Controls ──────────────────────────────────────── */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 text-xs text-[#737873]">
+				<div>
+					Menampilkan <b>{payments.length}</b> dari <b>{totalCount}</b> data
+					tagihan
 				</div>
 
-				<div className="flex items-center gap-1.5">
+				<div className="flex items-center gap-1.5 self-end sm:self-auto">
 					<Button
 						type="button"
 						variant="outline"
 						size="sm"
+						onClick={() => onPageChange(Math.max(1, currentPage - 1))}
 						disabled={currentPage <= 1 || isLoading}
-						onClick={() => onPageChange(currentPage - 1)}
-						className="h-8 px-3 text-xs border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea]"
+						className="h-8 text-xs border-[#e4e9e4] hover:bg-[#f3f7f3]"
 					>
 						Sebelumnya
 					</Button>
-					<div className="px-2 text-xs font-semibold text-[#252925]">
-						{currentPage}
-					</div>
+					<span className="px-2 font-medium">
+						{currentPage} / {totalPages || 1}
+					</span>
 					<Button
 						type="button"
 						variant="outline"
 						size="sm"
+						onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
 						disabled={currentPage >= totalPages || isLoading}
-						onClick={() => onPageChange(currentPage + 1)}
-						className="h-8 px-3 text-xs border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea]"
+						className="h-8 text-xs border-[#e4e9e4] hover:bg-[#f3f7f3]"
 					>
 						Selanjutnya
 					</Button>
