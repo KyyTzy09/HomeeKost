@@ -1,3 +1,4 @@
+export * from "./invoice.repository.ts";
 export * from "./property.repository.ts";
 export * from "./room.repository.ts";
 export * from "./tenant.repository.ts";

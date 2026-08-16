@@ -193,45 +193,53 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 6: Tagihan, Invoice Digital & Integrasi Fonnte WhatsApp Gateway (Minggu 3 - 4)
 ### 6.1 Fonnte WhatsApp API Gateway Integration (`api.fonnte.com`)
-- [ ] 🔴 Client Helper `src/lib/fonnte-client.ts`:
+- [x] 🔴 Client Helper `src/lib/fonnte-client.ts` & `src/lib/phone-sanitizer.ts`:
   - Header: `Authorization: ${FONNTE_TOKEN}`
-  - Function `sendTextMessage(target: string, message: string)` via `POST https://api.fonnte.com/send`
-  - Function `sendInvoiceWithAttachment(target: string, message: string, fileUrl: string, filename: string)`
+  - Function `sendText({ target, message })` via `POST https://api.fonnte.com/send`
+  - Function `sendFile({ target, message, url, filename })`
   - Logging status respons pengiriman ke tabel `NotificationLog`
   - Fallback mechanism: Jika API gagal/koneksi bermasalah, sediakan tombol link manual WhatsApp Web / App (`https://wa.me/628xxx?text=...`)
+  - Template Generator `src/lib/whatsapp-templates.ts` (Invoice Tagihan, Pengingat Jatuh Tempo H-3/Hari H/Overdue, Kwitansi Lunas)
 
 ### 6.2 Monitoring Pembayaran & Tagihan (Screen `#payments`)
-- [ ] 🔴 Halaman `src/routes/pembayaran/index.tsx`:
+- [x] 🔴 Halaman `src/routes/dashboard/payments.tsx`:
   - Kartu Ringkasan: Total Tagihan Bulan Ini, Sudah Dibayar, Belum Dibayar / Terlambat
   - Filter Status Pembayaran: Semua, Menunggu Pembayaran (`PENDING`), Lunas (`PAID`), Jatuh Tempo (`OVERDUE`)
-  - Filter Periode Bulan & Tahun
-  - Tabel Tagihan: Nomor Invoice, Nama Penyewa, Kamar, Jatuh Tempo (dengan indikator visual H-3, H-0, Overdue), Nominal Tagihan, Status Badge, Tanggal Bayar
-  - Aksi "Verifikasi Pembayaran" (*Confirm / Mark as Paid*) -> Otomatis mencatat pelunasan & menambah Pemasukan Kas
+  - Filter Periode Bulan & Tahun dan Pencarian Instan Real-time
+  - Tabel Tagihan TanStack Table v8: Nomor Invoice, Nama Penyewa (dengan direct link WA), Kamar, Jatuh Tempo (dengan indikator visual H-3, H-0, Overdue), Nominal Tagihan, Status Badge, Tanggal Bayar
+  - Aksi "Verifikasi Pembayaran" (*Confirm / Mark as Paid*) -> Otomatis mencatat pelunasan & menambah Pemasukan Kas (`INCOME` - `RENT`) secara atomik via Prisma Transaction
+  - Modal Generate Tagihan Bulanan Massal (`PaymentGenerateDialog`) & Modal Buat Tagihan Manual (`PaymentFormDialog`)
+  - Action button "Kirim WA (Fonnte API)" dan "Buka WhatsApp Web (Manual wa.me)"
 
 ### 6.3 Invoice Digital & Live PDF Engine (Screen `#invoice`)
-- [ ] 🔴 PDF Generator Engine `src/lib/pdf-generator.ts`:
-  - Template resmi Invoice HomeeKost (Header Kos, No Invoice, Tanggal, Detail Kamar, Periode Sewa, Nominal, Rekening Transfer / QRIS Pembayaran)
-- [ ] 🔴 Halaman `src/routes/invoice/index.tsx`:
-  - Split View Layout (Daftar Invoice di panel kiri, Live Preview PDF Invoice di panel kanan)
-  - Tombol Buat Invoice Manual (`#invoiceModal`) & Generate Invoice Massal Bulanan
-  - Tombol Aksi **"Kirim Tagihan via WhatsApp (Fonnte)"** (Otomatis panggil Fonnte API + lampiran link PDF)
-  - Tombol Cadangan **"Kirim WA Manual (wa.me)"**
-  - Tombol **"Download PDF Invoice"**
+- [x] 🔴 In-Memory PDF Generator (`src/lib/pdf-generator.ts`):
+  - Pure in-memory PDF Engine (`pdf-lib`) super ringan (<10MB RAM, cocok untuk VPS Linux 2GB)
+  - Layout formal A4 (Logo HomeeKost, Nomor Invoice, Stempel LUNAS / MENUNGGU, Rentang Periode Sewa, Tabel Rincian, Rekening Transfer BCA, Tanda Tangan)
+- [x] 🔴 Fonnte Direct Multipart PDF Upload (`src/lib/fonnte-client.ts`):
+  - Pengiriman file PDF biner Buffer secara langsung via `multipart/form-data` ke Fonnte API (`api.fonnte.com/send`)
+- [x] 🔴 Halaman `src/routes/dashboard/invoices.tsx`:
+  - Split View Layout (Daftar Invoice real-time dari database di panel kiri, Live Preview Dokumen Faktur/Kwitansi di panel kanan)
+  - Tombol Buat Invoice Manual (`PaymentFormDialog`)
+  - Tombol Aksi **"Kirim File via WA"** (Kirim file dokumen PDF langsung via WhatsApp Fonnte)
+  - Tombol **"Cetak / Simpan PDF"** (A4 Print-to-PDF)
 
 ---
 
 ## Phase 7: Background Cron Scheduler & Engagement Hub (Minggu 4)
 ### 7.1 Automated Daily Cron Tasks (08:00 WIB)
-- [ ] 🔴 Endpoint Server Cron `src/routes/api/cron/daily-tasks.ts`:
-  - **Pemeriksaan Jatuh Tempo**: Query kontrak/invoice H-3, H-0, dan H+1 Overdue -> Auto-update status `OVERDUE` -> Dispatch pesan pengingat tagihan otomatis via Fonnte API
+- [x] 🔴 Endpoint Server Cron `src/routes/api/cron/daily-tasks.ts`:
+  - **Pemeriksaan Jatuh Tempo**: Query invoice H-3, H-0, dan Overdue -> Auto-update status `OVERDUE` -> Dispatch pesan pengingat tagihan otomatis via Fonnte API
   - **Birthday Reminder Engine**: Query data penyewa aktif yang ulang tahun hari ini (berdasarkan `birthDate`) -> Dispatch ucapan selamat ulang tahun personal via Fonnte API
   - Simpan audit pengiriman pesan ke `NotificationLog`
+  - Dilindungi token rahasia `CRON_SECRET` (Authorization Bearer / Query param)
 
 ### 7.2 Modul Engagement & Pengumuman Kos (Screen `#engagement`)
-- [ ] 🔴 Halaman `src/routes/engagement/index.tsx`:
-  - Widget **"Ulang Tahun Terdekat"**: Menampilkan daftar anak kos yang berulang tahun dalam 7 hari ke depan
-  - Widget **"Agenda & Pengumuman Kos"**: Daftar pengumuman kegiatan (Kerja Bakti, Jadwal Pembayaran Sampah, Info Perbaikan Air/WiFi)
-  - Modal Form Buat Pengumuman & Tombol **"Broadcast ke WhatsApp Seluruh Penghuni via Fonnte"**
+- [x] 🔴 Halaman `src/routes/dashboard/engagement.tsx`:
+  - Widget **"Ulang Tahun Terdekat"**: Menampilkan daftar anak kos yang berulang tahun dalam 30 hari ke depan (terkalkulasi otomatis dari `birthDate`) + tombol instan **"Kirim Ucapan WA"**
+  - Widget **"Agenda & Pengumuman Kos"**: Daftar pengumuman kegiatan (Kerja Bakti, Maintenance, Acara, Umum) + tombol **"Broadcast WA"**
+  - Widget **"Riwayat Log Notifikasi WhatsApp"**: Audit 15 log pengiriman notifikasi terakhir dari database
+  - Modal Form Buat Pengumuman & Broadcast Massal (`EngagementEventDialog`) dengan **Isolasi RBAC Ketat** (SuperAdmin bisa broadcast ke semua cabang atau pilih cabang mana pun; Admin cabang terkunci hanya untuk cabang miliknya)
+  - Tombol manual **"Jalankan Cron Pagi"** untuk testing dan eksekusi instan pengingat harian
 
 ---
 

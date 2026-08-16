@@ -1,6 +1,7 @@
 import type {
 	OccupationStatus,
 	RentDuration,
+	SessionUser,
 	TenantItem,
 	TenantPaymentStatus,
 } from "../../common/types/index.ts";
@@ -162,6 +163,8 @@ export class TenantService {
 				registrationDate: t.createdAt.toISOString().slice(0, 10),
 				notes: t.notes || null,
 				paymentStatus,
+				contractId: activeContract?.id,
+				roomId: room?.id,
 			};
 		});
 	}
@@ -222,12 +225,15 @@ export class TenantService {
 			registrationDate: t.createdAt.toISOString().slice(0, 10),
 			notes: t.notes || null,
 			paymentStatus,
+			contractId: activeContract?.id,
+			roomId: room?.id,
 		};
 	}
 
 	async createTenant(
 		propertyId: string,
 		input: TenantFormValues,
+		user?: SessionUser,
 	): Promise<TenantItem> {
 		const canonicalPhone = sanitizePhone(input.phone);
 		const room = await this.roomRepo.findByRoomNumber(propertyId, input.roomNo);
@@ -270,6 +276,7 @@ export class TenantService {
 				startDate,
 				dueDateDay,
 				rentAmount,
+				recordedById: user?.id,
 			},
 		);
 

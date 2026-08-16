@@ -24,7 +24,9 @@ import { Route as DashboardSelectPropertyRouteImport } from './routes/dashboard/
 import { Route as DashboardTenantsRouteImport } from './routes/dashboard/tenants'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiCronDailyTasksRouteImport } from './routes/api/cron/daily-tasks'
 import { Route as DashboardPropertiesPropertyIdRouteImport } from './routes/dashboard/properties.$propertyId'
+import { Route as ApiInvoicesInvoiceIdDocumentRouteImport } from './routes/api/invoices/$invoiceId/document'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -101,11 +103,22 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronDailyTasksRoute = ApiCronDailyTasksRouteImport.update({
+  id: '/api/cron/daily-tasks',
+  path: '/api/cron/daily-tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardPropertiesPropertyIdRoute =
   DashboardPropertiesPropertyIdRouteImport.update({
     id: '/properties/$propertyId',
     path: '/properties/$propertyId',
     getParentRoute: () => DashboardRoute,
+  } as any)
+const ApiInvoicesInvoiceIdDocumentRoute =
+  ApiInvoicesInvoiceIdDocumentRouteImport.update({
+    id: '/api/invoices/$invoiceId/document',
+    path: '/api/invoices/$invoiceId/document',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -124,7 +137,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
+  '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -141,7 +156,9 @@ export interface FileRoutesByTo {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
+  '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,7 +177,9 @@ export interface FileRoutesById {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
+  '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,7 +199,9 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard/'
     | '/api/auth/$'
+    | '/api/cron/daily-tasks'
     | '/dashboard/properties/$propertyId'
+    | '/api/invoices/$invoiceId/document'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -197,7 +218,9 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard'
     | '/api/auth/$'
+    | '/api/cron/daily-tasks'
     | '/dashboard/properties/$propertyId'
+    | '/api/invoices/$invoiceId/document'
   id:
     | '__root__'
     | '/'
@@ -215,7 +238,9 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard/'
     | '/api/auth/$'
+    | '/api/cron/daily-tasks'
     | '/dashboard/properties/$propertyId'
+    | '/api/invoices/$invoiceId/document'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -223,6 +248,8 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCronDailyTasksRoute: typeof ApiCronDailyTasksRoute
+  ApiInvoicesInvoiceIdDocumentRoute: typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -332,12 +359,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/daily-tasks': {
+      id: '/api/cron/daily-tasks'
+      path: '/api/cron/daily-tasks'
+      fullPath: '/api/cron/daily-tasks'
+      preLoaderRoute: typeof ApiCronDailyTasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/properties/$propertyId': {
       id: '/dashboard/properties/$propertyId'
       path: '/properties/$propertyId'
       fullPath: '/dashboard/properties/$propertyId'
       preLoaderRoute: typeof DashboardPropertiesPropertyIdRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/api/invoices/$invoiceId/document': {
+      id: '/api/invoices/$invoiceId/document'
+      path: '/api/invoices/$invoiceId/document'
+      fullPath: '/api/invoices/$invoiceId/document'
+      preLoaderRoute: typeof ApiInvoicesInvoiceIdDocumentRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -381,6 +422,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCronDailyTasksRoute: ApiCronDailyTasksRoute,
+  ApiInvoicesInvoiceIdDocumentRoute: ApiInvoicesInvoiceIdDocumentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

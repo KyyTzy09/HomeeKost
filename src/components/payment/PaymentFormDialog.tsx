@@ -1,6 +1,7 @@
-import { useForm } from "@tanstack/react-form";
-import { useEffect } from "react";
+import { DollarSign, MessageSquare, Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
+import { Checkbox } from "../../common/shadcn/checkbox.tsx";
 import {
 	Dialog,
 	DialogContent,
@@ -18,347 +19,295 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
-import {
-	type PaymentFormValues,
-	type PaymentStatus,
-	paymentSchema,
-	STATUS_LABEL,
-} from "../../common/validations/payment.schema.ts";
-import type { PaymentItem } from "./PaymentCard.tsx";
+import type { TenantItem } from "../../common/types/index.ts";
+import type { CreateManualInvoiceInput } from "../../common/validations/index.ts";
+import { parseRupiah } from "../../lib/currency.ts";
+import { getTodayDateString } from "../../lib/date-utils.ts";
+import { MONTH_OPTIONS } from "./PaymentGenerateDialog.tsx";
 
 interface PaymentFormDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	editingPayment: PaymentItem | null;
-	onSubmit: (values: PaymentFormValues) => void;
+	tenants: TenantItem[];
+	onSubmit: (values: CreateManualInvoiceInput) => void;
+	isSubmitting?: boolean;
 }
-
-const FIELD_CLASS =
-	"h-[43px] border-[#dfe7e0] rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20";
-
-const LABEL_CLASS = "block text-[11px] font-bold text-[#506257] mb-[6px]";
-
-const ERROR_CLASS = "text-[10.5px] text-[#b66b68] mt-1 font-medium";
 
 export function PaymentFormDialog({
 	open,
 	onOpenChange,
-	editingPayment,
+	tenants,
 	onSubmit,
+	isSubmitting = false,
 }: PaymentFormDialogProps) {
-	const defaultVals: PaymentFormValues = {
-		tenantName: editingPayment?.tenantName ?? "",
-		roomNumber: editingPayment?.roomNumber ?? "",
-		period: editingPayment?.period ?? "",
-		dueDate: editingPayment?.dueDate ?? "",
-		amount: editingPayment?.amount ?? 0,
-		status: (editingPayment?.status as PaymentStatus) ?? "PENDING",
-		paidAt: editingPayment?.paidAt ?? null,
-	};
+	const now = new Date();
+	const todayStr = useMemo(() => getTodayDateString(), []);
+	const currentYear = now.getFullYear();
 
-	const form = useForm({
-		defaultValues: defaultVals,
-		onSubmit: async ({ value }) => {
-			const result = paymentSchema.safeParse(value);
-			if (!result.success) return;
-			onSubmit(result.data);
-			onOpenChange(false);
-		},
-	});
+	const [contractId, setContractId] = useState<string>("");
+	const [periodMonth, setPeriodMonth] = useState<number>(now.getMonth() + 1);
+	const [periodYear, setPeriodYear] = useState<number>(currentYear);
+	const [amount, setAmount] = useState<number>(0);
+	const [dueDate, setDueDate] = useState<string>(todayStr);
+	const [notes, setNotes] = useState<string>("");
+	const [sendWhatsApp, setSendWhatsApp] = useState<boolean>(false);
+	const [errors, setErrors] = useState<Record<string, string>>({});
 
-	// Reset form whenever dialog opens with new data
+	// Filter hanya penghuni yang memiliki kamar aktif
+	const activeTenantsWithRoom = useMemo(() => {
+		return tenants.filter((t) => t.roomNo && t.roomNo !== "—");
+	}, [tenants]);
+
 	useEffect(() => {
 		if (open) {
-			form.reset(defaultVals);
+			if (activeTenantsWithRoom.length > 0) {
+				const firstTenant = activeTenantsWithRoom[0];
+				setContractId(firstTenant.contractId || firstTenant.id);
+				setAmount(parseRupiah(firstTenant.rent) || 850000);
+			} else {
+				setContractId("");
+				setAmount(0);
+			}
+			setPeriodMonth(now.getMonth() + 1);
+			setPeriodYear(currentYear);
+			setDueDate(todayStr);
+			setNotes("");
+			setSendWhatsApp(false);
+			setErrors({});
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [open, editingPayment?.id]);
+	}, [open, activeTenantsWithRoom, currentYear, todayStr]);
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		const newErrors: Record<string, string> = {};
+
+		if (!contractId) {
+			newErrors.contractId = "Penghuni / Kamar sewa wajib dipilih.";
+		}
+		if (!amount || amount < 1000) {
+			newErrors.amount = "Nominal tagihan minimal Rp 1.000.";
+		}
+		if (!dueDate) {
+			newErrors.dueDate = "Tanggal jatuh tempo wajib diisi.";
+		}
+
+		if (Object.keys(newErrors).length > 0) {
+			setErrors(newErrors);
+			return;
+		}
+
+		onSubmit({
+			contractId,
+			periodMonth,
+			periodYear,
+			amount,
+			dueDate,
+			notes: notes.trim() || undefined,
+			sendWhatsApp,
+		});
+	};
+
+	const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[560px] rounded-[20px] border-[#e1e8e2] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]">
-				<DialogHeader className="gap-1 mb-2">
-					<DialogTitle className="text-[18px] font-bold text-[#29382e]">
-						{editingPayment ? "Edit Data Pembayaran" : "Catat Pembayaran"}
+			<DialogContent
+				className="max-w-[500px] p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				aria-describedby="create-invoice-desc"
+			>
+				<DialogHeader className="pb-3 border-b border-[#e4e9e4]">
+					<DialogTitle className="text-base font-bold text-[#252925] flex items-center gap-2">
+						<DollarSign className="w-5 h-5 text-[#4f6958]" />
+						Buat Tagihan Sewa Manual
 					</DialogTitle>
-					<DialogDescription className="text-[11.5px] text-[#8a958d]">
-						{editingPayment
-							? "Perbarui data pembayaran sewa penghuni."
-							: "Tambahkan data pembayaran sewa ke daftar pembayaran."}
+					<DialogDescription
+						id="create-invoice-desc"
+						className="text-xs text-[#737873]"
+					>
+						Terbitkan invoice tagihan baru untuk kamar dan periode sewa tertentu
 					</DialogDescription>
 				</DialogHeader>
 
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
-						form.handleSubmit();
-					}}
-					className="space-y-4 pt-1"
-				>
-					{/* Row 1: Penghuni + Kamar */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						{/* Penghuni */}
-						<form.Field
-							name="tenantName"
-							validators={{
-								onChange: ({ value }) =>
-									!value || value.trim().length < 2
-										? "Nama penghuni minimal 2 karakter"
-										: undefined,
+				<form onSubmit={handleSubmit} className="space-y-4 py-2">
+					{/* Tenant & Room Selector */}
+					<div>
+						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+							Pilih Penghuni & Kamar *
+						</Label>
+						<Select
+							value={contractId}
+							onValueChange={(val) => {
+								if (val) {
+									setContractId(val);
+									const matched = activeTenantsWithRoom.find(
+										(t) => (t.contractId || t.id) === val,
+									);
+									if (matched) {
+										setAmount(parseRupiah(matched.rent) || 850000);
+									}
+								}
 							}}
 						>
-							{(field) => (
-								<div>
-									<Label htmlFor={field.name} className={LABEL_CLASS}>
-										Penghuni <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(e.target.value)}
-										placeholder="Nama penghuni"
-										className={FIELD_CLASS}
-									/>
-									{field.state.meta.errors.length > 0 && (
-										<p className={ERROR_CLASS}>
-											{field.state.meta.errors.join(", ")}
-										</p>
-									)}
-								</div>
-							)}
-						</form.Field>
-
-						{/* Kamar */}
-						<form.Field
-							name="roomNumber"
-							validators={{
-								onChange: ({ value }) =>
-									!value ? "Nomor kamar wajib diisi" : undefined,
-							}}
-						>
-							{(field) => (
-								<div>
-									<Label htmlFor={field.name} className={LABEL_CLASS}>
-										Kamar <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(e.target.value)}
-										placeholder="A-03"
-										className={FIELD_CLASS}
-									/>
-									{field.state.meta.errors.length > 0 && (
-										<p className={ERROR_CLASS}>
-											{field.state.meta.errors.join(", ")}
-										</p>
-									)}
-								</div>
-							)}
-						</form.Field>
+							<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+								<SelectValue placeholder="Pilih Penghuni & Kamar" />
+							</SelectTrigger>
+							<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+								{activeTenantsWithRoom.map((t) => (
+									<SelectItem key={t.id} value={t.contractId || t.id}>
+										{t.name} — Kamar {t.roomNo} ({t.rent}/bln)
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						{errors.contractId && (
+							<p className="text-[11px] text-[#a65f5b] mt-1">
+								{errors.contractId}
+							</p>
+						)}
 					</div>
 
-					{/* Row 2: Periode + Jatuh Tempo */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						{/* Periode */}
-						<form.Field
-							name="period"
-							validators={{
-								onChange: ({ value }) =>
-									!value
-										? "Periode wajib diisi"
-										: !/^[A-Za-z]+ \d{4}$/.test(value)
-											? "Format: Agustus 2026"
-											: undefined,
-							}}
-						>
-							{(field) => (
-								<div>
-									<Label htmlFor={field.name} className={LABEL_CLASS}>
-										Periode <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(e.target.value)}
-										placeholder="Agustus 2026"
-										className={FIELD_CLASS}
-									/>
-									{field.state.meta.errors.length > 0 && (
-										<p className={ERROR_CLASS}>
-											{field.state.meta.errors.join(", ")}
-										</p>
-									)}
-								</div>
-							)}
-						</form.Field>
+					{/* Periode Bulan & Tahun */}
+					<div className="grid grid-cols-2 gap-3">
+						<div>
+							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+								Bulan Periode *
+							</Label>
+							<Select
+								value={String(periodMonth)}
+								onValueChange={(val) => {
+									if (val) setPeriodMonth(Number(val));
+								}}
+							>
+								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Bulan" />
+								</SelectTrigger>
+								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+									{MONTH_OPTIONS.map((m) => (
+										<SelectItem key={m.value} value={String(m.value)}>
+											{m.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 
-						{/* Jatuh Tempo */}
-						<form.Field
-							name="dueDate"
-							validators={{
-								onChange: ({ value }) =>
-									!value ? "Tanggal jatuh tempo wajib diisi" : undefined,
-							}}
-						>
-							{(field) => (
-								<div>
-									<Label htmlFor={field.name} className={LABEL_CLASS}>
-										Jatuh Tempo <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										type="date"
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(e.target.value)}
-										className={FIELD_CLASS}
-									/>
-									{field.state.meta.errors.length > 0 && (
-										<p className={ERROR_CLASS}>
-											{field.state.meta.errors.join(", ")}
-										</p>
-									)}
-								</div>
-							)}
-						</form.Field>
+						<div>
+							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+								Tahun Periode *
+							</Label>
+							<Select
+								value={String(periodYear)}
+								onValueChange={(val) => {
+									if (val) setPeriodYear(Number(val));
+								}}
+							>
+								<SelectTrigger className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+									<SelectValue placeholder="Tahun" />
+								</SelectTrigger>
+								<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+									{yearOptions.map((y) => (
+										<SelectItem key={y} value={String(y)}>
+											{y}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
 
-					{/* Row 3: Nominal + Status */}
+					{/* Amount & Due Date */}
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						{/* Nominal */}
-						<form.Field
-							name="amount"
-							validators={{
-								onChange: ({ value }) =>
-									!value || Number(value) < 1
-										? "Nominal minimal Rp 1"
-										: undefined,
-							}}
-						>
-							{(field) => (
-								<div>
-									<Label htmlFor={field.name} className={LABEL_CLASS}>
-										Nominal (Rp) <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Input
-										id={field.name}
-										name={field.name}
-										type="number"
-										min={1}
-										value={field.state.value}
-										onBlur={field.handleBlur}
-										onChange={(e) => field.handleChange(Number(e.target.value))}
-										placeholder="850000"
-										className={FIELD_CLASS}
-									/>
-									{field.state.meta.errors.length > 0 && (
-										<p className={ERROR_CLASS}>
-											{field.state.meta.errors.join(", ")}
-										</p>
-									)}
-								</div>
+						<div>
+							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+								Nominal Tagihan (Rp) *
+							</Label>
+							<Input
+								type="number"
+								min="1000"
+								step="1000"
+								value={amount || ""}
+								onChange={(e) => setAmount(Number(e.target.value) || 0)}
+								placeholder="Contoh: 850000"
+								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+							/>
+							{errors.amount && (
+								<p className="text-[11px] text-[#a65f5b] mt-1">
+									{errors.amount}
+								</p>
 							)}
-						</form.Field>
+						</div>
 
-						{/* Status */}
-						<form.Field name="status">
-							{(field) => (
-								<div>
-									<Label htmlFor={field.name} className={LABEL_CLASS}>
-										Status <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) =>
-											field.handleChange(val as PaymentStatus)
-										}
-									>
-										<SelectTrigger
-											id={field.name}
-											className="h-[43px] border-[#dfe7e0] rounded-[11px] text-[12px] bg-[#fbfcfb] text-[#252925] focus:border-[#8fa594] focus:ring-[#8fa594]/20"
-										>
-											<SelectValue placeholder="Pilih status" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="PAID">{STATUS_LABEL.PAID}</SelectItem>
-											<SelectItem value="PENDING">
-												{STATUS_LABEL.PENDING}
-											</SelectItem>
-											<SelectItem value="OVERDUE">
-												{STATUS_LABEL.OVERDUE}
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
+						<div>
+							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+								Tanggal Jatuh Tempo *
+							</Label>
+							<Input
+								type="date"
+								value={dueDate}
+								onChange={(e) => setDueDate(e.target.value)}
+								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+							/>
+							{errors.dueDate && (
+								<p className="text-[11px] text-[#a65f5b] mt-1">
+									{errors.dueDate}
+								</p>
 							)}
-						</form.Field>
+						</div>
 					</div>
 
-					{/* Row 4: Tanggal Bayar — conditional on status = PAID */}
-					<form.Subscribe selector={(s) => s.values.status}>
-						{(status) =>
-							status === "PAID" ? (
-								<form.Field
-									name="paidAt"
-									validators={{
-										onChange: ({ value }) =>
-											!value
-												? "Tanggal bayar wajib diisi jika status Sudah Bayar"
-												: undefined,
-									}}
-								>
-									{(field) => (
-										<div>
-											<Label htmlFor={field.name} className={LABEL_CLASS}>
-												Tanggal Bayar <span className="text-[#b66b68]">*</span>
-											</Label>
-											<Input
-												id={field.name}
-												name={field.name}
-												type="date"
-												value={field.state.value ?? ""}
-												onBlur={field.handleBlur}
-												onChange={(e) =>
-													field.handleChange(e.target.value || null)
-												}
-												className={FIELD_CLASS}
-											/>
-											{field.state.meta.errors.length > 0 && (
-												<p className={ERROR_CLASS}>
-													{field.state.meta.errors.join(", ")}
-												</p>
-											)}
-										</div>
-									)}
-								</form.Field>
-							) : null
-						}
-					</form.Subscribe>
+					{/* Notes */}
+					<div>
+						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+							Keterangan Tambahan (Opsional)
+						</Label>
+						<Input
+							value={notes}
+							onChange={(e) => setNotes(e.target.value)}
+							placeholder="Contoh: Biaya sewa + deposit kunci"
+							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+						/>
+					</div>
 
-					{/* Footer */}
-					<DialogFooter className="pt-3 border-t border-[#edf1ed] mt-5 gap-2">
+					{/* Checkbox Send WhatsApp */}
+					<div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4]">
+						<Checkbox
+							id="sendInvoiceWa"
+							checked={sendWhatsApp}
+							onCheckedChange={(checked) => setSendWhatsApp(checked === true)}
+							className="mt-0.5"
+						/>
+						<label
+							htmlFor="sendInvoiceWa"
+							className="text-xs text-[#252925] cursor-pointer select-none leading-relaxed"
+						>
+							<span className="font-semibold flex items-center gap-1">
+								<MessageSquare className="w-3.5 h-3.5 text-[#568062]" />
+								Kirim Tagihan via WhatsApp Langsung
+							</span>
+							<span className="text-[11px] text-[#737873] block mt-0.5">
+								Pemberitahuan invoice akan langsung dikirimkan ke nomor WhatsApp
+								penyewa via Fonnte Gateway.
+							</span>
+						</label>
+					</div>
+
+					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-end gap-2">
 						<Button
 							type="button"
 							variant="outline"
+							className="h-9 px-4 text-xs font-semibold border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
 							onClick={() => onOpenChange(false)}
-							className="h-[38px] px-4 text-xs font-semibold rounded-[8px] border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3]"
 						>
 							Batal
 						</Button>
+
 						<Button
 							type="submit"
-							className="h-[38px] px-5 text-xs font-bold rounded-[8px] bg-[#4f6958] hover:bg-[#425949] text-white transition-colors"
+							disabled={isSubmitting}
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
 						>
-							{editingPayment ? "Simpan Perubahan" : "Simpan Pembayaran"}
+							<Save className="w-3.5 h-3.5 mr-1.5" />
+							{isSubmitting ? "Menyimpan..." : "Buat Tagihan"}
 						</Button>
 					</DialogFooter>
 				</form>

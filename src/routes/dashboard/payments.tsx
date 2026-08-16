@@ -1,585 +1,328 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	Bell,
-	CheckCircle2,
-	Clock,
-	CreditCard,
-	Pencil,
-	Plus,
-	Send,
-	Trash2,
-	TriangleAlert,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { Clock, MessageSquare, Plus } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
-import { Card } from "../../common/shadcn/card.tsx";
+import type { PaymentItem } from "../../common/types/index.ts";
+import type {
+	ConfirmPaymentInput,
+	CreateManualInvoiceInput,
+	GenerateMonthlyInvoicesInput,
+} from "../../common/validations/index.ts";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "../../common/shadcn/select.tsx";
-import type { PaymentFormValues } from "../../common/validations/payment.schema.ts";
-import {
-	formatDueDate,
-	formatRupiah,
+	PaymentConfirmDialog,
 	PaymentDeleteDialog,
 	PaymentFormDialog,
-	type PaymentItem,
-	STATUS_BADGE,
-	STATUS_LABEL,
+	PaymentGenerateDialog,
+	PaymentMetrics,
+	PaymentTable,
 } from "../../components/payment/index.ts";
+import {
+	useConfirmPayment,
+	useCreateManualInvoice,
+	useDashboardContext,
+	useDeleteInvoice,
+	useGenerateMonthlyInvoices,
+	usePaymentStats,
+	usePayments,
+	useProperties,
+	useSendWhatsAppInvoice,
+	useTenants,
+} from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/payments")({
 	head: () => ({
-		meta: [{ title: "Pembayaran & Tagihan — HomeeKost Management" }],
+		meta: [
+			{
+				title: "Monitoring Pembayaran & Tagihan Sewa — HomeeKost Management",
+			},
+		],
 	}),
 	component: PaymentsPage,
 });
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_PAYMENTS: PaymentItem[] = [
-	{
-		id: "pay-1",
-		tenantName: "Alya Putri",
-		roomNumber: "A-03",
-		period: "Agustus 2026",
-		dueDate: "2026-08-10",
-		amount: 850_000,
-		status: "PENDING",
-		paidAt: null,
-	},
-	{
-		id: "pay-2",
-		tenantName: "Fira Aulia",
-		roomNumber: "A-07",
-		period: "Agustus 2026",
-		dueDate: "2026-08-08",
-		amount: 850_000,
-		status: "OVERDUE",
-		paidAt: null,
-	},
-	{
-		id: "pay-3",
-		tenantName: "Dinda Maharani",
-		roomNumber: "B-01",
-		period: "Agustus 2026",
-		dueDate: "2026-08-20",
-		amount: 900_000,
-		status: "PAID",
-		paidAt: "2026-08-19",
-	},
-	{
-		id: "pay-4",
-		tenantName: "Nabila Putri",
-		roomNumber: "B-02",
-		period: "Agustus 2026",
-		dueDate: "2026-08-12",
-		amount: 950_000,
-		status: "PENDING",
-		paidAt: null,
-	},
-	{
-		id: "pay-5",
-		tenantName: "Sarah Anindita",
-		roomNumber: "C-01",
-		period: "Agustus 2026",
-		dueDate: "2026-08-15",
-		amount: 1_200_000,
-		status: "PAID",
-		paidAt: "2026-08-14",
-	},
-	{
-		id: "pay-6",
-		tenantName: "Rina Kusuma",
-		roomNumber: "C-03",
-		period: "Agustus 2026",
-		dueDate: "2026-08-05",
-		amount: 800_000,
-		status: "OVERDUE",
-		paidAt: null,
-	},
-];
-
-const MONTHS = [
-	"Januari",
-	"Februari",
-	"Maret",
-	"April",
-	"Mei",
-	"Juni",
-	"Juli",
-	"Agustus",
-	"September",
-	"Oktober",
-	"November",
-	"Desember",
-];
-
-// ─── Page Component ────────────────────────────────────────────────────────
 function PaymentsPage() {
-	const [payments, setPayments] = useState<PaymentItem[]>(MOCK_PAYMENTS);
-	const [toastMessage, setToastMessage] = useState<string | null>(null);
+	const dashboardContext = useDashboardContext();
+	const activePropertyId = dashboardContext.activeProperty?.id;
 
-	// Filter state
-	const [filterMonth, setFilterMonth] = useState("Agustus");
-	const [filterStatus, setFilterStatus] = useState<
-		"all" | "PAID" | "PENDING" | "OVERDUE"
-	>("all");
+	const { data: properties = [] } = useProperties();
+	const { data: tenants = [] } = useTenants(activePropertyId);
 
-	// Dialog state
-	const [isFormOpen, setIsFormOpen] = useState(false);
-	const [editingPayment, setEditingPayment] = useState<PaymentItem | null>(
+	const now = new Date();
+	const [selectedMonth] = useState<number>(now.getMonth() + 1);
+	const [selectedYear] = useState<number>(now.getFullYear());
+
+	// Filter and Sort states
+	const [searchQuery, setSearchQuery] = useState<string>("");
+	const [statusFilter, setStatusFilter] = useState<string>("ALL");
+	const [sortBy, setSortBy] = useState<"dueDate" | "amount" | "createdAt">(
+		"dueDate",
+	);
+	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+	const [currentPage, setCurrentPage] = useState<number>(1);
+
+	// Modal states
+	const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+	const [selectedPayment, setSelectedPayment] = useState<PaymentItem | null>(
 		null,
 	);
-	const [deletingPayment, setDeletingPayment] = useState<PaymentItem | null>(
-		null,
-	);
+	const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+	const [isGenerateOpen, setIsGenerateOpen] = useState<boolean>(false);
+	const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
 
-	// ─── Helpers ────────────────────────────────────────────────────────
+	// Toast notification
+	const [toastMsg, setToastMsg] = useState<string | null>(null);
+
 	const showToast = (msg: string) => {
-		setToastMessage(msg);
-		setTimeout(() => setToastMessage(null), 3000);
+		setToastMsg(msg);
+		setTimeout(() => setToastMsg(null), 4000);
 	};
 
-	// ─── Computed Stats ─────────────────────────────────────────────────
-	const stats = useMemo(() => {
-		const paid = payments.filter((p) => p.status === "PAID");
-		const pending = payments.filter((p) => p.status === "PENDING");
-		const overdue = payments.filter((p) => p.status === "OVERDUE");
-		return {
-			paidTotal: paid.reduce((s, p) => s + p.amount, 0),
-			paidCount: paid.length,
-			pendingTotal: pending.reduce((s, p) => s + p.amount, 0),
-			pendingCount: pending.length,
-			overdueTotal: overdue.reduce((s, p) => s + p.amount, 0),
-			overdueCount: overdue.length,
-		};
-	}, [payments]);
+	// Queries
+	const { data: paymentsData, isLoading: isLoadingPayments } = usePayments({
+		propertyId: activePropertyId,
+		status: statusFilter as "ALL" | "PENDING" | "PAID" | "OVERDUE",
+		month: selectedMonth,
+		year: selectedYear,
+		search: searchQuery,
+		sortBy,
+		sortOrder,
+		page: currentPage,
+		limit: 10,
+	});
 
-	// ─── Attention items for reminder panel ────────────────────────────
-	const attentionPayments = useMemo(
-		() =>
-			payments.filter((p) => p.status === "PENDING" || p.status === "OVERDUE"),
-		[payments],
-	);
+	const { data: paymentStats, isLoading: isLoadingStats } = usePaymentStats({
+		propertyId: activePropertyId,
+		month: selectedMonth,
+		year: selectedYear,
+	});
 
-	// ─── Filtered table rows ─────────────────────────────────────────────
-	const filteredPayments = useMemo(() => {
-		return payments.filter((p) => {
-			const monthMatch = p.period.includes(filterMonth);
-			const statusMatch = filterStatus === "all" || p.status === filterStatus;
-			return monthMatch && statusMatch;
-		});
-	}, [payments, filterMonth, filterStatus]);
+	// Mutations
+	const confirmPaymentMutation = useConfirmPayment();
+	const createInvoiceMutation = useCreateManualInvoice();
+	const generateInvoicesMutation = useGenerateMonthlyInvoices();
+	const sendWhatsAppMutation = useSendWhatsAppInvoice();
+	const deleteInvoiceMutation = useDeleteInvoice();
 
-	// ─── Handlers ────────────────────────────────────────────────────────
-	const handleOpenAdd = () => {
-		setEditingPayment(null);
-		setIsFormOpen(true);
-	};
-
-	const handleOpenEdit = (p: PaymentItem) => {
-		setEditingPayment(p);
-		setIsFormOpen(true);
-	};
-
-	const handleFormSubmit = (values: PaymentFormValues) => {
-		if (editingPayment) {
-			setPayments((prev) =>
-				prev.map((p) =>
-					p.id === editingPayment.id
-						? {
-								...p,
-								tenantName: values.tenantName,
-								roomNumber: values.roomNumber,
-								period: values.period,
-								dueDate: values.dueDate,
-								amount: values.amount,
-								status: values.status,
-								paidAt: values.paidAt ?? null,
-							}
-						: p,
-				),
-			);
-			showToast(`Data pembayaran ${values.tenantName} berhasil diperbarui`);
+	// Handlers
+	const handleSortToggle = (newSortBy: "dueDate" | "amount" | "createdAt") => {
+		if (sortBy === newSortBy) {
+			setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
 		} else {
-			const newPayment: PaymentItem = {
-				id: `pay-${Date.now()}`,
-				tenantName: values.tenantName,
-				roomNumber: values.roomNumber,
-				period: values.period,
-				dueDate: values.dueDate,
-				amount: values.amount,
-				status: values.status,
-				paidAt: values.paidAt ?? null,
-			};
-			setPayments((prev) => [newPayment, ...prev]);
-			showToast(`Pembayaran ${values.tenantName} berhasil dicatat`);
+			setSortBy(newSortBy);
+			setSortOrder(newSortBy === "amount" ? "desc" : "asc");
 		}
 	};
 
-	const handleDeleteConfirm = () => {
-		if (!deletingPayment) return;
-		setPayments((prev) => prev.filter((p) => p.id !== deletingPayment.id));
-		showToast(`Data pembayaran ${deletingPayment.tenantName} telah dihapus`);
-		setDeletingPayment(null);
+	const handleConfirmPayment = async (data: ConfirmPaymentInput) => {
+		try {
+			const res = await confirmPaymentMutation.mutateAsync(data);
+			setIsConfirmOpen(false);
+			setSelectedPayment(null);
+
+			if (res.whatsappSent) {
+				showToast(
+					"Pembayaran berhasil diverifikasi & Kwitansi telah dikirim ke WhatsApp!",
+				);
+			} else {
+				showToast(
+					"Pembayaran berhasil diverifikasi & tercatat di Pemasukan Kas.",
+				);
+			}
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal memverifikasi pembayaran.");
+		}
 	};
 
-	const handleSendReminder = (p: PaymentItem) => {
-		showToast(`Reminder WhatsApp dikirim ke ${p.tenantName}`);
+	const handleCreateManualInvoice = async (data: CreateManualInvoiceInput) => {
+		try {
+			await createInvoiceMutation.mutateAsync(data);
+			setIsFormOpen(false);
+			showToast("Tagihan invoice baru berhasil diterbitkan.");
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menerbitkan tagihan manual.");
+		}
 	};
 
-	const handleMarkPaid = (p: PaymentItem) => {
-		const today = new Date().toISOString().slice(0, 10);
-		setPayments((prev) =>
-			prev.map((item) =>
-				item.id === p.id ? { ...item, status: "PAID", paidAt: today } : item,
-			),
-		);
-		showToast(`Pembayaran ${p.tenantName} dikonfirmasi lunas`);
+	const handleGenerateMonthly = async (data: GenerateMonthlyInvoicesInput) => {
+		try {
+			const res = (await generateInvoicesMutation.mutateAsync(data)) as {
+				generatedCount: number;
+				success: boolean;
+			};
+			setIsGenerateOpen(false);
+			showToast(
+				`Berhasil membuat ${res.generatedCount} tagihan sewa bulanan baru!`,
+			);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal membuat tagihan bulanan massal.");
+		}
 	};
 
-	// ─── Render ──────────────────────────────────────────────────────────
+	const handleSendWhatsApp = async (payment: PaymentItem) => {
+		try {
+			const type =
+				payment.status === "PAID"
+					? "RECEIPT"
+					: payment.dueDaysRemaining <= 3
+						? "REMINDER"
+						: "NEW_INVOICE";
+
+			const res = (await sendWhatsAppMutation.mutateAsync({
+				invoiceId: payment.id,
+				type,
+			})) as { success?: boolean; detail?: string };
+
+			if (res?.success) {
+				showToast(
+					`File dokumen & pesan WhatsApp berhasil dikirim ke ${payment.tenantName} (${payment.tenantPhone})`,
+				);
+			} else {
+				showToast(
+					`Fonnte: ${res?.detail || "Gagal mengirim. Pastikan device Fonnte tersambung & nomor WA valid."}`,
+				);
+			}
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal mengirim notifikasi WhatsApp.");
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!selectedPayment) return;
+		try {
+			await deleteInvoiceMutation.mutateAsync(selectedPayment.id);
+			setIsDeleteOpen(false);
+			setSelectedPayment(null);
+			showToast("Tagihan sewa berhasil dihapus.");
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menghapus tagihan sewa.");
+		}
+	};
+
 	return (
-		<>
-			{/* Toast */}
-			<div
-				className={`toast ${toastMessage ? "show" : ""}`}
-				role="status"
-				aria-live="polite"
-			>
-				{toastMessage}
-			</div>
-
-			{/* Page Header */}
-			<div className="page-head">
-				<div>
-					<h1>Pembayaran</h1>
-					<p>Monitor pembayaran sewa dan tindak lanjuti yang jatuh tempo.</p>
+		<div className="space-y-6 pb-12">
+			{/* Toast Notification Popup */}
+			{toastMsg && (
+				<div className="fixed bottom-6 right-6 z-50 bg-[#253129] text-white px-4 py-3 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+					<MessageSquare className="w-4 h-4 text-[#8fa594]" />
+					<span>{toastMsg}</span>
 				</div>
-				<div className="actions">
+			)}
+
+			{/* ─── Page Header ────────────────────────────────────────────── */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+				<div>
+					<h1 className="text-xl sm:text-2xl font-bold text-[#252925] tracking-tight">
+						Monitoring Pembayaran & Tagihan Sewa
+					</h1>
+					<p className="text-xs text-[#737873] mt-1">
+						Pantau jatuh tempo sewa, verifikasi pembayaran lunas, dan kirim
+						notifikasi WhatsApp otomatis (Fonnte API)
+					</p>
+				</div>
+
+				<div className="flex items-center gap-2.5">
 					<Button
 						type="button"
-						onClick={handleOpenAdd}
-						className="h-[38px] px-4 text-xs font-semibold rounded-[8px] bg-[#4f6958] hover:bg-[#425949] text-white flex items-center gap-1.5"
+						variant="outline"
+						onClick={() => setIsGenerateOpen(true)}
+						className="h-9 px-3.5 text-xs font-semibold border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea] shadow-sm"
 					>
-						<Plus className="w-3.5 h-3.5" />
-						Catat Pembayaran
+						<Clock className="w-3.5 h-3.5 mr-1.5 text-[#568062]" />
+						Generate Bulanan
+					</Button>
+
+					<Button
+						type="button"
+						onClick={() => setIsFormOpen(true)}
+						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 rounded-xl shadow-sm"
+					>
+						<Plus className="w-3.5 h-3.5 mr-1.5" />
+						Buat Tagihan Manual
 					</Button>
 				</div>
 			</div>
 
-			{/* ── 3 KPI Stat Cards ──────────────────────────────────────────── */}
-			<div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-				{/* Sudah Dibayar */}
-				<Card className="stat p-[18px_19px] ring-0 border-[#e4e9e4] rounded-[10px]">
-					<div className="stat-top">
-						<span>Sudah Dibayar</span>
-						<span className="stat-icon">
-							<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
-						</span>
-					</div>
-					<div className="stat-value text-[#5f896d]">
-						{formatRupiah(stats.paidTotal).replace("Rp", "Rp")}
-					</div>
-					<div className="stat-sub">
-						<span className="up">{stats.paidCount} penghuni</span>
-					</div>
-				</Card>
+			{/* ─── Metric Cards ───────────────────────────────────────────── */}
+			<PaymentMetrics
+				stats={paymentStats}
+				isLoading={isLoadingStats}
+				periodLabel="Bulan Ini"
+			/>
 
-				{/* Jatuh Tempo */}
-				<Card className="stat p-[18px_19px] ring-0 border-[#e4e9e4] rounded-[10px]">
-					<div className="stat-top">
-						<span>Jatuh Tempo</span>
-						<span className="stat-icon">
-							<Clock className="w-4 h-4 text-[#b18a4b]" />
-						</span>
-					</div>
-					<div className="stat-value">{formatRupiah(stats.pendingTotal)}</div>
-					<div className="stat-sub">
-						<span className="warn">{stats.pendingCount} penghuni</span>
-					</div>
-				</Card>
+			{/* ─── TanStack Table View with Filters & Real-time Search ───────── */}
+			<PaymentTable
+				payments={paymentsData?.data || []}
+				totalCount={paymentsData?.totalCount || 0}
+				currentPage={paymentsData?.currentPage || 1}
+				totalPages={paymentsData?.totalPages || 1}
+				pageSize={paymentsData?.pageSize || 10}
+				searchQuery={searchQuery}
+				onSearchChange={(q) => {
+					setSearchQuery(q);
+					setCurrentPage(1);
+				}}
+				statusFilter={statusFilter}
+				onStatusFilterChange={(status) => {
+					setStatusFilter(status);
+					setCurrentPage(1);
+				}}
+				sortBy={sortBy}
+				sortOrder={sortOrder}
+				onSortToggle={handleSortToggle}
+				onPageChange={setCurrentPage}
+				isLoading={isLoadingPayments}
+				onAddNew={() => setIsFormOpen(true)}
+				onGenerateMonthly={() => setIsGenerateOpen(true)}
+				onConfirmPayment={(p) => {
+					setSelectedPayment(p);
+					setIsConfirmOpen(true);
+				}}
+				onSendWhatsApp={handleSendWhatsApp}
+				onDelete={(p) => {
+					setSelectedPayment(p);
+					setIsDeleteOpen(true);
+				}}
+				isSendingWhatsApp={sendWhatsAppMutation.isPending}
+			/>
 
-				{/* Terlambat */}
-				<Card className="stat p-[18px_19px] ring-0 border-[#e4e9e4] rounded-[10px]">
-					<div className="stat-top">
-						<span>Terlambat</span>
-						<span className="stat-icon">
-							<TriangleAlert className="w-4 h-4 text-[#b66b68]" />
-						</span>
-					</div>
-					<div className="stat-value text-[#b66b68]">
-						{formatRupiah(stats.overdueTotal)}
-					</div>
-					<div className="stat-sub">
-						<span className="warn">{stats.overdueCount} penghuni</span>
-					</div>
-				</Card>
-			</div>
+			{/* ─── Dialogs ─────────────────────────────────────────────────── */}
+			<PaymentConfirmDialog
+				open={isConfirmOpen}
+				onOpenChange={setIsConfirmOpen}
+				payment={selectedPayment}
+				onConfirm={handleConfirmPayment}
+				isSubmitting={confirmPaymentMutation.isPending}
+			/>
 
-			{/* ── Payment Reminder Panel ─────────────────────────────────────── */}
-			{attentionPayments.length > 0 && (
-				<div className="card panel reminder-panel" style={{ marginBottom: 16 }}>
-					<div className="panel-head">
-						<div>
-							<h2>Payment Reminder</h2>
-							<p>
-								Penghuni yang masa sewa atau pembayarannya mendekati tenggat
-								akan mendapat pengingat otomatis.
-							</p>
-						</div>
-						<span className="badge green">
-							<Bell className="inline w-3 h-3 mr-1 -mt-0.5" />
-							Otomatis
-						</span>
-					</div>
-					<div className="attention">
-						{attentionPayments.slice(0, 4).map((p) => (
-							<div key={p.id} className="attention-item">
-								<div className="att-icon">
-									{p.status === "OVERDUE" ? (
-										<TriangleAlert className="w-4 h-4 text-[#b66b68]" />
-									) : (
-										<CreditCard className="w-4 h-4 text-[#b18a4b]" />
-									)}
-								</div>
-								<div>
-									<strong>
-										{p.tenantName} · {p.roomNumber}
-									</strong>
-									<span>
-										{p.status === "OVERDUE"
-											? `Terlambat sejak ${formatDueDate(p.dueDate)}`
-											: `Jatuh tempo ${formatDueDate(p.dueDate)}`}{" "}
-										· {formatRupiah(p.amount)}
-									</span>
-								</div>
-								<div className="flex items-center gap-1.5">
-									<button
-										type="button"
-										className="row-action"
-										onClick={() => handleSendReminder(p)}
-									>
-										<Send className="inline w-3 h-3 mr-1 -mt-0.5" />
-										Kirim Reminder
-									</button>
-									<button
-										type="button"
-										className="row-action"
-										style={{
-											background: "#e8f2ea",
-											color: "#568062",
-											borderColor: "#c8e0cc",
-										}}
-										onClick={() => handleMarkPaid(p)}
-									>
-										<CheckCircle2 className="inline w-3 h-3 mr-1 -mt-0.5" />
-										Konfirmasi Bayar
-									</button>
-								</div>
-							</div>
-						))}
-					</div>
-				</div>
-			)}
+			<PaymentGenerateDialog
+				open={isGenerateOpen}
+				onOpenChange={setIsGenerateOpen}
+				properties={properties}
+				defaultPropertyId={activePropertyId}
+				onGenerate={handleGenerateMonthly}
+				isGenerating={generateInvoicesMutation.isPending}
+			/>
 
-			{/* ── Payment Table Panel ────────────────────────────────────────── */}
-			<div className="card panel">
-				{/* Toolbar: title + filters */}
-				<div className="toolbar">
-					<div>
-						<b style={{ fontSize: 12 }}>Daftar pembayaran</b>
-					</div>
-					<div className="actions" style={{ gap: 8 }}>
-						{/* Filter Bulan */}
-						<Select
-							value={filterMonth}
-							onValueChange={(v) => v && setFilterMonth(v)}
-						>
-							<SelectTrigger className="h-[32px] px-3 text-[11px] font-medium rounded-[8px] border-[#e4e9e4] bg-white text-[#252925] min-w-[130px] focus:ring-0">
-								<SelectValue className="text-sm" />
-							</SelectTrigger>
-							<SelectContent>
-								{MONTHS.map((m) => (
-									<SelectItem key={m} value={m} className="text-[11px]">
-										{m}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-
-						{/* Filter Status */}
-						<Select
-							value={filterStatus}
-							onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}
-						>
-							<SelectTrigger className="h-[32px] px-3 text-[11px] font-medium rounded-[8px] border-[#e4e9e4] bg-white text-[#252925] min-w-[130px] focus:ring-0">
-								<SelectValue className={"text-sm"} />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all" className="text-[11px]">
-									Semua status
-								</SelectItem>
-								<SelectItem value="PAID" className="text-[11px]">
-									Sudah bayar
-								</SelectItem>
-								<SelectItem value="PENDING" className="text-[11px]">
-									Jatuh tempo
-								</SelectItem>
-								<SelectItem value="OVERDUE" className="text-[11px]">
-									Terlambat
-								</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-				</div>
-
-				{/* Table */}
-				<div className="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>Penghuni</th>
-								<th>Kamar</th>
-								<th>Periode</th>
-								<th>Jatuh Tempo</th>
-								<th>Nominal</th>
-								<th>Status</th>
-								<th>Aksi</th>
-							</tr>
-						</thead>
-						<tbody>
-							{filteredPayments.length === 0 ? (
-								<tr>
-									<td
-										colSpan={7}
-										style={{
-											textAlign: "center",
-											padding: "32px 0",
-											color: "#8a958d",
-											fontSize: 11,
-										}}
-									>
-										Tidak ada data pembayaran untuk filter ini.
-									</td>
-								</tr>
-							) : (
-								filteredPayments.map((p) => (
-									<tr key={p.id}>
-										<td>
-											<b>{p.tenantName}</b>
-										</td>
-										<td>{p.roomNumber}</td>
-										<td>{p.period}</td>
-										<td>{formatDueDate(p.dueDate)}</td>
-										<td>
-											<span style={{ fontWeight: 500 }}>
-												{formatRupiah(p.amount)}
-											</span>
-										</td>
-										<td>
-											<span className={STATUS_BADGE[p.status]}>
-												{STATUS_LABEL[p.status]}
-											</span>
-										</td>
-										<td>
-											{/* Contextual action buttons per status */}
-											<div
-												style={{ display: "flex", gap: 4, flexWrap: "wrap" }}
-											>
-												{(p.status === "PENDING" || p.status === "OVERDUE") && (
-													<>
-														<button
-															type="button"
-															className="row-action"
-															onClick={() => handleSendReminder(p)}
-															title="Kirim reminder WhatsApp"
-														>
-															Kirim Reminder
-														</button>
-														<button
-															type="button"
-															className="row-action"
-															style={{
-																background: "#e8f2ea",
-																color: "#568062",
-																borderColor: "#c8e0cc",
-															}}
-															onClick={() => handleMarkPaid(p)}
-															title="Konfirmasi pembayaran masuk"
-														>
-															Konfirmasi Bayar
-														</button>
-													</>
-												)}
-												{p.status === "PAID" && (
-													<button
-														type="button"
-														className="row-action"
-														onClick={() => handleOpenEdit(p)}
-														title="Lihat atau edit detail"
-													>
-														Lihat Detail
-													</button>
-												)}
-												{/* Edit & Delete always available */}
-												<button
-													type="button"
-													className="row-action"
-													onClick={() => handleOpenEdit(p)}
-													title="Edit data"
-													style={{ padding: "4px 7px" }}
-												>
-													<Pencil className="w-3 h-3" />
-												</button>
-												<button
-													type="button"
-													className="row-action danger-text"
-													onClick={() => setDeletingPayment(p)}
-													title="Hapus data"
-													style={{ padding: "4px 7px" }}
-												>
-													<Trash2 className="w-3 h-3" />
-												</button>
-											</div>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-
-				{/* Table footer: row count */}
-				<div
-					style={{
-						padding: "10px 0 2px",
-						fontSize: 10,
-						color: "#98a29a",
-						fontWeight: 500,
-						textAlign: "right",
-					}}
-				>
-					{filteredPayments.length} data pembayaran
-				</div>
-			</div>
-
-			{/* ── Modals ────────────────────────────────────────────────────── */}
 			<PaymentFormDialog
 				open={isFormOpen}
 				onOpenChange={setIsFormOpen}
-				editingPayment={editingPayment}
-				onSubmit={handleFormSubmit}
+				tenants={tenants}
+				onSubmit={handleCreateManualInvoice}
+				isSubmitting={createInvoiceMutation.isPending}
 			/>
 
 			<PaymentDeleteDialog
-				payment={deletingPayment}
-				onOpenChange={(open) => !open && setDeletingPayment(null)}
-				onConfirm={handleDeleteConfirm}
+				open={isDeleteOpen}
+				payment={selectedPayment}
+				onOpenChange={setIsDeleteOpen}
+				onConfirm={handleDelete}
+				isDeleting={deleteInvoiceMutation.isPending}
 			/>
-		</>
+		</div>
 	);
 }

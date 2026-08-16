@@ -1072,3 +1072,40 @@ td {
 		font-size: 21px;
 	}
 }
+
+/* ─── Official Printable PDF Invoice Styles ───────────────────────── */
+@media print {
+	body {
+		background: #ffffff !important;
+		color: #000000 !important;
+	}
+	.sidebar,
+	.topbar,
+	header,
+	nav,
+	aside,
+	.print\\:hidden,
+	button,
+	.btn {
+		display: none !important;
+	}
+	.main {
+		margin: 0 !important;
+		padding: 0 !important;
+		width: 100% !important;
+	}
+	.content {
+		padding: 0 !important;
+		margin: 0 !important;
+		max-width: 100% !important;
+	}
+	#printable-invoice-sheet {
+		border: 1px solid #d4ded6 !important;
+		box-shadow: none !important;
+		padding: 24px !important;
+		width: 100% !important;
+		max-width: 100% !important;
+		page-break-inside: avoid;
+	}
+}
+

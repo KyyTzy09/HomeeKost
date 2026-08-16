@@ -197,6 +197,7 @@ model Property {
   address               String
   description           String?
   imageUrl              String?              @db.Text
+  
   rooms                 Room[]
   cctvDevices           CctvDevice[]
   userAccesses          UserPropertyAccess[]

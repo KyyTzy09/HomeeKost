@@ -1,5 +1,7 @@
 export * from "./auth.fn.ts";
 export * from "./dashboard.fn.ts";
+export * from "./engagement.fn.ts";
+export * from "./payment.fn.ts";
 export * from "./property.fn.ts";
 export * from "./room.fn.ts";
 export * from "./storage.fn.ts";

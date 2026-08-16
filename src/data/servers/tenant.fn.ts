@@ -68,7 +68,7 @@ export const createTenantServerFn = createServerFn({
 		return executeWithLogging(
 			"createTenantServerFn",
 			{ propertyId, ...data },
-			() => tenantService.createTenant(propertyId, data),
+			(session) => tenantService.createTenant(propertyId, data, session.user),
 			{
 				method: "POST",
 				summary: (res) => `Sukses dibuat: ${res.name}`,

@@ -44,25 +44,6 @@ interface TenantFormDialogProps {
 	onSubmit: (values: TenantFormValues) => void;
 }
 
-export const DEFAULT_ROOM_OPTIONS: RoomOption[] = [
-	{ roomNo: "A-01", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-02", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-03", type: "Deluxe", monthlyPrice: 1200000 },
-	{ roomNo: "A-04", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-05", type: "Deluxe", monthlyPrice: 1100000 },
-	{ roomNo: "A-06", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-07", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-08", type: "Suite", monthlyPrice: 1500000 },
-	{ roomNo: "B-01", type: "Standard", monthlyPrice: 900000 },
-	{ roomNo: "B-02", type: "Deluxe", monthlyPrice: 950000 },
-	{ roomNo: "B-03", type: "Standard", monthlyPrice: 900000 },
-	{ roomNo: "B-04", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "C-01", type: "Deluxe", monthlyPrice: 1200000 },
-	{ roomNo: "C-02", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "C-03", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "C-04", type: "Suite", monthlyPrice: 1600000 },
-];
-
 /**
  * Helper to safely convert any date format (e.g. ISO, "10 Jan 2026", "10 Agu") into standard HTML "YYYY-MM-DD"
  */
@@ -137,7 +118,7 @@ export function TenantFormDialog({
 	open,
 	onOpenChange,
 	propertyName,
-	roomOptions = DEFAULT_ROOM_OPTIONS,
+	roomOptions = [],
 	editingTenant,
 	onSubmit,
 }: TenantFormDialogProps) {
@@ -156,6 +137,8 @@ export function TenantFormDialog({
 		toInputDateFormat(editingTenant?.dueDate) ||
 		calculateDueDate(initialStartDate, initialDuration);
 
+	const defaultInitialRoom = roomOptions[0];
+
 	const form = useForm({
 		defaultValues: {
 			name: editingTenant?.name ?? "",
@@ -167,11 +150,11 @@ export function TenantFormDialog({
 			occupationStatus: (editingTenant?.occupationStatus ??
 				"Mahasiswa") as OccupationStatus,
 			institution: editingTenant?.institution ?? "",
-			roomNo: editingTenant?.roomNo ?? (roomOptions[0]?.roomNo || "A-01"),
+			roomNo: editingTenant?.roomNo ?? (defaultInitialRoom?.roomNo || ""),
 			rent:
 				editingTenant?.rent ??
-				(roomOptions[0]
-					? formatRupiah(roomOptions[0].monthlyPrice)
+				(defaultInitialRoom
+					? formatRupiah(defaultInitialRoom.monthlyPrice)
 					: "Rp850.000"),
 			duration: initialDuration,
 			startDate: initialStartDate,
@@ -279,7 +262,7 @@ export function TenantFormDialog({
 				const defaultRoom = roomOptions[0];
 				const defaultRent = defaultRoom
 					? formatRupiah(defaultRoom.monthlyPrice)
-					: "Rp850.000";
+					: "Rp0";
 				const defaultDue = calculateDueDate(todayStr, "Bulanan");
 
 				form.setFieldValue("name", "");
@@ -290,7 +273,7 @@ export function TenantFormDialog({
 				form.setFieldValue("email", "");
 				form.setFieldValue("occupationStatus", "Mahasiswa");
 				form.setFieldValue("institution", "");
-				form.setFieldValue("roomNo", defaultRoom?.roomNo ?? "A-01");
+				form.setFieldValue("roomNo", defaultRoom?.roomNo ?? "");
 				form.setFieldValue("rent", defaultRent);
 				form.setFieldValue("duration", "Bulanan");
 				form.setFieldValue("startDate", todayStr);
@@ -827,8 +810,10 @@ export function TenantFormDialog({
 																	);
 																})
 															) : (
-																<div className="py-4 text-center text-[11px] text-[#8a958d]">
-																	Kamar tidak ditemukan
+																<div className="py-4 px-2 text-center text-[11px] text-[#8a958d]">
+																	{roomOptions.length === 0
+																		? "Tidak ada kamar kosong yang tersedia di properti ini."
+																		: "Kamar tidak ditemukan."}
 																</div>
 															)}
 														</div>

@@ -179,10 +179,11 @@ export function FinanceTransactionTable({
 					const isIncome = info.getValue() === "Income";
 					return (
 						<span
-							className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${isIncome
-								? "bg-[#e8f2ea] text-[#568062]"
-								: "bg-[#f7e9e8] text-[#a65f5b]"
-								}`}
+							className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${
+								isIncome
+									? "bg-[#e8f2ea] text-[#568062]"
+									: "bg-[#f7e9e8] text-[#a65f5b]"
+							}`}
 						>
 							{isIncome ? "Pemasukan" : "Pengeluaran"}
 						</span>
@@ -216,8 +217,9 @@ export function FinanceTransactionTable({
 					const isIncome = tx.type === "Income";
 					return (
 						<div
-							className={`text-xs font-bold text-right whitespace-nowrap ${isIncome ? "text-[#568062]" : "text-[#a65f5b]"
-								}`}
+							className={`text-xs font-bold text-right whitespace-nowrap ${
+								isIncome ? "text-[#568062]" : "text-[#a65f5b]"
+							}`}
 						>
 							{isIncome ? "+" : "-"} {formatRupiah(info.getValue())}
 						</div>
@@ -421,9 +423,9 @@ export function FinanceTransactionTable({
 										{header.isPlaceholder
 											? null
 											: flexRender(
-												header.column.columnDef.header,
-												header.getContext(),
-											)}
+													header.column.columnDef.header,
+													header.getContext(),
+												)}
 									</TableHead>
 								))}
 							</TableRow>
