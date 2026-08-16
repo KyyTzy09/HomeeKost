@@ -128,7 +128,7 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 			{isOpen && (
 				<div
 					onClick={onClose}
-					className="fixed inset-0 bg-[rgba(28,40,31,0.30)] z-40 md:hidden transition-opacity"
+					className="fixed inset-0 bg-[rgba(28,40,31,0.30)] z-40 lg:hidden transition-opacity cursor-pointer"
 				/>
 			)}
 
@@ -155,28 +155,37 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 				</nav>
 
 				{/* Bottom Profile Area */}
-				<div className="sidebar-bottom">
-					<div
-						className="profile-mini cursor-pointer hover:bg-[#f4f8f4] transition-colors rounded-[10px]"
-						onClick={handleLogout}
-						title="Klik untuk keluar akun"
-					>
-						<div className="avatar">{initials}</div>
-						<div className="flex-1 min-w-0">
-							<strong className="truncate block text-[#252925] text-[12px] font-bold">
-								{user.name}
-							</strong>
-							<span className="truncate block text-[11px] text-[#737873]">
-								{isSuperAdmin ? "Owner" : "Admin Staf"}
-							</span>
-						</div>
+				<div className="sidebar-bottom pt-2">
+					<div className="p-2 rounded-xl border-t border-[#e4e9e4] flex items-center justify-between gap-2 bg-white hover:bg-[#f4f8f4] transition-colors">
+						<Link
+							to="/dashboard/profile"
+							onClick={onClose}
+							className="flex items-center gap-2.5 flex-1 min-w-0 group cursor-pointer"
+							title="Buka Halaman Profil"
+						>
+							<div className="avatar w-8 h-8 rounded-full bg-[#dfe9e0] text-[#4f6958] font-bold text-xs flex items-center justify-center shrink-0 group-hover:bg-[#d5e4d7] transition-colors">
+								{initials}
+							</div>
+							<div className="flex-1 min-w-0">
+								<strong className="truncate block text-[#252925] text-xs font-bold leading-tight group-hover:text-[#4f6958] transition-colors">
+									{user.name}
+								</strong>
+								<span className="truncate block text-[10.5px] text-[#737873]">
+									{isSuperAdmin ? "Owner" : "Admin Staf"}
+								</span>
+							</div>
+						</Link>
 						<button
 							type="button"
-							className="text-[10px] text-[#a65f5b] hover:text-[#8a4a46] font-semibold flex items-center gap-1 shrink-0 p-1.5 rounded-[6px] hover:bg-[#faeae8] transition-colors"
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								handleLogout();
+							}}
+							className="text-[#a65f5b] hover:text-[#8a4a46] hover:bg-[#faeae8] p-1.5 rounded-lg shrink-0 transition-colors cursor-pointer"
 							title="Keluar dari akun"
 						>
-							<LogOut className="w-3.5 h-3.5" />
-							<span className="hidden sm:inline">Keluar</span>
+							<LogOut className="w-4 h-4" />
 						</button>
 					</div>
 				</div>

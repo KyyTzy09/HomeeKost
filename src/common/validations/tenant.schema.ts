@@ -19,8 +19,10 @@ export const tenantSchema = z.object({
 	phone: z
 		.string()
 		.min(1, "Nomor WhatsApp wajib diisi")
-		.min(10, "Nomor WhatsApp minimal 10 digit")
-		.max(16, "Nomor WhatsApp maksimal 16 digit"),
+		.regex(
+			/^[0-9+]{10,16}$/,
+			"Nomor WhatsApp harus berupa angka (10-16 digit)",
+		),
 	originAddress: z.string().optional(),
 	email: z
 		.string()
@@ -42,7 +44,11 @@ export const tenantSchema = z.object({
 	deposit: z.string().optional(),
 	emergencyName: z.string().optional(),
 	emergencyRelation: z.string().optional(),
-	emergencyPhone: z.string().optional(),
+	emergencyPhone: z
+		.string()
+		.regex(/^[0-9+]{9,16}$/, "Nomor telepon darurat harus berupa angka")
+		.optional()
+		.or(z.literal("")),
 	registrationDate: z.string().min(1, "Tanggal pendaftaran wajib diisi"),
 	notes: z.string().optional(),
 	agreement: z.boolean().refine((val) => val === true, {

@@ -7,31 +7,38 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
-import type { PaymentItem } from "./PaymentCard.tsx";
+import type { PaymentItem } from "../../common/types/index.ts";
 
 interface PaymentDeleteDialogProps {
+	open: boolean;
 	payment: PaymentItem | null;
 	onOpenChange: (open: boolean) => void;
 	onConfirm: () => void;
+	isDeleting?: boolean;
 }
 
 export function PaymentDeleteDialog({
+	open,
 	payment,
 	onOpenChange,
 	onConfirm,
+	isDeleting = false,
 }: PaymentDeleteDialogProps) {
 	return (
-		<Dialog
-			open={!!payment}
-			onOpenChange={(open) => !open && onOpenChange(false)}
-		>
-			<DialogContent className="max-w-[420px] rounded-[20px] border-[#efd4d0] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]">
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent
+				className="max-w-[420px] rounded-[20px] border-[#efd4d0] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				aria-describedby="delete-payment-desc"
+			>
 				<DialogHeader className="gap-1 mb-2">
 					<DialogTitle className="text-[17px] font-bold text-[#a65f5b]">
-						Hapus Data Pembayaran?
+						Hapus Tagihan Pembayaran?
 					</DialogTitle>
-					<DialogDescription className="text-[12px] text-[#607066] leading-relaxed">
-						Apakah Anda yakin ingin menghapus data pembayaran{" "}
+					<DialogDescription
+						id="delete-payment-desc"
+						className="text-[12px] text-[#607066] leading-relaxed"
+					>
+						Apakah Anda yakin ingin menghapus data tagihan{" "}
 						<b className="text-[#252925]">
 							{payment?.tenantName} · {payment?.roomNumber}
 						</b>{" "}
@@ -50,10 +57,11 @@ export function PaymentDeleteDialog({
 					</Button>
 					<Button
 						type="button"
+						disabled={isDeleting}
 						onClick={onConfirm}
 						className="h-[36px] px-4 text-xs font-bold rounded-[8px] bg-[#b66b68] hover:bg-[#a65f5b] text-white transition-colors"
 					>
-						Ya, Hapus Data
+						{isDeleting ? "Menghapus..." : "Ya, Hapus Tagihan"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

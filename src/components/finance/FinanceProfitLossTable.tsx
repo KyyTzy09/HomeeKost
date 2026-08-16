@@ -1,10 +1,10 @@
 import {
-	type ColumnDef,
+	createColumnHelper,
 	flexRender,
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Info } from "lucide-react";
+import { FileSpreadsheet, Info } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
@@ -15,70 +15,129 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "../../common/shadcn/table.tsx";
 import type { ProfitLossRow } from "../../common/types/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 
-interface FinanceProfitLossTableProps {
-	selectedMonth: string;
-	onMonthChange: (month: string) => void;
-	onApply: () => void;
-	data: ProfitLossRow[];
+export const MONTH_NAMES_ID = [
+	{ label: "Januari", value: 1 },
+	{ label: "Februari", value: 2 },
+	{ label: "Maret", value: 3 },
+	{ label: "April", value: 4 },
+	{ label: "Mei", value: 5 },
+	{ label: "Juni", value: 6 },
+	{ label: "Juli", value: 7 },
+	{ label: "Agustus", value: 8 },
+	{ label: "September", value: 9 },
+	{ label: "Oktober", value: 10 },
+	{ label: "November", value: 11 },
+	{ label: "Desember", value: 12 },
+];
+
+interface DateOption {
+	label: string;
+	value: number;
 }
+
+interface FinanceProfitLossTableProps {
+	selectedMonth: DateOption;
+	selectedYear: DateOption;
+	onMonthChange: (value: DateOption) => void;
+	onYearChange: (value: DateOption) => void;
+	data: ProfitLossRow[];
+	isLoading?: boolean;
+	onExportCsv?: () => void;
+	isExporting?: boolean;
+}
+
+const columnHelper = createColumnHelper<ProfitLossRow>();
 
 export function FinanceProfitLossTable({
 	selectedMonth,
+	selectedYear,
 	onMonthChange,
-	onApply,
+	onYearChange,
 	data,
+	isLoading = false,
+	onExportCsv,
+	isExporting = false,
 }: FinanceProfitLossTableProps) {
-	const columns = useMemo<ColumnDef<ProfitLossRow>[]>(
+	const currentYear = new Date().getFullYear();
+	const yearOptions: DateOption[] = [
+		{ label: String(currentYear - 2), value: currentYear - 2 },
+		{ label: String(currentYear - 1), value: currentYear - 1 },
+		{ label: String(currentYear), value: currentYear },
+		{ label: String(currentYear + 1), value: currentYear + 1 },
+	];
+
+	const columns = useMemo(
 		() => [
-			{
-				accessorKey: "account",
-				header: "Akun",
-				cell: ({ row }) => {
-					const item = row.original;
+			columnHelper.accessor("account", {
+				id: "account",
+				header: () => "Pos Akun Keuangan",
+				cell: (info) => {
+					const row = info.row.original;
+					const isSub = row.isSubItem;
+					const isProfit = row.isProfit;
+					const isTotal = row.isTotal;
+
 					return (
 						<div
-							className={`${
-								item.isSubItem
-									? "pl-6 text-xs text-[#4c524d]"
-									: "font-bold text-xs text-[#252925]"
-							} ${item.isProfit ? "text-[#568062] font-bold text-sm" : ""}`}
+							className={`flex items-center gap-1.5 ${
+								isSub
+									? "pl-5 text-[#4c524d]"
+									: isProfit
+										? "text-[#252925] font-bold text-sm"
+										: isTotal
+											? "text-[#252925] font-bold text-xs"
+											: "text-[#252925]"
+							}`}
 						>
-							{item.isSubItem && <span className="text-[#8fa594] mr-2">↳</span>}
-							{item.account}
+							{isSub && <span className="text-[#8fa594]">↳</span>}
+							<span>{info.getValue()}</span>
 						</div>
 					);
 				},
-			},
-			{
-				accessorKey: "period",
-				header: "Pilih Bulan",
-				cell: ({ row }) => (
-					<span className="text-xs text-[#737873]">{row.original.period}</span>
+			}),
+			columnHelper.accessor("period", {
+				id: "period",
+				header: () => "Periode",
+				cell: (info) => (
+					<span className="text-xs text-[#737873] whitespace-nowrap">
+						{info.getValue()}
+					</span>
 				),
-			},
-			{
-				accessorKey: "amount",
-				header: () => <div className="text-right">Nilai</div>,
-				cell: ({ row }) => {
-					const item = row.original;
+			}),
+			columnHelper.accessor("amount", {
+				id: "amount",
+				header: () => <div className="text-right">Jumlah (Rp)</div>,
+				cell: (info) => {
+					const row = info.row.original;
+					const isProfit = row.isProfit;
+					const isTotal = row.isTotal;
+
 					return (
 						<div
-							className={`text-right font-semibold text-xs ${
-								item.isProfit
+							className={`text-xs text-right whitespace-nowrap ${
+								isProfit
 									? "text-[#568062] font-bold text-sm"
-									: item.isTotal
+									: isTotal
 										? "text-[#252925] font-bold"
 										: "text-[#4c524d]"
 							}`}
 						>
-							{formatRupiah(item.amount)}
+							{formatRupiah(info.getValue())}
 						</div>
 					);
 				},
-			},
+			}),
 		],
 		[],
 	);
@@ -91,117 +150,175 @@ export function FinanceProfitLossTable({
 
 	return (
 		<Card className="p-5 bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
+			{/* ─── Header & Period Selector ─────────────────────────────────── */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e4e9e4]">
 				<div>
 					<h2 className="text-sm font-bold text-[#252925]">
-						Laporan Laba Rugi
+						Laporan Laba Rugi (P&L Statement)
 					</h2>
 					<p className="text-[11px] text-[#737873] mt-0.5">
-						Struktur mengikuti pembukuan: pendapatan per kost, investasi,
-						operasional, dan laba bersih.
+						Rekapitulasi pendapatan sewa, pengeluaran operasional & investasi,
+						serta laba bersih
 					</p>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2">
 					<Select
-						value={selectedMonth}
+						value={String(selectedMonth.value)}
 						onValueChange={(val) => {
-							if (val) onMonthChange(val);
+							const matched = MONTH_NAMES_ID.find(
+								(m) => String(m.value) === val,
+							);
+							if (matched) onMonthChange(matched);
 						}}
 					>
-						<SelectTrigger className="w-36 h-8 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus:ring-[#8fa594]">
-							<SelectValue placeholder="Pilih Bulan" />
+						<SelectTrigger className="w-[125px] h-8.5 text-xs bg-[#fbfcfb] border-[#e4e9e4]">
+							<SelectValue placeholder="Pilih Bulan">
+								{selectedMonth.label}
+							</SelectValue>
 						</SelectTrigger>
-						<SelectContent className="bg-white border-[#e4e9e4]">
-							{[
-								"April",
-								"Mei",
-								"Juni",
-								"Juli",
-								"Agustus",
-								"September",
-								"Oktober",
-								"November",
-								"Desember",
-							].map((m) => (
-								<SelectItem key={m} value={m} className="text-xs">
-									{m}
+						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+							{MONTH_NAMES_ID.map((m) => (
+								<SelectItem
+									key={m.value}
+									value={String(m.value)}
+									disabled={m.value > new Date().getMonth() + 1}
+								>
+									{m.label}
 								</SelectItem>
 							))}
 						</SelectContent>
 					</Select>
 
-					{/* Tombol Terapkan: Berfungsi untuk mengonfirmasi / refresh data periode terpilih */}
-					<Button
-						type="button"
-						className="h-8 px-3 text-xs bg-[#4f6958] hover:bg-[#425949] text-white font-semibold shadow-sm"
-						onClick={onApply}
+					<Select
+						value={String(selectedYear.value)}
+						onValueChange={(val) => {
+							const matched = yearOptions.find((y) => String(y.value) === val);
+							if (matched) onYearChange(matched);
+						}}
 					>
-						Terapkan
-					</Button>
+						<SelectTrigger className="w-[95px] h-8.5 text-xs bg-[#fbfcfb] border-[#e4e9e4]">
+							<SelectValue placeholder="Tahun">
+								{selectedYear.label}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+							{yearOptions.map((y) => (
+								<SelectItem
+									key={y.value}
+									value={String(y.value)}
+									disabled={y.value > new Date().getFullYear()}
+								>
+									{y.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+
+					{onExportCsv && (
+						<Button
+							type="button"
+							variant="outline"
+							onClick={onExportCsv}
+							disabled={isExporting}
+							className="h-8.5 text-xs font-semibold px-3 border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea]"
+						>
+							<FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-[#568062]" />
+							{isExporting ? "Mengunduh..." : "Ekspor CSV 12 Bulan"}
+						</Button>
+					)}
 				</div>
 			</div>
 
-			{/* TanStack Table Container */}
-			<div className="mt-4 border border-[#e4e9e4] rounded-lg overflow-hidden">
-				<table className="w-full text-left text-xs border-collapse">
-					<thead>
+			{/* ─── TanStack Table View ──────────────────────────────────────── */}
+			<div className="overflow-hidden mt-4 border border-[#e4e9e4] rounded-xl">
+				<Table>
+					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
-							<tr
+							<TableRow
 								key={headerGroup.id}
-								className="bg-[#f3f7f3] border-b border-[#e4e9e4] text-[#737873] text-[11px]"
+								className="bg-[#f5f8f5] hover:bg-[#f5f8f5]"
 							>
 								{headerGroup.headers.map((header) => (
-									<th key={header.id} className="py-2.5 px-4 font-semibold">
+									<TableHead
+										key={header.id}
+										className="text-[11px] font-semibold text-[#4f6958] py-2.5 px-4"
+									>
 										{header.isPlaceholder
 											? null
 											: flexRender(
 													header.column.columnDef.header,
 													header.getContext(),
 												)}
-									</th>
+									</TableHead>
 								))}
-							</tr>
+							</TableRow>
 						))}
-					</thead>
-					<tbody className="divide-y divide-[#e4e9e4]">
-						{table.getRowModel().rows.map((row) => {
-							const orig = row.original;
-							return (
-								<tr
-									key={row.id}
-									className={`${
-										orig.isTotal
-											? "bg-[#fbfcfb]"
-											: orig.isProfit
-												? "bg-[#e8f2ea]/60"
-												: ""
-									} hover:bg-[#f3f7f3]/50 transition-colors`}
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length}
+									className="py-8 text-center text-xs text-[#737873]"
 								>
-									{row.getVisibleCells().map((cell) => (
-										<td key={cell.id} className="py-2.5 px-4">
-											{flexRender(
-												cell.column.columnDef.cell,
-												cell.getContext(),
-											)}
-										</td>
-									))}
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+									<div className="flex items-center justify-center gap-2">
+										<div className="w-4 h-4 border-2 border-[#4f6958] border-t-transparent rounded-full animate-spin" />
+										<span>Menghitung laporan laba rugi...</span>
+									</div>
+								</TableCell>
+							</TableRow>
+						) : table.getRowModel().rows.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length}
+									className="py-8 text-center text-xs text-[#737873]"
+								>
+									Tidak ada data transaksi pada periode yang dipilih.
+								</TableCell>
+							</TableRow>
+						) : (
+							table.getRowModel().rows.map((row) => {
+								const original = row.original;
+								const isHeaderTotal = original.isTotal;
+								const isProfitRow = original.isProfit;
+
+								let rowBg = "bg-white hover:bg-[#fbfcfb]";
+								if (isProfitRow)
+									rowBg = "bg-[#f3f7f3] font-bold hover:bg-[#edf5ee]";
+								else if (isHeaderTotal)
+									rowBg = "bg-[#faf9f5] font-semibold hover:bg-[#f4f2ec]";
+
+								return (
+									<TableRow
+										key={row.id}
+										className={`${rowBg} transition-colors border-b border-[#edf0ed]`}
+									>
+										{row.getVisibleCells().map((cell) => (
+											<TableCell
+												key={cell.id}
+												className="py-2.5 px-4 text-xs text-[#252925]"
+											>
+												{flexRender(
+													cell.column.columnDef.cell,
+													cell.getContext(),
+												)}
+											</TableCell>
+										))}
+									</TableRow>
+								);
+							})
+						)}
+					</TableBody>
+				</Table>
 			</div>
 
-			{/* Note Box */}
-			<div className="mt-3.5 p-3 bg-[#f7faf7] border border-[#e5ece5] rounded-lg text-[11px] text-[#737873] flex items-start gap-2">
-				<Info className="w-4 h-4 text-[#5f896d] shrink-0 mt-0.5" />
-				<div>
-					<b className="text-[#252925]">Catatan Laporan:</b> Memisahkan belanja{" "}
-					<b>Investasi (Capex)</b> dan <b>Operasional (Opex)</b> agar laba
-					bersih riil per properti dapat dianalisis secara akurat sesuai kaidah
-					akuntansi kos.
-				</div>
+			<div className="flex items-center gap-2 mt-3 text-[11px] text-[#737873]">
+				<Info className="w-3.5 h-3.5 text-[#8fa594] shrink-0" />
+				<span>
+					Kalkulasi laba rugi dihitung otomatis dari seluruh transaksi sewa dan
+					operasional yang telah diverifikasi di database.
+				</span>
 			</div>
 		</Card>
 	);

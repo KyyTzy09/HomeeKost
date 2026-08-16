@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Megaphone } from "lucide-react";
+import { Lock, Megaphone } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
@@ -22,37 +22,60 @@ import {
 } from "../../common/shadcn/select.tsx";
 import type { AnnouncementCategory } from "../../common/types/index.ts";
 import {
-	type EngagementEventFormValues,
-	engagementEventSchema,
+	type BroadcastAnnouncementInput,
+	broadcastAnnouncementSchema,
 } from "../../common/validations/index.ts";
-import { getTodayDateString } from "../../lib/date-utils.ts";
 
 interface EngagementEventDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (values: EngagementEventFormValues) => void;
+	onSubmit: (values: BroadcastAnnouncementInput) => void;
+	properties: { id: string; name: string }[];
+	userRole?: string;
+	userPropertyId?: string | null;
+	isLoading?: boolean;
 }
+
+const CATEGORY_OPTIONS: { label: string; value: AnnouncementCategory }[] = [
+	{ label: "📢 Umum / Informasi", value: "UMUM" },
+	{ label: "🧹 Kerja Bakti & Kebersihan", value: "KERJA_BAKTI" },
+	{ label: "🔧 Maintenance & Fasilitas", value: "MAINTENANCE" },
+	{ label: "🎉 Acara / Kegiatan Bersama", value: "ACARA" },
+];
 
 export function EngagementEventDialog({
 	open,
 	onOpenChange,
 	onSubmit,
+	properties,
+	userRole,
+	userPropertyId,
+	isLoading = false,
 }: EngagementEventDialogProps) {
-	const todayStr = getTodayDateString();
+	const isAdmin = userRole === "ADMIN";
+
+	const propertyOptions = [
+		{ label: "📢 Semua Cabang Kos (Global)", value: "ALL" },
+		...properties.map((p) => ({ label: `🏠 ${p.name}`, value: p.id })),
+	];
 
 	const form = useForm({
 		defaultValues: {
 			title: "",
-			property: "Semua Kost",
+			propertyId: isAdmin && userPropertyId ? userPropertyId : "",
 			category: "UMUM" as AnnouncementCategory,
-			date: todayStr,
-			reminder: "1 hari sebelumnya",
 			content: "",
 			isBroadcast: true,
 		},
 		validators: {
 			onSubmit: ({ value }) => {
-				const res = engagementEventSchema.safeParse(value);
+				const res = broadcastAnnouncementSchema.safeParse({
+					...value,
+					propertyId:
+						value.propertyId === "" || value.propertyId === "ALL"
+							? null
+							: value.propertyId,
+				});
 				if (!res.success) {
 					const fieldErrors: Record<string, string> = {};
 					for (const issue of res.error.issues) {
@@ -67,7 +90,18 @@ export function EngagementEventDialog({
 			},
 		},
 		onSubmit: ({ value }) => {
-			onSubmit(value as EngagementEventFormValues);
+			onSubmit({
+				title: value.title,
+				propertyId:
+					isAdmin && userPropertyId
+						? userPropertyId
+						: value.propertyId === "" || value.propertyId === "ALL"
+							? null
+							: value.propertyId,
+				category: value.category,
+				content: value.content,
+				isBroadcast: value.isBroadcast,
+			});
 			onOpenChange(false);
 		},
 	});
@@ -75,30 +109,36 @@ export function EngagementEventDialog({
 	useEffect(() => {
 		if (open) {
 			form.reset();
-			form.setFieldValue("date", todayStr);
-			form.setFieldValue("property", "Semua Kost");
+			form.setFieldValue(
+				"propertyId",
+				isAdmin && userPropertyId ? userPropertyId : "ALL",
+			);
 			form.setFieldValue("category", "UMUM");
-			form.setFieldValue("reminder", "1 hari sebelumnya");
 			form.setFieldValue("isBroadcast", true);
 		}
-	}, [open, todayStr, form]);
+	}, [open, isAdmin, userPropertyId, form]);
+
+	const assignedPropertyName =
+		properties.find((p) => p.id === userPropertyId)?.name ||
+		"Cabang Ditugaskan";
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="max-w-[600px] max-h-[90vh] overflow-y-auto p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				className="max-w-[580px] max-h-[90vh] overflow-y-auto p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
 				aria-describedby="event-dialog-description"
 			>
 				<DialogHeader className="pb-4 border-b border-[#e4e9e4]">
 					<DialogTitle className="text-lg font-bold text-[#252925] flex items-center gap-2">
 						<Megaphone className="w-5 h-5 text-[#4f6958]" />
-						Tambah Acara & Pengumuman Kos
+						Buat Broadcast Pengumuman Kos
 					</DialogTitle>
 					<DialogDescription
 						id="event-dialog-description"
 						className="text-xs text-[#737873] mt-1"
 					>
-						Atur agenda acara atau pengumuman penting untuk penghuni kos.
+						Kirim pesan pengumuman penting secara massal ke WhatsApp penghuni
+						kos aktif.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -110,15 +150,15 @@ export function EngagementEventDialog({
 					}}
 					className="space-y-4 pt-2"
 				>
-					{/* Nama Acara / Judul */}
+					{/* Judul Pengumuman */}
 					<form.Field name="title">
 						{(field) => (
 							<div className="space-y-1.5">
 								<Label className="text-xs font-semibold text-[#252925]">
-									Nama Acara / Judul Pengumuman
+									Judul Pengumuman
 								</Label>
 								<Input
-									placeholder="Contoh: Kerja Bakti Bulanan, Pembersihan Toren Air"
+									placeholder="Contoh: Kerja Bakti Lingkungan, Perbaikan Toren Air"
 									value={field.state.value}
 									onChange={(e) => field.handleChange(e.target.value)}
 									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
@@ -133,137 +173,114 @@ export function EngagementEventDialog({
 					</form.Field>
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-						{/* Target Kos */}
-						<form.Field name="property">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Target Kos
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) field.handleChange(val);
-										}}
-									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Properti" />
-										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
-											{["Semua Kost", "Kos A", "Kos B", "Kos C"].map((prop) => (
-												<SelectItem key={prop} value={prop} className="text-xs">
-													{prop}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+						{/* Target Kos (RBAC Enforced) */}
+						<form.Field name="propertyId">
+							{(field) => {
+								const currentPropVal = field.state.value || "ALL";
+								const selectedPropOption = propertyOptions.find(
+									(opt) => opt.value === currentPropVal,
+								);
+
+								return (
+									<div className="space-y-1.5">
+										<Label className="text-xs font-semibold text-[#252925] flex items-center justify-between">
+											<span>Target Cabang Kos</span>
+											{isAdmin && (
+												<span className="text-[10px] font-normal text-[#99773d] flex items-center gap-1">
+													<Lock className="w-3 h-3" />
+													Terkunci (Admin)
+												</span>
+											)}
+										</Label>
+										{isAdmin ? (
+											<div className="border border-[#e4e9e4] bg-[#f5f8f5] text-xs h-10 px-3 flex items-center rounded-md font-medium text-[#252925]">
+												🏠 {assignedPropertyName}
+											</div>
+										) : (
+											<Select
+												value={currentPropVal}
+												onValueChange={(val) => {
+													if (val) field.handleChange(val);
+												}}
+											>
+												<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+													<SelectValue placeholder="Pilih Target Kos">
+														{selectedPropOption?.label}
+													</SelectValue>
+												</SelectTrigger>
+												<SelectContent className="bg-white border-[#e4e9e4]">
+													{propertyOptions.map((prop) => (
+														<SelectItem
+															key={prop.value}
+															value={prop.value}
+															className="text-xs"
+														>
+															{prop.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										)}
+									</div>
+								);
+							}}
 						</form.Field>
 
 						{/* Kategori Pengumuman */}
 						<form.Field name="category">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Kategori
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) field.handleChange(val as AnnouncementCategory);
-										}}
-									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Kategori" />
-										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
-											<SelectItem value="UMUM" className="text-xs">
-												Umum
-											</SelectItem>
-											<SelectItem value="KERJA_BAKTI" className="text-xs">
-												Kerja Bakti
-											</SelectItem>
-											<SelectItem value="MAINTENANCE" className="text-xs">
-												Maintenance
-											</SelectItem>
-											<SelectItem value="ACARA" className="text-xs">
-												Acara Kos
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
-						</form.Field>
+							{(field) => {
+								const selectedCategoryOption = CATEGORY_OPTIONS.find(
+									(opt) => opt.value === field.state.value,
+								);
 
-						{/* Tanggal Pelaksanaan */}
-						<form.Field name="date">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Tanggal Pelaksanaan
-									</Label>
-									<Input
-										type="date"
-										value={field.state.value}
-										onChange={(e) => field.handleChange(e.target.value)}
-										className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
-									/>
-									{field.state.meta.errors?.[0] && (
-										<p className="text-[11px] text-[#a65f5b]">
-											{field.state.meta.errors[0]}
-										</p>
-									)}
-								</div>
-							)}
-						</form.Field>
-
-						{/* Waktu Pengingat */}
-						<form.Field name="reminder">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Waktu Pengingat
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) field.handleChange(val);
-										}}
-									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Waktu" />
-										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
-											<SelectItem value="1 hari sebelumnya" className="text-xs">
-												1 hari sebelumnya
-											</SelectItem>
-											<SelectItem value="3 hari sebelumnya" className="text-xs">
-												3 hari sebelumnya
-											</SelectItem>
-											<SelectItem value="7 hari sebelumnya" className="text-xs">
-												7 hari sebelumnya
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+								return (
+									<div className="space-y-1.5">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Kategori Pengumuman
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) => {
+												if (val)
+													field.handleChange(val as AnnouncementCategory);
+											}}
+										>
+											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+												<SelectValue placeholder="Pilih Kategori">
+													{selectedCategoryOption?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent className="bg-white border-[#e4e9e4]">
+												{CATEGORY_OPTIONS.map((opt) => (
+													<SelectItem
+														key={opt.value}
+														value={opt.value}
+														className="text-xs"
+													>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								);
+							}}
 						</form.Field>
 					</div>
 
-					{/* Isi Catatan / Pengumuman */}
+					{/* Isi Pesan Pengumuman */}
 					<form.Field name="content">
 						{(field) => (
 							<div className="space-y-1.5">
 								<Label className="text-xs font-semibold text-[#252925]">
-									Isi Pengumuman / Pesan WhatsApp
+									Isi Pesan Pengumuman (WhatsApp)
 								</Label>
 								<textarea
 									rows={4}
-									placeholder="Tulis pesan lengkap yang akan dibroadcast ke seluruh penghuni..."
+									placeholder="Tuliskan isi pengumuman lengkap yang akan dibaca oleh anak kos..."
 									value={field.state.value}
 									onChange={(e) => field.handleChange(e.target.value)}
-									className="w-full border border-[#e4e9e4] rounded-xl p-3 text-xs bg-[#fbfcfb] outline-none focus:border-[#8fa594] resize-vertical"
+									className="w-full border border-[#e4e9e4] rounded-xl p-3 text-xs bg-[#fbfcfb] outline-none focus:border-[#8fa594] resize-vertical leading-relaxed"
 								/>
 								{field.state.meta.errors?.[0] && (
 									<p className="text-[11px] text-[#a65f5b]">
@@ -274,10 +291,10 @@ export function EngagementEventDialog({
 						)}
 					</form.Field>
 
-					{/* Broadcast WhatsApp Checkbox */}
+					{/* Checkbox Broadcast Langsung */}
 					<form.Field name="isBroadcast">
 						{(field) => (
-							<div className="flex items-center gap-2 p-3 bg-[#f7faf7] border border-[#e5ece5] rounded-xl">
+							<div className="flex items-center gap-2.5 p-3 bg-[#f7faf7] border border-[#e5ece5] rounded-xl">
 								<Checkbox
 									id="isBroadcast"
 									checked={field.state.value}
@@ -289,8 +306,8 @@ export function EngagementEventDialog({
 									htmlFor="isBroadcast"
 									className="text-xs text-[#252925] font-medium cursor-pointer"
 								>
-									Kirim broadcast WhatsApp ke seluruh penghuni kos aktif secara
-									otomatis via Fonnte Gateway.
+									Kirim pesan broadcast WhatsApp secara langsung ke seluruh
+									nomor penghuni aktif via Fonnte Gateway.
 								</label>
 							</div>
 						)}
@@ -302,14 +319,16 @@ export function EngagementEventDialog({
 							variant="outline"
 							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9"
 							onClick={() => onOpenChange(false)}
+							disabled={isLoading}
 						>
 							Batal
 						</Button>
 						<Button
 							type="submit"
 							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
+							disabled={isLoading}
 						>
-							Simpan Pengingat
+							{isLoading ? "Mengirim..." : "Kirim & Simpan Pengumuman"}
 						</Button>
 					</DialogFooter>
 				</form>

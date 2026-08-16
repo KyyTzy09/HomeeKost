@@ -39,6 +39,17 @@ interface UserFormDialogProps {
 	onSubmit: (values: UserFormValues) => void;
 }
 
+const ROLE_OPTIONS: { label: string; value: AppUserRole }[] = [
+	{ label: "SuperAdmin (Owner)", value: "SUPER_ADMIN" },
+	{ label: "Admin (Cabang Kos)", value: "ADMIN" },
+	{ label: "Staff (Operasional)", value: "STAFF" },
+];
+
+const USER_STATUS_OPTIONS: { label: string; value: AppUserStatus }[] = [
+	{ label: "Aktif", value: "ACTIVE" },
+	{ label: "Nonaktif", value: "INACTIVE" },
+];
+
 export function UserFormDialog({
 	open,
 	onOpenChange,
@@ -47,6 +58,17 @@ export function UserFormDialog({
 	currentUserRole = "SUPER_ADMIN",
 	onSubmit,
 }: UserFormDialogProps) {
+	const propertyOptions = [
+		{
+			label: "Semua Kost (Akses Multi-Cabang Global)",
+			value: "Semua Kost",
+		},
+		...properties.map((prop) => ({
+			label: `${prop.name}${prop.address ? ` · ${prop.address}` : ""}`,
+			value: prop.name,
+		})),
+	];
+
 	const form = useForm({
 		defaultValues: {
 			name: editingUser?.name || "",
@@ -166,7 +188,7 @@ export function UserFormDialog({
 						)}
 					</form.Field>
 
-					{/* Email */}
+					{/* Email Akun */}
 					<form.Field name="email">
 						{(field) => (
 							<div className="space-y-1.5">
@@ -174,7 +196,8 @@ export function UserFormDialog({
 									htmlFor={field.name}
 									className="text-xs font-semibold text-[#252925]"
 								>
-									Alamat Email <span className="text-[#b66b68]">*</span>
+									Alamat Email Pengguna{" "}
+									<span className="text-[#b66b68]">*</span>
 								</Label>
 								<Input
 									id={field.name}
@@ -199,116 +222,143 @@ export function UserFormDialog({
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
 						{/* Role Selection */}
 						<form.Field name="role">
-							{(field) => (
-								<div className="space-y-1.5 w-full">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Hak Akses (Role)
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) {
-												field.handleChange(val as AppUserRole);
-												if (val === "SUPER_ADMIN") {
-													form.setFieldValue("assignedProperty", "Semua Kost");
+							{(field) => {
+								const selectedRoleOption = ROLE_OPTIONS.find(
+									(r) => r.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1.5 w-full">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Hak Akses (Role)
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) => {
+												if (val) {
+													field.handleChange(val as AppUserRole);
+													if (val === "SUPER_ADMIN") {
+														form.setFieldValue(
+															"assignedProperty",
+															"Semua Kost",
+														);
+													}
 												}
-											}
-										}}
-									>
-										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Role" />
-										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
-											{currentUserRole === "SUPER_ADMIN" && (
-												<SelectItem value="SUPER_ADMIN" className="text-xs">
-													SuperAdmin (Owner)
+											}}
+										>
+											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+												<SelectValue placeholder="Pilih Role">
+													{selectedRoleOption?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent className="bg-white border-[#e4e9e4]">
+												{currentUserRole === "SUPER_ADMIN" && (
+													<SelectItem value="SUPER_ADMIN" className="text-xs">
+														SuperAdmin (Owner)
+													</SelectItem>
+												)}
+												{currentUserRole === "SUPER_ADMIN" && (
+													<SelectItem value="ADMIN" className="text-xs">
+														Admin (Cabang Kos)
+													</SelectItem>
+												)}
+												<SelectItem value="STAFF" className="text-xs">
+													Staff (Operasional)
 												</SelectItem>
-											)}
-											{currentUserRole === "SUPER_ADMIN" && (
-												<SelectItem value="ADMIN" className="text-xs">
-													Admin (Cabang Kos)
-												</SelectItem>
-											)}
-											<SelectItem value="STAFF" className="text-xs">
-												Staff (Operasional)
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+											</SelectContent>
+										</Select>
+									</div>
+								);
+							}}
 						</form.Field>
 
 						{/* Status Akun */}
 						<form.Field name="status">
-							{(field) => (
-								<div className="space-y-1.5 w-full">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Status Akun
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) field.handleChange(val as AppUserStatus);
-										}}
-									>
-										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Status" />
-										</SelectTrigger>
-										<SelectContent className=" bg-white border-[#e4e9e4]">
-											<SelectItem value="ACTIVE" className="text-xs">
-												Aktif
-											</SelectItem>
-											<SelectItem value="INACTIVE" className="text-xs">
-												Nonaktif
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+							{(field) => {
+								const selectedStatusOption = USER_STATUS_OPTIONS.find(
+									(s) => s.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1.5 w-full">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Status Akun
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) => {
+												if (val) field.handleChange(val as AppUserStatus);
+											}}
+										>
+											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+												<SelectValue placeholder="Pilih Status">
+													{selectedStatusOption?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent className="bg-white border-[#e4e9e4]">
+												{USER_STATUS_OPTIONS.map((opt) => (
+													<SelectItem
+														key={opt.value}
+														value={opt.value}
+														className="text-xs"
+													>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								);
+							}}
 						</form.Field>
 					</div>
 
-					{/* Penugasan Cabang Kos (Integrated dynamically with properties from DB) */}
+					{/* Penugasan Cabang Kos */}
 					<form.Field name="assignedProperty">
-						{(field) => (
-							<div className="space-y-1.5 w-full">
-								<div className="flex items-center justify-between w-full">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Penugasan Cabang Properti
-									</Label>
-									{form.state.values.role === "SUPER_ADMIN" && (
-										<span className="text-[10px] text-[#4f6958] font-medium flex items-center gap-1">
-											<ShieldCheck className="w-3 h-3" /> Akses Global Seluruh
-											Kos
-										</span>
-									)}
+						{(field) => {
+							const selectedPropOption = propertyOptions.find(
+								(p) => p.value === field.state.value,
+							);
+
+							return (
+								<div className="space-y-1.5 w-full">
+									<div className="flex items-center justify-between w-full">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Penugasan Cabang Properti
+										</Label>
+										{form.state.values.role === "SUPER_ADMIN" && (
+											<span className="text-[10px] text-[#4f6958] font-medium flex items-center gap-1">
+												<ShieldCheck className="w-3 h-3" /> Akses Global Seluruh
+												Kos
+											</span>
+										)}
+									</div>
+									<Select
+										value={field.state.value}
+										onValueChange={(val) => {
+											if (val) field.handleChange(val);
+										}}
+									>
+										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+											<SelectValue placeholder="Pilih Cabang Properti">
+												{selectedPropOption?.label || field.state.value}
+											</SelectValue>
+										</SelectTrigger>
+										<SelectContent className="bg-white border-[#e4e9e4]">
+											{propertyOptions.map((prop) => (
+												<SelectItem
+													key={prop.value}
+													value={prop.value}
+													className="text-xs"
+												>
+													{prop.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
 								</div>
-								<Select
-									value={field.state.value}
-									onValueChange={(val) => {
-										if (val) field.handleChange(val);
-									}}
-								>
-									<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-										<SelectValue placeholder="Pilih Cabang Properti" />
-									</SelectTrigger>
-									<SelectContent className="bg-white border-[#e4e9e4]">
-										<SelectItem value="Semua Kost" className="text-xs">
-											Semua Kost (Akses Multi-Cabang Global)
-										</SelectItem>
-										{properties.map((prop) => (
-											<SelectItem
-												key={prop.id}
-												value={prop.name}
-												className="text-xs"
-											>
-												{prop.name} {prop.address ? `· ${prop.address}` : ""}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						)}
+							);
+						}}
 					</form.Field>
 
 					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-end gap-2">

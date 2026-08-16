@@ -55,10 +55,22 @@ function TenantsPage() {
 	const updateTenantMutation = useUpdateTenant();
 	const deleteTenantMutation = useDeleteTenant();
 
-	// Derived dynamic room options for combobox
+	// Dialog states
+	const [selectedDetailTenant, setSelectedDetailTenant] =
+		useState<TenantItem | null>(null);
+	const [isFormOpen, setIsFormOpen] = useState(false);
+	const [editingTenant, setEditingTenant] = useState<TenantItem | null>(null);
+	const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
+
+	// Derived dynamic room options for combobox (Only display vacant/available rooms, or current room if editing)
 	const roomOptions: RoomOption[] = useMemo(() => {
 		if (rooms.length === 0) return [];
-		return rooms.map((r) => ({
+		const availableRooms = rooms.filter(
+			(r) =>
+				r.status === "Kosong" ||
+				(editingTenant && r.roomNo === editingTenant.roomNo),
+		);
+		return availableRooms.map((r) => ({
 			roomNo: r.roomNo,
 			type: (r.type === "Deluxe" || r.type === "Suite" ? r.type : "Standard") as
 				| "Standard"
@@ -66,7 +78,7 @@ function TenantsPage() {
 				| "Suite",
 			monthlyPrice: parseRupiah(r.price),
 		}));
-	}, [rooms]);
+	}, [rooms, editingTenant]);
 
 	// Filter and search states
 	const [searchQuery, setSearchQuery] = useState("");
@@ -74,13 +86,6 @@ function TenantsPage() {
 	const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 	const [toastMessage, setToastMessage] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-	// Dialog states
-	const [selectedDetailTenant, setSelectedDetailTenant] =
-		useState<TenantItem | null>(null);
-	const [isFormOpen, setIsFormOpen] = useState(false);
-	const [editingTenant, setEditingTenant] = useState<TenantItem | null>(null);
-	const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
 
 	const showToast = (msg: string) => {
 		setToastMessage(msg);

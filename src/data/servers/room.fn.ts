@@ -1,24 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import type { RoomItem } from "../../common/types/index.ts";
 import {
 	type RoomFormValues,
 	roomFormSchema,
 } from "../../common/validations/index.ts";
-import { auth } from "../../lib/auth.ts";
+import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { roomService } from "../services/room.service.ts";
-
-async function requireAuthSession() {
-	const headers = getRequestHeaders();
-	const session = await auth.api.getSession({ headers });
-
-	if (!session || !session.user) {
-		throw new Error("Sesi tidak valid. Silakan login kembali.");
-	}
-
-	return session;
-}
 
 export const getRoomsByPropertyServerFn = createServerFn({
 	method: "GET",
@@ -27,8 +15,15 @@ export const getRoomsByPropertyServerFn = createServerFn({
 		return z.object({ propertyId: z.string().min(1) }).parse(input);
 	})
 	.handler(async ({ data: { propertyId } }): Promise<RoomItem[]> => {
-		await requireAuthSession();
-		return roomService.getRoomsByProperty(propertyId);
+		return executeWithLogging(
+			"getRoomsByPropertyServerFn",
+			{ propertyId },
+			() => roomService.getRoomsByProperty(propertyId),
+			{
+				method: "GET",
+				summary: (res) => `${res.length} kamar ditemukan`,
+			},
+		);
 	});
 
 export const getRoomByIdServerFn = createServerFn({
@@ -38,8 +33,15 @@ export const getRoomByIdServerFn = createServerFn({
 		return z.object({ id: z.string().min(1) }).parse(input);
 	})
 	.handler(async ({ data: { id } }): Promise<RoomItem | null> => {
-		await requireAuthSession();
-		return roomService.getRoomById(id);
+		return executeWithLogging(
+			"getRoomByIdServerFn",
+			{ id },
+			() => roomService.getRoomById(id),
+			{
+				method: "GET",
+				summary: (res) => (res ? `Kamar ${res.roomNo}` : "Not Found"),
+			},
+		);
 	});
 
 export const createRoomServerFn = createServerFn({
@@ -54,8 +56,15 @@ export const createRoomServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { propertyId, data } }): Promise<RoomItem> => {
-		await requireAuthSession();
-		return roomService.createRoom(propertyId, data);
+		return executeWithLogging(
+			"createRoomServerFn",
+			{ propertyId, ...data },
+			() => roomService.createRoom(propertyId, data),
+			{
+				method: "POST",
+				summary: (res) => `Sukses dibuat: Kamar ${res.roomNo}`,
+			},
+		);
 	});
 
 export const updateRoomServerFn = createServerFn({
@@ -70,8 +79,15 @@ export const updateRoomServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { id, data } }): Promise<RoomItem> => {
-		await requireAuthSession();
-		return roomService.updateRoom(id, data);
+		return executeWithLogging(
+			"updateRoomServerFn",
+			{ id, ...data },
+			() => roomService.updateRoom(id, data),
+			{
+				method: "POST",
+				summary: (res) => `Sukses diubah: Kamar ${res.roomNo}`,
+			},
+		);
 	});
 
 export const deleteRoomServerFn = createServerFn({
@@ -82,7 +98,14 @@ export const deleteRoomServerFn = createServerFn({
 	})
 	.handler(
 		async ({ data: { id } }): Promise<{ success: boolean; id: string }> => {
-			await requireAuthSession();
-			return roomService.deleteRoom(id);
+			return executeWithLogging(
+				"deleteRoomServerFn",
+				{ id },
+				() => roomService.deleteRoom(id),
+				{
+					method: "POST",
+					summary: () => `Sukses dihapus: ${id}`,
+				},
+			);
 		},
 	);

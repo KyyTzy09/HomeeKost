@@ -1,31 +1,33 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
-import type { AuditLogItem, UserItem } from "../../common/types/index.ts";
+import type {
+	AuditLogItem,
+	UserItem,
+	UserProfileDetail,
+} from "../../common/types/index.ts";
 import {
+	type ChangePasswordFormValues,
+	changePasswordSchema,
+	type ProfileUpdateFormValues,
+	profileUpdateSchema,
 	type UserFormValues,
 	userFormSchema,
 } from "../../common/validations/index.ts";
-import { auth } from "../../lib/auth.ts";
+import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { userManagementService } from "../services/user-management.service.ts";
-
-// Guard helper to ensure caller is authenticated
-async function requireAuthSession() {
-	const headers = getRequestHeaders();
-	const session = await auth.api.getSession({ headers });
-
-	if (!session || !session.user) {
-		throw new Error("Sesi login Anda tidak valid atau telah berakhir.");
-	}
-
-	return session;
-}
 
 export const getUsersServerFn = createServerFn({
 	method: "GET",
 }).handler(async (): Promise<UserItem[]> => {
-	await requireAuthSession();
-	return userManagementService.getUsers();
+	return executeWithLogging(
+		"getUsersServerFn",
+		{},
+		() => userManagementService.getUsers(),
+		{
+			method: "GET",
+			summary: (res) => `${res.length} user ditemukan`,
+		},
+	);
 });
 
 export const createUserServerFn = createServerFn({
@@ -35,8 +37,15 @@ export const createUserServerFn = createServerFn({
 		return userFormSchema.parse(input);
 	})
 	.handler(async ({ data }): Promise<UserItem> => {
-		const session = await requireAuthSession();
-		return userManagementService.createUser(data, session.user.id);
+		return executeWithLogging(
+			"createUserServerFn",
+			data,
+			(session) => userManagementService.createUser(data, session.user.id),
+			{
+				method: "POST",
+				summary: (res) => `Sukses dibuat: ${res.name} (${res.role})`,
+			},
+		);
 	});
 
 export const updateUserServerFn = createServerFn({
@@ -51,8 +60,15 @@ export const updateUserServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { id, data } }): Promise<UserItem> => {
-		const session = await requireAuthSession();
-		return userManagementService.updateUser(id, data, session.user.id);
+		return executeWithLogging(
+			"updateUserServerFn",
+			{ id, ...data },
+			(session) => userManagementService.updateUser(id, data, session.user.id),
+			{
+				method: "POST",
+				summary: (res) => `Sukses diperbarui: ${res.name}`,
+			},
+		);
 	});
 
 export const deleteUserServerFn = createServerFn({
@@ -67,14 +83,79 @@ export const deleteUserServerFn = createServerFn({
 	})
 	.handler(
 		async ({ data: { id } }): Promise<{ success: boolean; id: string }> => {
-			const session = await requireAuthSession();
-			return userManagementService.deleteUser(id, session.user.id);
+			return executeWithLogging(
+				"deleteUserServerFn",
+				{ id },
+				(session) => userManagementService.deleteUser(id, session.user.id),
+				{
+					method: "POST",
+					summary: () => `Sukses dihapus: ${id}`,
+				},
+			);
 		},
 	);
+
+export const getMyProfileServerFn = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<UserProfileDetail> => {
+	return executeWithLogging(
+		"getMyProfileServerFn",
+		{},
+		(session) => userManagementService.getMyProfile(session.user.id),
+		{
+			method: "GET",
+			summary: (res) => `Profil ${res.name} (${res.role})`,
+		},
+	);
+});
+
+export const updateMyProfileServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: ProfileUpdateFormValues) => {
+		return profileUpdateSchema.parse(input);
+	})
+	.handler(async ({ data }): Promise<UserProfileDetail> => {
+		return executeWithLogging(
+			"updateMyProfileServerFn",
+			data,
+			(session) => userManagementService.updateMyProfile(session.user.id, data),
+			{
+				method: "POST",
+				summary: (res) => `Profil ${res.name} berhasil diperbarui`,
+			},
+		);
+	});
+
+export const changeMyPasswordServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: ChangePasswordFormValues) => {
+		return changePasswordSchema.parse(input);
+	})
+	.handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+		return executeWithLogging(
+			"changeMyPasswordServerFn",
+			{},
+			(session) =>
+				userManagementService.changeMyPassword(session.user.id, data),
+			{
+				method: "POST",
+				summary: (res) => res.message,
+			},
+		);
+	});
 
 export const getUserAuditLogsServerFn = createServerFn({
 	method: "GET",
 }).handler(async (): Promise<AuditLogItem[]> => {
-	await requireAuthSession();
-	return userManagementService.getAuditLogs();
+	return executeWithLogging(
+		"getUserAuditLogsServerFn",
+		{},
+		() => userManagementService.getAuditLogs(),
+		{
+			method: "GET",
+			summary: (res) => `${res.length} baris audit log`,
+		},
+	);
 });

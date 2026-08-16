@@ -1,6 +1,7 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { getContext } from "./common/integrations/tanstack-query/root-provider";
+import { logger } from "./lib/logger.ts";
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
@@ -15,6 +16,13 @@ export function getRouter() {
 	});
 
 	setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient });
+
+	// Development Navigation Logger
+	if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+		router.subscribe("onResolved", ({ toLocation, fromLocation }) => {
+			logger.route(toLocation.pathname, fromLocation?.pathname);
+		});
+	}
 
 	return router;
 }

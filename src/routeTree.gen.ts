@@ -18,13 +18,16 @@ import { Route as DashboardEngagementRouteImport } from './routes/dashboard/enga
 import { Route as DashboardFinanceRouteImport } from './routes/dashboard/finance'
 import { Route as DashboardInvoicesRouteImport } from './routes/dashboard/invoices'
 import { Route as DashboardPaymentsRouteImport } from './routes/dashboard/payments'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as DashboardReportsRouteImport } from './routes/dashboard/reports'
 import { Route as DashboardRoomsRouteImport } from './routes/dashboard/rooms'
 import { Route as DashboardSelectPropertyRouteImport } from './routes/dashboard/select-property'
 import { Route as DashboardTenantsRouteImport } from './routes/dashboard/tenants'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiCronDailyTasksRouteImport } from './routes/api/cron/daily-tasks'
 import { Route as DashboardPropertiesPropertyIdRouteImport } from './routes/dashboard/properties.$propertyId'
+import { Route as ApiInvoicesInvoiceIdDocumentRouteImport } from './routes/api/invoices/$invoiceId/document'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -71,6 +74,11 @@ const DashboardPaymentsRoute = DashboardPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardReportsRoute = DashboardReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -101,11 +109,22 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronDailyTasksRoute = ApiCronDailyTasksRouteImport.update({
+  id: '/api/cron/daily-tasks',
+  path: '/api/cron/daily-tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardPropertiesPropertyIdRoute =
   DashboardPropertiesPropertyIdRouteImport.update({
     id: '/properties/$propertyId',
     path: '/properties/$propertyId',
     getParentRoute: () => DashboardRoute,
+  } as any)
+const ApiInvoicesInvoiceIdDocumentRoute =
+  ApiInvoicesInvoiceIdDocumentRouteImport.update({
+    id: '/api/invoices/$invoiceId/document',
+    path: '/api/invoices/$invoiceId/document',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -117,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
   '/dashboard/payments': typeof DashboardPaymentsRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/reports': typeof DashboardReportsRoute
   '/dashboard/rooms': typeof DashboardRoomsRoute
   '/dashboard/select-property': typeof DashboardSelectPropertyRoute
@@ -124,7 +144,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
+  '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -134,6 +156,7 @@ export interface FileRoutesByTo {
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
   '/dashboard/payments': typeof DashboardPaymentsRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/reports': typeof DashboardReportsRoute
   '/dashboard/rooms': typeof DashboardRoomsRoute
   '/dashboard/select-property': typeof DashboardSelectPropertyRoute
@@ -141,7 +164,9 @@ export interface FileRoutesByTo {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
+  '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -153,6 +178,7 @@ export interface FileRoutesById {
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
   '/dashboard/payments': typeof DashboardPaymentsRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/reports': typeof DashboardReportsRoute
   '/dashboard/rooms': typeof DashboardRoomsRoute
   '/dashboard/select-property': typeof DashboardSelectPropertyRoute
@@ -160,7 +186,9 @@ export interface FileRoutesById {
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
+  '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -173,6 +201,7 @@ export interface FileRouteTypes {
     | '/dashboard/finance'
     | '/dashboard/invoices'
     | '/dashboard/payments'
+    | '/dashboard/profile'
     | '/dashboard/reports'
     | '/dashboard/rooms'
     | '/dashboard/select-property'
@@ -180,7 +209,9 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard/'
     | '/api/auth/$'
+    | '/api/cron/daily-tasks'
     | '/dashboard/properties/$propertyId'
+    | '/api/invoices/$invoiceId/document'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,6 +221,7 @@ export interface FileRouteTypes {
     | '/dashboard/finance'
     | '/dashboard/invoices'
     | '/dashboard/payments'
+    | '/dashboard/profile'
     | '/dashboard/reports'
     | '/dashboard/rooms'
     | '/dashboard/select-property'
@@ -197,7 +229,9 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard'
     | '/api/auth/$'
+    | '/api/cron/daily-tasks'
     | '/dashboard/properties/$propertyId'
+    | '/api/invoices/$invoiceId/document'
   id:
     | '__root__'
     | '/'
@@ -208,6 +242,7 @@ export interface FileRouteTypes {
     | '/dashboard/finance'
     | '/dashboard/invoices'
     | '/dashboard/payments'
+    | '/dashboard/profile'
     | '/dashboard/reports'
     | '/dashboard/rooms'
     | '/dashboard/select-property'
@@ -215,7 +250,9 @@ export interface FileRouteTypes {
     | '/dashboard/users'
     | '/dashboard/'
     | '/api/auth/$'
+    | '/api/cron/daily-tasks'
     | '/dashboard/properties/$propertyId'
+    | '/api/invoices/$invoiceId/document'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -223,6 +260,8 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiCronDailyTasksRoute: typeof ApiCronDailyTasksRoute
+  ApiInvoicesInvoiceIdDocumentRoute: typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -290,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPaymentsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/reports': {
       id: '/dashboard/reports'
       path: '/reports'
@@ -332,12 +378,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/daily-tasks': {
+      id: '/api/cron/daily-tasks'
+      path: '/api/cron/daily-tasks'
+      fullPath: '/api/cron/daily-tasks'
+      preLoaderRoute: typeof ApiCronDailyTasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/properties/$propertyId': {
       id: '/dashboard/properties/$propertyId'
       path: '/properties/$propertyId'
       fullPath: '/dashboard/properties/$propertyId'
       preLoaderRoute: typeof DashboardPropertiesPropertyIdRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/api/invoices/$invoiceId/document': {
+      id: '/api/invoices/$invoiceId/document'
+      path: '/api/invoices/$invoiceId/document'
+      fullPath: '/api/invoices/$invoiceId/document'
+      preLoaderRoute: typeof ApiInvoicesInvoiceIdDocumentRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -348,6 +408,7 @@ interface DashboardRouteChildren {
   DashboardFinanceRoute: typeof DashboardFinanceRoute
   DashboardInvoicesRoute: typeof DashboardInvoicesRoute
   DashboardPaymentsRoute: typeof DashboardPaymentsRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardReportsRoute: typeof DashboardReportsRoute
   DashboardRoomsRoute: typeof DashboardRoomsRoute
   DashboardSelectPropertyRoute: typeof DashboardSelectPropertyRoute
@@ -363,6 +424,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardFinanceRoute: DashboardFinanceRoute,
   DashboardInvoicesRoute: DashboardInvoicesRoute,
   DashboardPaymentsRoute: DashboardPaymentsRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
   DashboardReportsRoute: DashboardReportsRoute,
   DashboardRoomsRoute: DashboardRoomsRoute,
   DashboardSelectPropertyRoute: DashboardSelectPropertyRoute,
@@ -381,6 +443,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiCronDailyTasksRoute: ApiCronDailyTasksRoute,
+  ApiInvoicesInvoiceIdDocumentRoute: ApiInvoicesInvoiceIdDocumentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

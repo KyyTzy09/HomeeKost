@@ -107,12 +107,16 @@ export class TenantRepository {
 		endDate?: Date | null;
 		dueDateDay: number;
 		rentAmount: number;
+		recordedById?: string;
 	}) {
 		return this.db.$transaction(async (tx) => {
 			// 1. Check or create tenant
 			let tenant = await tx.tenant.findUnique({
 				where: { NIK: data.nik },
 			});
+
+			const initialPayment = Number(data.deposit ?? 0);
+			const totalRent = Number(data.rentAmount);
 
 			const tenantPayload = {
 				name: data.name,
@@ -127,7 +131,7 @@ export class TenantRepository {
 				emergencyRelation: data.emergencyRelation ?? null,
 				emergencyPhone: data.emergencyPhone ?? null,
 				vehicle: data.vehicle ?? null,
-				deposit: data.deposit ?? 0,
+				deposit: initialPayment,
 				notes: data.notes ?? null,
 				status: "ACTIVE" as const,
 			};
@@ -147,9 +151,10 @@ export class TenantRepository {
 			}
 
 			// 2. Set room status to OCCUPIED
-			await tx.room.update({
+			const room = await tx.room.update({
 				where: { id: data.roomId },
 				data: { status: "OCCUPIED" },
+				include: { property: true },
 			});
 
 			// 3. Create active rental contract
@@ -168,21 +173,95 @@ export class TenantRepository {
 				},
 			});
 
-			// 4. Create initial invoice
+			// 4. Determine user for transaction audit trail
+			let createdByUserId = data.recordedById;
+			if (!createdByUserId) {
+				const adminUser = await tx.user.findFirst({
+					select: { id: true },
+				});
+				createdByUserId = adminUser?.id;
+			}
+
 			const now = new Date();
 			const invoiceNum = `INV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-			await tx.invoice.create({
-				data: {
-					contractId: contract.id,
-					invoiceNumber: invoiceNum,
-					periodMonth: now.getMonth() + 1,
-					periodYear: now.getFullYear(),
-					amount: data.rentAmount,
-					dueDate: data.startDate,
-					status: "PENDING",
-				},
-			});
+			// 5. Intelligent Invoice & Cashflow Settlement
+			if (initialPayment >= totalRent) {
+				// Skenario 1: Bayar Lunas Penuh di Awal (Deposit / Bayar Awal >= Total Sewa)
+				const inv = await tx.invoice.create({
+					data: {
+						contractId: contract.id,
+						invoiceNumber: invoiceNum,
+						periodMonth: now.getMonth() + 1,
+						periodYear: now.getFullYear(),
+						amount: totalRent,
+						dueDate: data.startDate,
+						paidAt: now,
+						status: "PAID",
+					},
+				});
+
+				if (createdByUserId) {
+					await tx.transaction.create({
+						data: {
+							propertyId: room.propertyId,
+							createdBy: createdByUserId,
+							invoiceId: inv.id,
+							type: "INCOME",
+							category: "RENT",
+							classification: "OPERATIONAL",
+							paymentMethod: "TRANSFER",
+							amount: totalRent,
+							description: `Pembayaran Sewa Awal Lunas Kamar ${room.roomNumber} - ${data.name} (#${invoiceNum})`,
+							transactionDate: now,
+						},
+					});
+				}
+			} else if (initialPayment > 0) {
+				// Skenario 2: Bayar Sebagian / DP di Awal (0 < Deposit < Total Sewa)
+				if (createdByUserId) {
+					await tx.transaction.create({
+						data: {
+							propertyId: room.propertyId,
+							createdBy: createdByUserId,
+							type: "INCOME",
+							category: "RENT",
+							classification: "OPERATIONAL",
+							paymentMethod: "TRANSFER",
+							amount: initialPayment,
+							description: `Uang Muka (DP) / Deposit Sewa Awal Kamar ${room.roomNumber} - ${data.name}`,
+							transactionDate: now,
+						},
+					});
+				}
+
+				// Terbitkan invoice tagihan untuk sisa kekurangan
+				const remainingAmount = totalRent - initialPayment;
+				await tx.invoice.create({
+					data: {
+						contractId: contract.id,
+						invoiceNumber: invoiceNum,
+						periodMonth: now.getMonth() + 1,
+						periodYear: now.getFullYear(),
+						amount: remainingAmount,
+						dueDate: data.startDate,
+						status: "PENDING",
+					},
+				});
+			} else {
+				// Skenario 3: Belum Ada Pembayaran Sama Sekali (Deposit = 0)
+				await tx.invoice.create({
+					data: {
+						contractId: contract.id,
+						invoiceNumber: invoiceNum,
+						periodMonth: now.getMonth() + 1,
+						periodYear: now.getFullYear(),
+						amount: totalRent,
+						dueDate: data.startDate,
+						status: "PENDING",
+					},
+				});
+			}
 
 			return {
 				tenant,

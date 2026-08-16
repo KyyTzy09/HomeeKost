@@ -1,362 +1,519 @@
 import {
-	type ColumnDef,
+	createColumnHelper,
 	flexRender,
 	getCoreRowModel,
-	getPaginationRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDownUp, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+	ArrowDown,
+	ArrowDownUp,
+	ArrowUp,
+	Eye,
+	Loader2,
+	Pencil,
+	Plus,
+	Search,
+	Trash2,
+	X,
+} from "lucide-react";
+import { useMemo } from "react";
+import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
+import { Input } from "../../common/shadcn/input.tsx";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../../common/shadcn/select.tsx";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "../../common/shadcn/table.tsx";
 import type { TransactionItem } from "../../common/types/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 
+const CATEGORY_FILTER_OPTIONS = [
+	{ label: "Semua Kategori", value: "all" },
+	{ label: "Sewa Kamar", value: "RENT" },
+	{ label: "Listrik & Air", value: "UTILITIES" },
+	{ label: "WiFi / Internet", value: "INTERNET" },
+	{ label: "Perbaikan & Maintenance", value: "MAINTENANCE" },
+	{ label: "Gaji & Kebersihan", value: "SALARY" },
+	{ label: "Lain-lain", value: "OTHER" },
+];
+
+const TYPES_LIST = [
+	{ label: "Semua Jenis", value: "ALL" },
+	{ label: "Pemasukan", value: "INCOME" },
+	{ label: "Pengeluaran", value: "EXPENSE" },
+];
+
+interface FilterOption {
+	label: string;
+	value: string;
+}
+
 interface FinanceTransactionTableProps {
 	transactions: TransactionItem[];
+	totalCount?: number;
+	currentPage?: number;
+	totalPages?: number;
+	pageSize?: number;
+	searchQuery: string;
+	onSearchChange: (q: string) => void;
+	typeFilter: FilterOption;
+	onTypeFilterChange: (value: FilterOption) => void;
+	categoryFilter: FilterOption;
+	onCategoryFilterChange: (value: FilterOption) => void;
+	sortBy: "transactionDate" | "amount";
+	sortOrder: "asc" | "desc";
+	onSortToggle: (sortBy: "transactionDate" | "amount") => void;
+	onPageChange: (page: number) => void;
+	isLoading?: boolean;
+	onAddNew?: () => void;
 	onDetail: (tx: TransactionItem) => void;
 	onEdit: (tx: TransactionItem) => void;
 	onDelete: (tx: TransactionItem) => void;
+	currentUserId?: string;
+	isSuperAdmin?: boolean;
 }
+
+const columnHelper = createColumnHelper<TransactionItem>();
 
 export function FinanceTransactionTable({
 	transactions,
+	totalCount = 0,
+	currentPage = 1,
+	totalPages = 1,
+	searchQuery,
+	onSearchChange,
+	typeFilter,
+	onTypeFilterChange,
+	categoryFilter,
+	onCategoryFilterChange,
+	sortBy,
+	sortOrder,
+	onSortToggle,
+	onPageChange,
+	isLoading = false,
+	onAddNew,
 	onDetail,
 	onEdit,
 	onDelete,
+	currentUserId,
+	isSuperAdmin = false,
 }: FinanceTransactionTableProps) {
-	const [txFilter, setTxFilter] = useState<"all" | "Income" | "Expense">("all");
-	const [txSortDate, setTxSortDate] = useState<boolean>(false);
-	const [searchQuery, setSearchQuery] = useState<string>("");
-	const [pagination, setPagination] = useState({
-		pageIndex: 0,
-		pageSize: 5,
-	});
+	const canModify = (tx: TransactionItem) => {
+		if (isSuperAdmin) return true;
+		return tx.createdBy === currentUserId;
+	};
 
-	// Filtered & Sorted Transactions Data
-	const filteredData = useMemo(() => {
-		let result = transactions.filter((t) => {
-			const matchesType = txFilter === "all" || t.type === txFilter;
-			const q = searchQuery.trim().toLowerCase();
-			const matchesSearch =
-				!q ||
-				t.description.toLowerCase().includes(q) ||
-				t.property.toLowerCase().includes(q) ||
-				t.category.toLowerCase().includes(q);
-			return matchesType && matchesSearch;
-		});
-
-		if (txSortDate) {
-			result = [...result].sort((a, b) =>
-				(a.rawDate || a.date).localeCompare(b.rawDate || b.date),
-			);
-		}
-
-		return result;
-	}, [transactions, txFilter, searchQuery, txSortDate]);
-
-	const columns = useMemo<ColumnDef<TransactionItem>[]>(
+	const columns = useMemo(
 		() => [
-			{
-				accessorKey: "date",
-				header: "Tanggal",
-				cell: ({ row }) => (
-					<span className="text-[#737873] whitespace-nowrap font-medium text-xs">
-						{row.original.date}
+			columnHelper.accessor("date", {
+				id: "date",
+				header: () => (
+					<button
+						type="button"
+						onClick={() => onSortToggle("transactionDate")}
+						className="flex items-center gap-1.5 hover:text-[#252925] transition-colors"
+					>
+						<span>Tanggal</span>
+						{sortBy === "transactionDate" ? (
+							sortOrder === "asc" ? (
+								<ArrowUp className="w-3 h-3 text-[#4f6958]" />
+							) : (
+								<ArrowDown className="w-3 h-3 text-[#4f6958]" />
+							)
+						) : (
+							<ArrowDownUp className="w-3 h-3 text-[#8fa594]" />
+						)}
+					</button>
+				),
+				cell: (info) => (
+					<span className="text-xs text-[#737873] whitespace-nowrap">
+						{info.getValue()}
 					</span>
 				),
-			},
-			{
-				accessorKey: "property",
-				header: "Kost",
-				cell: ({ row }) => (
-					<span className="font-semibold text-[#252925] text-xs">
-						{row.original.property}
+			}),
+			columnHelper.accessor("propertyName", {
+				id: "propertyName",
+				header: () => "Kost",
+				cell: (info) => (
+					<span className="text-xs font-semibold text-[#252925] whitespace-nowrap">
+						{info.getValue()}
 					</span>
 				),
-			},
-			{
-				accessorKey: "category",
-				header: "Kategori",
-				cell: ({ row }) => (
-					<span className="text-[#737873] text-xs">
-						{row.original.category}
+			}),
+			columnHelper.accessor("category", {
+				id: "category",
+				header: () => "Kategori",
+				cell: (info) => (
+					<span className="inline-block px-2 py-0.5 rounded-md bg-[#f3f7f3] text-[#4f6958] text-[11px] font-medium whitespace-nowrap">
+						{info.getValue()}
 					</span>
 				),
-			},
-			{
-				accessorKey: "description",
-				header: "Nama Pembayaran / Deskripsi",
-				cell: ({ row }) => (
-					<span className="text-[#252925] font-medium text-xs">
-						{row.original.description}
+			}),
+			columnHelper.accessor("description", {
+				id: "description",
+				header: () => "Keterangan",
+				cell: (info) => (
+					<span
+						className="text-xs font-medium text-[#252925] block max-w-[240px] truncate"
+						title={info.getValue()}
+					>
+						{info.getValue()}
 					</span>
 				),
-			},
-			{
-				accessorKey: "type",
-				header: "Jenis",
-				cell: ({ row }) => {
-					const isIncome = row.original.type === "Income";
+			}),
+			columnHelper.accessor("type", {
+				id: "type",
+				header: () => "Jenis",
+				cell: (info) => {
+					const isIncome = info.getValue() === "Income";
 					return (
 						<span
-							className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+							className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${
 								isIncome
 									? "bg-[#e8f2ea] text-[#568062]"
 									: "bg-[#f7e9e8] text-[#a65f5b]"
 							}`}
 						>
-							{row.original.type}
+							{isIncome ? "Pemasukan" : "Pengeluaran"}
 						</span>
 					);
 				},
-			},
-			{
-				accessorKey: "amount",
-				header: () => <div className="text-right">Nominal</div>,
-				cell: ({ row }) => {
-					const isIncome = row.original.type === "Income";
+			}),
+			columnHelper.accessor("amount", {
+				id: "amount",
+				header: () => (
+					<div className="flex justify-end w-full">
+						<button
+							type="button"
+							onClick={() => onSortToggle("amount")}
+							className="flex items-center gap-1.5 hover:text-[#252925] transition-colors"
+						>
+							<span>Nominal</span>
+							{sortBy === "amount" ? (
+								sortOrder === "asc" ? (
+									<ArrowUp className="w-3 h-3 text-[#4f6958]" />
+								) : (
+									<ArrowDown className="w-3 h-3 text-[#4f6958]" />
+								)
+							) : (
+								<ArrowDownUp className="w-3 h-3 text-[#8fa594]" />
+							)}
+						</button>
+					</div>
+				),
+				cell: (info) => {
+					const tx = info.row.original;
+					const isIncome = tx.type === "Income";
 					return (
 						<div
-							className={`text-right font-semibold text-xs whitespace-nowrap ${
-								isIncome ? "text-[#568062]" : "text-[#252925]"
+							className={`text-xs font-bold text-right whitespace-nowrap ${
+								isIncome ? "text-[#568062]" : "text-[#a65f5b]"
 							}`}
 						>
-							{formatRupiah(row.original.amount)}
+							{isIncome ? "+" : "-"} {formatRupiah(info.getValue())}
 						</div>
 					);
 				},
-			},
-			{
+			}),
+			columnHelper.display({
 				id: "actions",
 				header: () => <div className="text-right">Aksi</div>,
 				cell: ({ row }) => {
 					const tx = row.original;
+					const editable = canModify(tx);
+
 					return (
-						<div className="text-right whitespace-nowrap space-x-1">
-							<button
+						<div
+							className="flex items-center justify-end gap-1"
+							onClick={(e) => e.stopPropagation()}
+							onKeyDown={(e) => e.stopPropagation()}
+							role="group"
+						>
+							<Button
 								type="button"
-								className="px-2 py-1 text-[11px] text-[#4f6958] font-semibold hover:bg-[#e8f0ea] rounded transition-colors"
+								variant="ghost"
+								size="icon"
+								className="w-7 h-7 text-[#737873] hover:text-[#4f6958] hover:bg-[#e8f0ea]"
 								onClick={() => onDetail(tx)}
+								title="Lihat Detail"
 							>
-								Detail
-							</button>
-							<button
-								type="button"
-								className="px-2 py-1 text-[11px] text-[#252925] font-semibold hover:bg-[#f3f7f3] rounded transition-colors"
-								onClick={() => onEdit(tx)}
-							>
-								Edit Data
-							</button>
-							<button
-								type="button"
-								className="px-2 py-1 text-[11px] text-[#a65f5b] font-semibold hover:bg-[#f7e9e8] rounded transition-colors"
-								onClick={() => onDelete(tx)}
-							>
-								Hapus
-							</button>
+								<Eye className="w-3.5 h-3.5" />
+							</Button>
+
+							{editable && (
+								<>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="w-7 h-7 text-[#737873] hover:text-[#4f6958] hover:bg-[#e8f0ea]"
+										onClick={() => onEdit(tx)}
+										title="Edit Transaksi"
+									>
+										<Pencil className="w-3.5 h-3.5" />
+									</Button>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="w-7 h-7 text-[#737873] hover:text-[#a65f5b] hover:bg-[#f7e9e8]"
+										onClick={() => onDelete(tx)}
+										title="Hapus Transaksi"
+									>
+										<Trash2 className="w-3.5 h-3.5" />
+									</Button>
+								</>
+							)}
 						</div>
 					);
 				},
-			},
+			}),
 		],
-		[onDetail, onEdit, onDelete],
+		[
+			sortBy,
+			sortOrder,
+			onSortToggle,
+			isSuperAdmin,
+			currentUserId,
+			onDetail,
+			onEdit,
+			onDelete,
+		],
 	);
 
 	const table = useReactTable({
-		data: filteredData,
+		data: transactions,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		state: {
-			pagination,
-		},
-		onPaginationChange: setPagination,
+		manualSorting: true,
+		manualPagination: true,
 	});
 
 	return (
 		<Card className="p-5 bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e4e9e4]">
+			{/* ─── Header & Controls ────────────────────────────────────────── */}
+			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#e4e9e4]">
 				<div>
-					<h2 className="text-sm font-bold text-[#252925]">
-						History Transaksi
-					</h2>
+					<div className="flex items-center gap-2">
+						<h2 className="text-sm font-bold text-[#252925]">
+							Riwayat Transaksi Kas
+						</h2>
+						<span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f0ea] text-[#4f6958]">
+							{totalCount} Transaksi
+						</span>
+					</div>
 					<p className="text-[11px] text-[#737873] mt-0.5">
-						Seluruh mutasi pemasukan dan pengeluaran kos tercatat lengkap.
+						Daftar seluruh arus kas masuk dan keluar per properti dengan
+						pencarian dan filter
 					</p>
 				</div>
 
-				{/* Filter Toolbar Segmented Container */}
-				<div className="flex flex-wrap items-center gap-2">
-					<button
-						type="button"
-						onClick={() => setTxSortDate(!txSortDate)}
-						className={`h-8 px-3 text-xs font-semibold rounded-xl border flex items-center gap-1.5 transition-all ${
-							txSortDate
-								? "bg-[#e8f0ea] text-[#4f6958] border-[#4f6958]/30 shadow-sm"
-								: "bg-white text-[#737873] border-[#e4e9e4] hover:bg-[#f3f7f3]"
-						}`}
-					>
-						<ArrowDownUp className="w-3 h-3" />
-						<span>Urutkan tanggal</span>
-					</button>
-
-					{/* Segmented Button Group */}
-					<div className="flex items-center p-1 bg-[#f0f4f0] border border-[#e4e9e4] rounded-xl gap-1">
-						<button
+				<div className="flex items-center gap-2">
+					{onAddNew && (
+						<Button
 							type="button"
-							onClick={() => {
-								setTxFilter("all");
-								setPagination((p) => ({ ...p, pageIndex: 0 }));
-							}}
-							className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-								txFilter === "all"
-									? "bg-white text-[#252925] font-bold shadow-sm border border-[#d5dfd6]"
-									: "text-[#737873] hover:text-[#252925]"
-							}`}
+							onClick={onAddNew}
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-8.5 rounded-lg shadow-sm"
 						>
-							Semua
-						</button>
-
-						<button
-							type="button"
-							onClick={() => {
-								setTxFilter("Income");
-								setPagination((p) => ({ ...p, pageIndex: 0 }));
-							}}
-							className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-								txFilter === "Income"
-									? "bg-white text-[#568062] font-bold shadow-sm border border-[#d5dfd6]"
-									: "text-[#737873] hover:text-[#568062]"
-							}`}
-						>
-							Pemasukan
-						</button>
-
-						<button
-							type="button"
-							onClick={() => {
-								setTxFilter("Expense");
-								setPagination((p) => ({ ...p, pageIndex: 0 }));
-							}}
-							className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-								txFilter === "Expense"
-									? "bg-white text-[#a65f5b] font-bold shadow-sm border border-[#d5dfd6]"
-									: "text-[#737873] hover:text-[#a65f5b]"
-							}`}
-						>
-							Pengeluaran
-						</button>
-					</div>
+							<Plus className="w-3.5 h-3.5 mr-1.5" />
+							Tambah Transaksi
+						</Button>
+					)}
 				</div>
 			</div>
 
-			{/* Search Toolbar */}
-			<div className="py-3">
-				<div className="relative max-w-sm">
-					<Search className="w-3.5 h-3.5 absolute left-3 top-3 text-[#737873]" />
-					<input
-						type="text"
-						placeholder="Cari nama pembayaran, deskripsi, atau kost..."
+			{/* ─── Filters & Search Toolbar ─────────────────────────────────── */}
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 py-4">
+				{/* Search Bar */}
+				<div className="lg:col-span-5 relative">
+					<Search className="w-3.5 h-3.5 text-[#737873] absolute left-3 top-1/2 -translate-y-1/2" />
+					<Input
 						value={searchQuery}
-						onChange={(e) => {
-							setSearchQuery(e.target.value);
-							setPagination((p) => ({ ...p, pageIndex: 0 }));
-						}}
-						className="w-full pl-8 pr-3 py-1.5 text-xs border border-[#e4e9e4] rounded-lg bg-[#fbfcfb] outline-none focus:border-[#8fa594]"
+						onChange={(e) => onSearchChange(e.target.value)}
+						placeholder="Cari transaksi, keterangan, properti, staf..."
+						className="pl-8.5 pr-8 h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 					/>
+					{searchQuery && (
+						<button
+							type="button"
+							onClick={() => onSearchChange("")}
+							className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#737873] hover:text-[#252925]"
+						>
+							<X className="w-3.5 h-3.5" />
+						</button>
+					)}
+				</div>
+
+				{/* Type Filter */}
+				<div className="lg:col-span-3">
+					<Select
+						value={typeFilter.value}
+						onValueChange={(val) => {
+							const matched = TYPES_LIST.find((o) => o.value === val);
+							if (matched) onTypeFilterChange(matched);
+						}}
+					>
+						<SelectTrigger className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] w-full">
+							<SelectValue placeholder="Semua Jenis">
+								{typeFilter.label}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+							{TYPES_LIST.map((opt) => (
+								<SelectItem key={opt.value} value={opt.value}>
+									{opt.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Category Filter */}
+				<div className="lg:col-span-4">
+					<Select
+						value={categoryFilter.value}
+						onValueChange={(val) => {
+							const matched = CATEGORY_FILTER_OPTIONS.find(
+								(o) => o.value === val,
+							);
+							if (matched) onCategoryFilterChange(matched);
+						}}
+					>
+						<SelectTrigger className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] w-full">
+							<SelectValue placeholder="Pilih Kategori">
+								{categoryFilter.label}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
+							{CATEGORY_FILTER_OPTIONS.map((opt) => (
+								<SelectItem key={opt.value} value={opt.value}>
+									{opt.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
 			</div>
 
-			{/* TanStack Table Container */}
-			<div className="border border-[#e4e9e4] rounded-lg overflow-hidden">
-				<table className="w-full text-left text-xs border-collapse">
-					<thead>
+			{/* ─── TanStack Table Grid ──────────────────────────────────────── */}
+			<div className="overflow-hidden border border-[#e4e9e4] rounded-xl">
+				<Table>
+					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
-							<tr
+							<TableRow
 								key={headerGroup.id}
-								className="bg-[#f3f7f3] border-b border-[#e4e9e4] text-[#737873] text-[11px]"
+								className="bg-[#f5f8f5] hover:bg-[#f5f8f5]"
 							>
 								{headerGroup.headers.map((header) => (
-									<th key={header.id} className="py-2.5 px-3 font-semibold">
+									<TableHead
+										key={header.id}
+										className="text-[11px] font-semibold text-[#4f6958] py-2.5 px-3.5"
+									>
 										{header.isPlaceholder
 											? null
 											: flexRender(
 													header.column.columnDef.header,
 													header.getContext(),
 												)}
-									</th>
+									</TableHead>
 								))}
-							</tr>
+							</TableRow>
 						))}
-					</thead>
-					<tbody className="divide-y divide-[#e4e9e4]">
-						{table.getRowModel().rows.map((row) => (
-							<tr key={row.id} className="hover:bg-[#fbfcfb] transition-colors">
-								{row.getVisibleCells().map((cell) => (
-									<td key={cell.id} className="py-3 px-3">
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</td>
-								))}
-							</tr>
-						))}
-
-						{table.getRowModel().rows.length === 0 && (
-							<tr>
-								<td
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							<TableRow>
+								<TableCell
 									colSpan={columns.length}
 									className="py-8 text-center text-xs text-[#737873]"
 								>
-									Tidak ada transaksi yang cocok dengan filter atau pencarian.
-								</td>
-							</tr>
+									<div className="flex items-center justify-center gap-2">
+										<Loader2 className="w-4 h-4 animate-spin text-[#4f6958]" />
+										<span>Memuat data transaksi...</span>
+									</div>
+								</TableCell>
+							</TableRow>
+						) : table.getRowModel().rows.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length}
+									className="py-8 text-center text-xs text-[#737873]"
+								>
+									<div className="flex items-center justify-center gap-2">
+										<span>Belum ada transaksi</span>
+									</div>
+								</TableCell>
+							</TableRow>
+						) : (
+							table.getRowModel().rows.map((row) => (
+								<TableRow
+									key={row.id}
+									className="hover:bg-[#fbfcfb] transition-colors cursor-pointer"
+									onClick={() => onDetail(row.original)}
+								>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell
+											key={cell.id}
+											className="py-2.5 px-3.5 text-xs text-[#252925]"
+										>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
+										</TableCell>
+									))}
+								</TableRow>
+							))
 						)}
-					</tbody>
-				</table>
+					</TableBody>
+				</Table>
 			</div>
 
-			{/* Pagination Controls */}
-			{table.getPageCount() > 1 && (
-				<div className="flex justify-between items-center mt-4 text-xs text-[#737873]">
-					<span>
-						Menampilkan {table.getRowModel().rows.length} dari{" "}
-						{filteredData.length} transaksi
-					</span>
-					<div className="flex gap-1.5">
-						<button
-							type="button"
-							onClick={() => table.previousPage()}
-							disabled={!table.getCanPreviousPage()}
-							className="px-2.5 py-1 rounded-lg border border-[#e4e9e4] disabled:opacity-40 hover:bg-[#f3f7f3] font-medium"
-						>
-							Sebelumnya
-						</button>
-						{Array.from({ length: table.getPageCount() }, (_, i) => i).map(
-							(pageIdx) => (
-								<button
-									key={pageIdx}
-									type="button"
-									onClick={() => table.setPageIndex(pageIdx)}
-									className={`w-7 h-7 rounded-lg font-semibold border ${
-										pageIdx === table.getState().pagination.pageIndex
-											? "bg-[#4f6958] text-white border-[#4f6958]"
-											: "bg-white text-[#737873] border-[#e4e9e4] hover:bg-[#f3f7f3]"
-									}`}
-								>
-									{pageIdx + 1}
-								</button>
-							),
-						)}
-						<button
-							type="button"
-							onClick={() => table.nextPage()}
-							disabled={!table.getCanNextPage()}
-							className="px-2.5 py-1 rounded-lg border border-[#e4e9e4] disabled:opacity-40 hover:bg-[#f3f7f3] font-medium"
-						>
-							Berikutnya
-						</button>
-					</div>
+			{/* ─── Pagination Bar ───────────────────────────────────────────── */}
+			<div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#e4e9e4] mt-4">
+				<div className="text-[11px] text-[#737873]">
+					Menampilkan Halaman <b className="text-[#252925]">{currentPage}</b>{" "}
+					dari <b className="text-[#252925]">{totalPages}</b> ({totalCount}{" "}
+					total transaksi)
 				</div>
-			)}
+
+				<div className="flex items-center gap-1.5">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={currentPage <= 1 || isLoading}
+						onClick={() => onPageChange(currentPage - 1)}
+						className="h-8 px-3 text-xs border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea]"
+					>
+						Sebelumnya
+					</Button>
+					<div className="px-2 text-xs font-semibold text-[#252925]">
+						{currentPage}
+					</div>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={currentPage >= totalPages || isLoading}
+						onClick={() => onPageChange(currentPage + 1)}
+						className="h-8 px-3 text-xs border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea]"
+					>
+						Selanjutnya
+					</Button>
+				</div>
+			</div>
 		</Card>
 	);
 }

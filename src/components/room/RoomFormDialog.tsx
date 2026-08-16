@@ -27,6 +27,7 @@ import {
 	type RoomFormValues,
 	roomSchema,
 } from "../../common/validations/index.ts";
+import { formatRupiah } from "../../lib/currency.ts";
 
 interface RoomFormDialogProps {
 	open: boolean;
@@ -35,6 +36,18 @@ interface RoomFormDialogProps {
 	editingRoom: RoomItem | null;
 	onSubmit: (values: RoomFormValues) => void;
 }
+
+const ROOM_TYPE_OPTIONS: { label: string; value: RoomType }[] = [
+	{ label: "Standard", value: "Standard" },
+	{ label: "Deluxe", value: "Deluxe" },
+	{ label: "Suite", value: "Suite" },
+];
+
+const ROOM_STATUS_OPTIONS: { label: string; value: RoomStatus }[] = [
+	{ label: "Kosong", value: "Kosong" },
+	{ label: "Terisi", value: "Terisi" },
+	{ label: "Maintenance", value: "Maintenance" },
+];
 
 export function RoomFormDialog({
 	open,
@@ -131,26 +144,38 @@ export function RoomFormDialog({
 
 						{/* Type */}
 						<form.Field name="type">
-							{(field) => (
-								<div className="space-y-1">
-									<Label className="text-[11px] font-bold text-[#506257]">
-										Tipe Kamar <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => field.handleChange(val as RoomType)}
-									>
-										<SelectTrigger className="h-[41px] border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]">
-											<SelectValue placeholder="Pilih Tipe" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="Standard">Standard</SelectItem>
-											<SelectItem value="Deluxe">Deluxe</SelectItem>
-											<SelectItem value="Suite">Suite</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+							{(field) => {
+								const selectedType = ROOM_TYPE_OPTIONS.find(
+									(t) => t.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1">
+										<Label className="text-[11px] font-bold text-[#506257]">
+											Tipe Kamar <span className="text-[#b66b68]">*</span>
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) =>
+												field.handleChange(val as RoomType)
+											}
+										>
+											<SelectTrigger className="w-full h-[41px] border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]">
+												<SelectValue placeholder="Pilih Tipe">
+													{selectedType?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent>
+												{ROOM_TYPE_OPTIONS.map((opt) => (
+													<SelectItem key={opt.value} value={opt.value}>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								);
+							}}
 						</form.Field>
 
 						{/* Price */}
@@ -171,7 +196,13 @@ export function RoomFormDialog({
 										</Label>
 										<Input
 											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
+											inputMode="numeric"
+											onChange={(e) => {
+												const digits = e.target.value.replace(/[^0-9]/g, "");
+												field.handleChange(
+													digits ? formatRupiah(Number(digits)) : "",
+												);
+											}}
 											placeholder="Rp850.000"
 											className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${
 												hasError
@@ -191,28 +222,38 @@ export function RoomFormDialog({
 
 						{/* Status */}
 						<form.Field name="status">
-							{(field) => (
-								<div className="space-y-1">
-									<Label className="text-[11px] font-bold text-[#506257]">
-										Status <span className="text-[#b66b68]">*</span>
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) =>
-											field.handleChange(val as RoomStatus)
-										}
-									>
-										<SelectTrigger className="h-[41px] border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]">
-											<SelectValue placeholder="Pilih Status" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="Kosong">Kosong</SelectItem>
-											<SelectItem value="Terisi">Terisi</SelectItem>
-											<SelectItem value="Maintenance">Maintenance</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
+							{(field) => {
+								const selectedStatus = ROOM_STATUS_OPTIONS.find(
+									(s) => s.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1">
+										<Label className="text-[11px] font-bold text-[#506257]">
+											Status <span className="text-[#b66b68]">*</span>
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) =>
+												field.handleChange(val as RoomStatus)
+											}
+										>
+											<SelectTrigger className="w-full h-[41px] border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]">
+												<SelectValue placeholder="Pilih Status">
+													{selectedStatus?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent>
+												{ROOM_STATUS_OPTIONS.map((opt) => (
+													<SelectItem key={opt.value} value={opt.value}>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								);
+							}}
 						</form.Field>
 
 						{/* Facilities */}
@@ -240,23 +281,16 @@ export function RoomFormDialog({
 							type="button"
 							variant="outline"
 							onClick={() => onOpenChange(false)}
-							className="h-[38px] px-4 rounded-[9px] border-[#dfe7e0] text-[#506257] hover:bg-[#f3f7f3] text-[12px]"
+							className="h-[38px] px-4 rounded-[10px] border-[#dfe7e0] bg-white text-[#29382e] text-[12px] font-semibold hover:bg-[#f6faf6]"
 						>
 							Batal
 						</Button>
-						<form.Subscribe
-							selector={(state) => [state.canSubmit, state.isSubmitting]}
+						<Button
+							type="submit"
+							className="h-[38px] px-4 rounded-[10px] bg-[#4f6958] text-white text-[12px] font-semibold hover:bg-[#435b4b] shadow-2xs"
 						>
-							{([canSubmit, isSubmitting]) => (
-								<Button
-									type="submit"
-									disabled={!canSubmit || isSubmitting}
-									className="h-[38px] px-5 rounded-[9px] bg-[#4f6958] hover:bg-[#425949] text-white font-semibold text-[12px]"
-								>
-									{editingRoom ? "Simpan Perubahan" : "Simpan Kamar"}
-								</Button>
-							)}
-						</form.Subscribe>
+							{editingRoom ? "Simpan Perubahan" : "Tambah Kamar"}
+						</Button>
 					</DialogFooter>
 				</form>
 			</DialogContent>

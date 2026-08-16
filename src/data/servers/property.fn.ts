@@ -8,15 +8,22 @@ import {
 	type SetActivePropertyInput,
 	setActivePropertySchema,
 } from "../../common/validations/index.ts";
-import { requireAuthSession } from "../middlewares/auth.middleware.ts";
+import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { propertyService } from "../services/property.service.ts";
 import { propertySessionService } from "../services/property-session.service.ts";
 
 export const getPropertiesServerFn = createServerFn({
 	method: "GET",
 }).handler(async (): Promise<PropertyItem[]> => {
-	await requireAuthSession();
-	return propertyService.getPropertiesWithStats();
+	return executeWithLogging(
+		"getPropertiesServerFn",
+		{},
+		() => propertyService.getPropertiesWithStats(),
+		{
+			method: "GET",
+			summary: (res) => `${res.length} cabang properti ditemukan`,
+		},
+	);
 });
 
 export const getPropertyByIdServerFn = createServerFn({
@@ -26,8 +33,15 @@ export const getPropertyByIdServerFn = createServerFn({
 		return z.object({ id: z.string().min(1) }).parse(input);
 	})
 	.handler(async ({ data: { id } }): Promise<PropertyItem | null> => {
-		await requireAuthSession();
-		return propertyService.getPropertyById(id);
+		return executeWithLogging(
+			"getPropertyByIdServerFn",
+			{ id },
+			() => propertyService.getPropertyById(id),
+			{
+				method: "GET",
+				summary: (res) => (res ? `${res.name}` : "Not Found"),
+			},
+		);
 	});
 
 export const createPropertyServerFn = createServerFn({
@@ -37,8 +51,15 @@ export const createPropertyServerFn = createServerFn({
 		return propertyFormSchema.parse(input);
 	})
 	.handler(async ({ data }): Promise<PropertyItem> => {
-		await requireAuthSession();
-		return propertyService.createProperty(data);
+		return executeWithLogging(
+			"createPropertyServerFn",
+			data,
+			() => propertyService.createProperty(data),
+			{
+				method: "POST",
+				summary: (res) => `Sukses dibuat: ${res.name}`,
+			},
+		);
 	});
 
 export const updatePropertyServerFn = createServerFn({
@@ -53,8 +74,15 @@ export const updatePropertyServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { id, data } }): Promise<PropertyItem> => {
-		await requireAuthSession();
-		return propertyService.updateProperty(id, data);
+		return executeWithLogging(
+			"updatePropertyServerFn",
+			{ id, ...data },
+			() => propertyService.updateProperty(id, data),
+			{
+				method: "POST",
+				summary: (res) => `Sukses diperbarui: ${res.name}`,
+			},
+		);
 	});
 
 export const deletePropertyServerFn = createServerFn({
@@ -65,8 +93,15 @@ export const deletePropertyServerFn = createServerFn({
 	})
 	.handler(
 		async ({ data: { id } }): Promise<{ success: boolean; id: string }> => {
-			await requireAuthSession();
-			return propertyService.deleteProperty(id);
+			return executeWithLogging(
+				"deletePropertyServerFn",
+				{ id },
+				() => propertyService.deleteProperty(id),
+				{
+					method: "POST",
+					summary: () => `Sukses dihapus: ${id}`,
+				},
+			);
 		},
 	);
 
@@ -77,18 +112,26 @@ export const setActivePropertyServerFn = createServerFn({
 		return setActivePropertySchema.parse(input);
 	})
 	.handler(async ({ data: { propertyId } }) => {
-		const session = await requireAuthSession();
+		return executeWithLogging(
+			"setActivePropertyServerFn",
+			{ propertyId },
+			async (session) => {
+				const result = await propertySessionService.setActiveProperty(
+					session.user.id,
+					propertyId,
+				);
 
-		const result = await propertySessionService.setActiveProperty(
-			session.user.id,
-			propertyId,
+				setCookie("hk_active_property_id", result.propertyId, {
+					path: "/",
+					maxAge: 60 * 60 * 24 * 30, // 30 hari
+					sameSite: "lax",
+				});
+
+				return result;
+			},
+			{
+				method: "POST",
+				summary: (res) => `Active property changed to: ${res.propertyId}`,
+			},
 		);
-
-		setCookie("hk_active_property_id", result.propertyId, {
-			path: "/",
-			maxAge: 60 * 60 * 24 * 30, // 30 hari
-			sameSite: "lax",
-		});
-
-		return result;
 	});

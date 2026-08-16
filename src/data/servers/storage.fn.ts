@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireAuthSession } from "../middlewares/auth.middleware.ts";
+import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import {
 	type StorageUploadResult,
 	storageService,
@@ -30,11 +30,19 @@ export const uploadImageServerFn = createServerFn({
 		return uploadImageInputSchema.parse(input);
 	})
 	.handler(async ({ data }): Promise<StorageUploadResult> => {
-		await requireAuthSession();
-		return storageService.uploadImage(data.dataUrl, {
-			folder: data.folder,
-			filename: data.filename,
-		});
+		return executeWithLogging(
+			"uploadImageServerFn",
+			{ folder: data.folder, filename: data.filename },
+			() =>
+				storageService.uploadImage(data.dataUrl, {
+					folder: data.folder,
+					filename: data.filename,
+				}),
+			{
+				method: "POST",
+				summary: (res) => `Uploaded image: ${res.url}`,
+			},
+		);
 	});
 
 export const uploadDocumentServerFn = createServerFn({
@@ -44,10 +52,18 @@ export const uploadDocumentServerFn = createServerFn({
 		return uploadDocumentInputSchema.parse(input);
 	})
 	.handler(async ({ data }): Promise<StorageUploadResult> => {
-		await requireAuthSession();
-		return storageService.uploadDocument(data.dataUrl, {
-			folder: data.folder,
-			filename: data.filename,
-			mimeType: data.mimeType,
-		});
+		return executeWithLogging(
+			"uploadDocumentServerFn",
+			{ folder: data.folder, filename: data.filename },
+			() =>
+				storageService.uploadDocument(data.dataUrl, {
+					folder: data.folder,
+					filename: data.filename,
+					mimeType: data.mimeType,
+				}),
+			{
+				method: "POST",
+				summary: (res) => `Uploaded document: ${res.url}`,
+			},
+		);
 	});

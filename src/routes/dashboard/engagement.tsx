@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, MessageSquare, Plus, Send } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, MessageSquare, Play, Plus, Send } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import type {
@@ -9,17 +9,27 @@ import type {
 	UpcomingBirthdayItem,
 } from "../../common/types/index.ts";
 import type {
-	EngagementEventFormValues,
+	BroadcastAnnouncementInput,
 	EngagementTemplateFormValues,
 } from "../../common/validations/index.ts";
 import {
 	EngagementAnnouncementSection,
 	EngagementBirthdayPanel,
 	EngagementEventDialog,
+	EngagementNotificationLogSection,
 	EngagementTemplateDetailDialog,
 	EngagementTemplateDialog,
 	EngagementTemplatePanel,
 } from "../../components/engagement/index.ts";
+import {
+	useBroadcastAnnouncement,
+	useDashboardContext,
+	useDeleteAnnouncement,
+	useEngagementDashboard,
+	useProperties,
+	useRunDailyCronTasks,
+	useSendBirthdayWish,
+} from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/engagement")({
 	head: () => ({
@@ -33,121 +43,63 @@ export const Route = createFileRoute("/dashboard/engagement")({
 	component: EngagementPage,
 });
 
-// ─── Initial Mock Data ────────────────────────────────────────────────────────
-const INITIAL_BIRTHDAYS: UpcomingBirthdayItem[] = [
+// ─── Default Templates ───────────────────────────────────────────────────────
+const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 	{
-		id: 1,
-		name: "Sarah Anindita",
-		room: "C-01",
-		property: "Kos A",
-		birthDate: "10 Agustus",
-		daysRemaining: 1,
-		relativeLabel: "Besok",
-		phone: "081234567890",
-	},
-	{
-		id: 2,
-		name: "Dinda Maharani",
-		room: "B-01",
-		property: "Kos B",
-		birthDate: "20 Agustus",
-		daysRemaining: 11,
-		relativeLabel: "20 Agustus",
-		phone: "081987654321",
-	},
-	{
-		id: 3,
-		name: "Nabila Putri",
-		room: "B-02",
-		property: "Kos B",
-		birthDate: "27 Agustus",
-		daysRemaining: 18,
-		relativeLabel: "27 Agustus",
-		phone: "081345678901",
-	},
-];
-
-const INITIAL_TEMPLATES: EngagementTemplateItem[] = [
-	{
-		id: 1,
-		name: "Welcome Tenant",
+		id: "tpl-1",
+		name: "Sambutan Anak Kos Baru",
 		content:
-			"Halo! Selamat datang di HomeeKost. Semoga nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊",
+			"Halo Kak! Selamat datang di HomeeKost. Semoga betah dan nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊🌿",
 		category: "Sambutan",
 		icon: "👋",
 	},
 	{
-		id: 2,
-		name: "Payment Appreciation",
+		id: "tpl-2",
+		name: "Apresiasi Pembayaran Tepat Waktu",
 		content:
-			"Terima kasih banyak sudah melakukan pembayaran sewa kos tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan! ✨",
+			"Terima kasih banyak sudah melakukan pembayaran sewa kos tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan dan berkah! ✨🙏",
 		category: "Pembayaran",
 		icon: "💳",
 	},
 	{
-		id: 3,
-		name: "Birthday Greeting",
+		id: "tpl-3",
+		name: "Ucapan Selamat Ulang Tahun",
 		content:
-			"Selamat ulang tahun! 🎉 Semoga hari ini menyenangkan, sehat selalu, dan semua cita-citanya tercapai. Terima kasih sudah menjadi bagian dari keluarga besar HomeeKost! 🎂",
+			"Selamat ulang tahun! 🎉🎂 Semoga senantiasa sehat, bahagia, dan sukses selalu dalam studi maupun pekerjaan. Terima kasih telah menjadi bagian berharga dari keluarga besar kami!",
 		category: "Ulang Tahun",
 		icon: "🎂",
 	},
 	{
-		id: 4,
-		name: "Tenant Anniversary",
+		id: "tpl-4",
+		name: "Pemberitahuan Kerja Bakti",
 		content:
-			"Wah, tidak terasa sudah 1 tahun kamu tinggal di HomeeKost! 🏠 Terima kasih atas kepercayaanmu. Kami terus berusaha memberikan hunian terbaik untukmu.",
-		category: "Anniversary",
-		icon: "🏠",
-	},
-];
-
-const INITIAL_ANNOUNCEMENTS: AnnouncementItem[] = [
-	{
-		id: 1,
-		propertyId: "Kos A",
-		propertyName: "Kos A",
-		title: "Kerja Bakti & Fogging Nyamuk",
-		content:
-			"Diberitahukan kepada seluruh penghuni Kos A, pada hari Minggu pagi pukul 08.00 WIB akan dilaksanakan kerja bakti lingkungan & pengasapan fogging.",
-		category: "KERJA_BAKTI",
-		isBroadcast: true,
-		sentAt: "08 Agu 2026",
-	},
-	{
-		id: 2,
-		propertyId: "Semua Kost",
-		propertyName: "Semua Kost",
-		title: "Pembersihan Toren & Pengecekan Filter Air",
-		content:
-			"Akan dilakukan pembersihan tandon air rutin pada hari Selasa pukul 10.00-12.00 WIB. Mohon tampung air secukupnya.",
-		category: "MAINTENANCE",
-		isBroadcast: true,
-		sentAt: "05 Agu 2026",
-	},
-	{
-		id: 3,
-		propertyId: "Kos B",
-		propertyName: "Kos B",
-		title: "Iuran Kebersihan & Jadwal Angkut Sampah",
-		content:
-			"Sampah di depan kamar akan diangkut setiap pagi pukul 07.30 WIB. Pastikan kantong sampah tertutup rapat.",
-		category: "UMUM",
-		isBroadcast: false,
-		sentAt: null,
+			"Diberitahukan kepada seluruh penghuni, pada hari Minggu pagi pukul 08.00 WIB akan diadakan kerja bakti & pembersihan area bersama. Mohon partisipasi dan kerja samanya. Terima kasih! 🧹",
+		category: "Kerja Bakti",
+		icon: "🧹",
 	},
 ];
 
 function EngagementPage() {
-	const [birthdays] = useState<UpcomingBirthdayItem[]>(INITIAL_BIRTHDAYS);
-	const [templates, setTemplates] =
-		useState<EngagementTemplateItem[]>(INITIAL_TEMPLATES);
-	const [announcements, setAnnouncements] = useState<AnnouncementItem[]>(
-		INITIAL_ANNOUNCEMENTS,
-	);
+	const dashboardContext = useDashboardContext();
+	const currentUser = dashboardContext.user;
+	const userRole = dashboardContext.userRole || "ADMIN";
+	const userPropertyId = currentUser?.assignedPropertyId;
 
+	// Queries
+	const { data: properties = [] } = useProperties();
+	const { data: engagementData } = useEngagementDashboard();
+
+	// Mutations
+	const sendBirthdayWishMutation = useSendBirthdayWish();
+	const broadcastAnnouncementMutation = useBroadcastAnnouncement();
+	const deleteAnnouncementMutation = useDeleteAnnouncement();
+	const runCronMutation = useRunDailyCronTasks();
+
+	// State
+	const [templates, setTemplates] =
+		useState<EngagementTemplateItem[]>(DEFAULT_TEMPLATES);
 	const [selectedTemplate, setSelectedTemplate] =
-		useState<EngagementTemplateItem | null>(INITIAL_TEMPLATES[2] ?? null);
+		useState<EngagementTemplateItem | null>(DEFAULT_TEMPLATES[2] ?? null);
 
 	// Dialog & Toast states
 	const [isEventDialogOpen, setIsEventDialogOpen] = useState<boolean>(false);
@@ -166,18 +118,71 @@ function EngagementPage() {
 		setToastMessage(msg);
 		setTimeout(() => {
 			setToastMessage(null);
-		}, 3000);
+		}, 4000);
 	};
+
+	// Map backend upcoming birthdays to UI format
+	const birthdays: UpcomingBirthdayItem[] = useMemo(() => {
+		if (!engagementData?.upcomingBirthdays) return [];
+		return engagementData.upcomingBirthdays.map((b) => ({
+			id: b.id,
+			tenantId: b.tenantId,
+			name: b.name,
+			room: b.roomNumber,
+			property: b.propertyName,
+			birthDate: b.birthDate,
+			daysRemaining: b.daysRemaining,
+			relativeLabel: b.relativeLabel,
+			phone: b.phone,
+		}));
+	}, [engagementData]);
+
+	// Map backend announcements to UI format
+	const announcements: AnnouncementItem[] = useMemo(() => {
+		if (!engagementData?.recentAnnouncements) return [];
+		return engagementData.recentAnnouncements.map((a) => ({
+			id: a.id,
+			propertyId: a.propertyId,
+			propertyName: a.property?.name || "Semua Cabang Kos",
+			title: a.title,
+			content: a.content,
+			category: a.category,
+			isBroadcast: a.isBroadcast,
+			sentAt: a.sentAt ? new Date(a.sentAt).toLocaleDateString("id-ID") : null,
+		}));
+	}, [engagementData]);
 
 	// Birthday Action Handlers
-	const handleSendWish = (item: UpcomingBirthdayItem) => {
-		showToast(
-			`Ucapan ulang tahun WhatsApp siap dikirimkan ke ${item.name} (${item.phone})`,
-		);
+	const handleSendWish = async (item: UpcomingBirthdayItem) => {
+		if (!item.tenantId) {
+			showToast("ID Penyewa tidak ditemukan.");
+			return;
+		}
+
+		try {
+			const res = await sendBirthdayWishMutation.mutateAsync({
+				tenantId: item.tenantId,
+			});
+
+			if (res?.success) {
+				showToast(
+					`Ucapan selamat ulang tahun berhasil dikirimkan ke WhatsApp ${item.name} (${item.phone})! 🎂🎉`,
+				);
+			} else {
+				showToast(
+					`Fonnte: ${res?.detail || "Gagal mengirim via API. Silakan gunakan tautan WhatsApp manual."}`,
+				);
+			}
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal mengirimkan ucapan ulang tahun.");
+		}
 	};
 
-	const handleSetReminder = (item: UpcomingBirthdayItem) => {
-		showToast(`Pengingat ulang tahun untuk ${item.name} berhasil diaktifkan`);
+	const handleSetReminder = (_item: UpcomingBirthdayItem) => {
+		showToast(
+			"Sistem otomatis akan mengirimkan ucapan WA pada hari-H pukul 08:00 WIB via Cron Scheduler.",
+		);
 	};
 
 	// Template Action Handlers
@@ -193,7 +198,7 @@ function EngagementPage() {
 			showToast(`Template "${values.name}" berhasil diperbarui`);
 		} else {
 			const newTpl: EngagementTemplateItem = {
-				id: Date.now(),
+				id: `tpl-${Date.now()}`,
 				name: values.name,
 				content: values.content,
 				category: "Kustom",
@@ -214,40 +219,69 @@ function EngagementPage() {
 	};
 
 	// Announcement Action Handlers
-	const handleSaveEvent = (values: EngagementEventFormValues) => {
-		const newAnn: AnnouncementItem = {
-			id: Date.now(),
-			propertyId: values.property,
-			propertyName: values.property,
-			title: values.title,
-			content: values.content,
-			category: values.category,
-			isBroadcast: values.isBroadcast,
-			sentAt: values.isBroadcast ? "Hari ini" : null,
-		};
-		setAnnouncements((prev) => [newAnn, ...prev]);
-
-		if (values.isBroadcast) {
-			showToast(
-				`Pengumuman "${values.title}" berhasil disimpan dan dibroadcast ke WhatsApp penghuni ${values.property}`,
-			);
-		} else {
-			showToast(`Pengumuman "${values.title}" berhasil disimpan`);
+	const handleSaveEvent = async (values: BroadcastAnnouncementInput) => {
+		try {
+			const res = await broadcastAnnouncementMutation.mutateAsync(values);
+			if (values.isBroadcast) {
+				showToast(
+					`Pengumuman "${values.title}" berhasil disimpan dan dibroadcast ke ${res.sentCount} nomor WhatsApp penghuni!`,
+				);
+			} else {
+				showToast(`Pengumuman "${values.title}" berhasil disimpan.`);
+			}
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menyimpan pengumuman.");
 		}
 	};
 
-	const handleBroadcastAnnouncement = (ann: AnnouncementItem) => {
-		showToast(
-			`Broadcast pengumuman "${ann.title}" berhasil dikirimkan ke WhatsApp seluruh penghuni ${ann.propertyName} via Fonnte Gateway`,
-		);
+	const handleBroadcastAnnouncement = async (ann: AnnouncementItem) => {
+		try {
+			const res = await broadcastAnnouncementMutation.mutateAsync({
+				title: ann.title,
+				content: ann.content,
+				category: ann.category,
+				propertyId: ann.propertyId,
+				isBroadcast: true,
+			});
+			showToast(
+				`Broadcast pengumuman "${ann.title}" berhasil dikirim ke ${res.sentCount} nomor WhatsApp via Fonnte Gateway!`,
+			);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal mengirimkan broadcast.");
+		}
+	};
+
+	const handleDeleteAnnouncement = async (ann: AnnouncementItem) => {
+		try {
+			await deleteAnnouncementMutation.mutateAsync(String(ann.id));
+			showToast(`Pengumuman "${ann.title}" berhasil dihapus.`);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menghapus pengumuman.");
+		}
+	};
+
+	// Manual Trigger Cron Task
+	const handleTriggerCron = async () => {
+		try {
+			const res = await runCronMutation.mutateAsync();
+			showToast(
+				`Cron Sukses: ${res.dueRemindersSent} pengingat tagihan & ${res.birthdayWishesSent} ucapan ultah berhasil dieksekusi!`,
+			);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menjalankan cron harian.");
+		}
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6 pb-12">
 			{/* Toast Notification */}
 			{toastMessage && (
 				<div className="fixed bottom-6 right-6 z-50 bg-[#253129] text-white px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-					<CheckCircle2 className="w-4 h-4 text-[#5f896d]" />
+					<CheckCircle2 className="w-4 h-4 text-[#5f896d] shrink-0" />
 					<span>{toastMessage}</span>
 				</div>
 			)}
@@ -255,15 +289,31 @@ function EngagementPage() {
 			{/* Page Header */}
 			<div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
 				<div>
-					<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
-						Engagement
-					</h1>
+					<div className="flex items-center gap-2">
+						<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
+							Engagement Hub & Pengumuman
+						</h1>
+					</div>
 					<p className="text-xs text-[#737873] mt-1">
-						Bangun hubungan baik dengan penghuni tanpa terasa seperti CRM yang
-						rumit.
+						Otomasi pesan WhatsApp ramah, ucapan ulang tahun anak kos, dan
+						broadcast agenda kos terpusat.
 					</p>
 				</div>
-				<div className="flex items-center gap-2.5">
+				<div className="flex items-center gap-2.5 flex-wrap">
+					{/* Tombol Run Cron Manual (Berguna untuk Testing & Operasional) */}
+					<Button
+						type="button"
+						variant="outline"
+						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#f3f7f3] text-xs font-semibold px-3 h-9 shadow-sm"
+						onClick={handleTriggerCron}
+						disabled={runCronMutation.isPending}
+					>
+						<Play className="w-3.5 h-3.5 mr-1 text-[#4f6958]" />
+						{runCronMutation.isPending
+							? "Menjalankan..."
+							: "Jalankan Cron Pagi"}
+					</Button>
+
 					<Button
 						type="button"
 						variant="outline"
@@ -271,7 +321,7 @@ function EngagementPage() {
 						onClick={() => setIsEventDialogOpen(true)}
 					>
 						<Plus className="w-3.5 h-3.5 mr-1.5" />
-						Tambah Acara
+						Buat Broadcast
 					</Button>
 					<Button
 						type="button"
@@ -309,18 +359,18 @@ function EngagementPage() {
 				/>
 			</div>
 
-			{/* Active Template Preview / Contoh Ucapan Box */}
+			{/* Active Template Preview / Box */}
 			{selectedTemplate && (
 				<Card className="p-5 bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
 					<div className="flex items-center justify-between pb-3 border-b border-[#e4e9e4]">
 						<div>
 							<h2 className="text-sm font-bold text-[#252925] flex items-center gap-2">
 								<MessageSquare className="w-4 h-4 text-[#4f6958]" />
-								Pratinjau Pesan: {selectedTemplate.name}
+								Pratinjau Format Pesan: {selectedTemplate.name}
 							</h2>
 							<p className="text-[11px] text-[#737873]">
-								Template yang siap disesuaikan dan dikirim ke nomor WhatsApp
-								penghuni
+								Template pesan terstruktur yang siap disesuaikan dan dikirim ke
+								penghuni kos
 							</p>
 						</div>
 
@@ -341,14 +391,12 @@ function EngagementPage() {
 								type="button"
 								size="sm"
 								className="h-8 text-xs bg-[#4f6958] hover:bg-[#425949] text-white font-semibold flex items-center gap-1.5 shadow-sm"
-								onClick={() =>
-									showToast(
-										`Template "${selectedTemplate.name}" disalin ke draf pesan WhatsApp`,
-									)
-								}
+								onClick={() => {
+									setIsEventDialogOpen(true);
+								}}
 							>
 								<Send className="w-3 h-3" />
-								Gunakan Template
+								Gunakan untuk Broadcast
 							</Button>
 						</div>
 					</div>
@@ -369,6 +417,12 @@ function EngagementPage() {
 				announcements={announcements}
 				onOpenAddEvent={() => setIsEventDialogOpen(true)}
 				onBroadcast={handleBroadcastAnnouncement}
+				onDelete={handleDeleteAnnouncement}
+			/>
+
+			{/* Riwayat Log Notifikasi WhatsApp */}
+			<EngagementNotificationLogSection
+				logs={engagementData?.recentLogs || []}
 			/>
 
 			{/* Dialog Modals */}
@@ -376,6 +430,10 @@ function EngagementPage() {
 				open={isEventDialogOpen}
 				onOpenChange={setIsEventDialogOpen}
 				onSubmit={handleSaveEvent}
+				properties={properties}
+				userRole={userRole}
+				userPropertyId={userPropertyId}
+				isLoading={broadcastAnnouncementMutation.isPending}
 			/>
 
 			<EngagementTemplateDialog

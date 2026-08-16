@@ -35,6 +35,11 @@ interface AllocationFormDialogProps {
 
 export const AVAILABLE_PROPERTIES = ["Kos A", "Kos B", "Kos C"];
 
+const SPLIT_OPTIONS = [
+	{ label: "Rata per kos", value: "Rata per kos" },
+	{ label: "Manual per kos", value: "Manual per kos" },
+];
+
 export function AllocationFormDialog({
 	open,
 	onOpenChange,
@@ -192,36 +197,47 @@ export function AllocationFormDialog({
 
 						{/* Metode Pembagian */}
 						<form.Field name="split">
-							{(field) => (
-								<div className="space-y-1.5">
-									<Label className="text-xs font-semibold text-[#252925]">
-										Metode Pembagian
-									</Label>
-									<Select
-										value={field.state.value}
-										onValueChange={(val) => {
-											if (val) field.handleChange(val);
-										}}
-									>
-										<SelectTrigger className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
-											<SelectValue placeholder="Pilih Metode" />
-										</SelectTrigger>
-										<SelectContent className="bg-white border-[#e4e9e4]">
-											<SelectItem value="Rata per kos" className="text-xs">
-												Rata per kos
-											</SelectItem>
-											<SelectItem value="Manual per kos" className="text-xs">
-												Manual per kos
-											</SelectItem>
-										</SelectContent>
-									</Select>
-									{field.state.meta.errors?.[0] && (
-										<p className="text-[11px] text-[#a65f5b]">
-											{field.state.meta.errors[0]}
-										</p>
-									)}
-								</div>
-							)}
+							{(field) => {
+								const selectedSplitOption = SPLIT_OPTIONS.find(
+									(opt) => opt.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1.5">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Metode Pembagian
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) => {
+												if (val) field.handleChange(val);
+											}}
+										>
+											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+												<SelectValue placeholder="Pilih Metode">
+													{selectedSplitOption?.label}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent className="bg-white border-[#e4e9e4]">
+												{SPLIT_OPTIONS.map((opt) => (
+													<SelectItem
+														key={opt.value}
+														value={opt.value}
+														className="text-xs"
+													>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										{field.state.meta.errors?.[0] && (
+											<p className="text-[11px] text-[#a65f5b]">
+												{field.state.meta.errors[0]}
+											</p>
+										)}
+									</div>
+								);
+							}}
 						</form.Field>
 					</div>
 

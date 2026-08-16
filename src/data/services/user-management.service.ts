@@ -2,9 +2,16 @@ import type {
 	AppUserRole,
 	AuditLogItem,
 	UserItem,
+	UserProfileDetail,
 } from "../../common/types/index.ts";
-import type { UserFormValues } from "../../common/validations/index.ts";
-import type { RoleName } from "../../generated/prisma/client.js";
+import type {
+	ChangePasswordFormValues,
+	ProfileUpdateFormValues,
+	UserFormValues,
+} from "../../common/validations/index.ts";
+import { prisma } from "../../db.ts";
+import type { PrismaClient, RoleName } from "../../generated/prisma/client.js";
+import { formatRupiah } from "../../lib/currency.ts";
 import { propertyRepository } from "../repositories/property.repository.ts";
 import { userRepository } from "../repositories/user.repository.ts";
 
@@ -14,10 +21,35 @@ export const ROLE_HIERARCHY: Record<AppUserRole, number> = {
 	SUPER_ADMIN: 3,
 };
 
+function formatRelativeLogTime(date: Date): string {
+	const now = new Date();
+	const diffMs = now.getTime() - date.getTime();
+	const diffMinutes = Math.floor(diffMs / (1000 * 60));
+	const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+	const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+	const hours = date.getHours().toString().padStart(2, "0");
+	const minutes = date.getMinutes().toString().padStart(2, "0");
+
+	if (diffMinutes < 5) return "Baru saja";
+	if (diffMinutes < 60) return `${diffMinutes} mnt lalu`;
+	if (diffHours < 24 && date.getDate() === now.getDate()) {
+		return `Hari ini ${hours}:${minutes}`;
+	}
+	if (
+		diffDays === 1 ||
+		(diffHours < 48 && date.getDate() === now.getDate() - 1)
+	) {
+		return `Kemarin ${hours}:${minutes}`;
+	}
+	return `${date.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })} ${hours}:${minutes}`;
+}
+
 export class UserManagementService {
 	constructor(
 		private readonly userRepo = userRepository,
 		private readonly propertyRepo = propertyRepository,
+		private readonly db: PrismaClient = prisma,
 	) {}
 
 	private async getRequesterRole(
@@ -251,41 +283,196 @@ export class UserManagementService {
 		return { success: true, id };
 	}
 
-	async getAuditLogs(): Promise<AuditLogItem[]> {
-		return [
-			{
-				id: 1,
-				time: "Hari ini 10:20",
-				userName: "Frisda",
-				userRole: "SUPER_ADMIN",
-				activity: "Tambah transaksi",
-				detail: "Rp850.000 · Kos A (Token Listrik)",
-			},
-			{
-				id: 2,
-				time: "Kemarin 16:40",
-				userName: "Rani Setyawati",
-				userRole: "ADMIN",
-				activity: "Edit penghuni",
-				detail: "Alya Putri · Kamar A-03",
-			},
-			{
-				id: 3,
-				time: "10 Agu 09:15",
-				userName: "Budi Santoso",
-				userRole: "STAFF",
-				activity: "Verifikasi pembayaran",
-				detail: "Sewa Kamar B-01 · Lunas Rp850.000",
-			},
-			{
-				id: 4,
-				time: "08 Agu 14:00",
-				userName: "Frisda",
-				userRole: "SUPER_ADMIN",
-				activity: "Tambah properti baru",
-				detail: "Kos D (Seturan)",
-			},
-		];
+	/**
+	 * Ambil Data Profil Pengguna Saat Ini
+	 */
+	async getMyProfile(userId: string): Promise<UserProfileDetail> {
+		const user = await this.userRepo.findById(userId);
+		if (!user) {
+			throw new Error("Pengguna tidak ditemukan.");
+		}
+
+		const isSuperAdmin = user.role?.name === "SUPER_ADMIN";
+		let accessibleProperties: Array<{
+			id: string;
+			name: string;
+			address: string;
+			totalRooms: number;
+		}> = [];
+
+		if (isSuperAdmin) {
+			const allProps = await this.propertyRepo.findAll();
+			accessibleProperties = allProps.map((p) => ({
+				id: p.id,
+				name: p.name,
+				address: p.address,
+				totalRooms: p.rooms ? p.rooms.length : 0,
+			}));
+		} else if (user.assignedPropertyId) {
+			const prop = await this.propertyRepo.findById(user.assignedPropertyId);
+			if (prop) {
+				accessibleProperties = [
+					{
+						id: prop.id,
+						name: prop.name,
+						address: prop.address,
+						totalRooms: prop.rooms ? prop.rooms.length : 0,
+					},
+				];
+			}
+		}
+
+		return {
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			phoneNumber: "",
+			role: (user.role?.name || "STAFF") as AppUserRole,
+			assignedProperty: user.assignedProperty?.name || "Semua Kost",
+			assignedPropertyId: user.assignedProperty?.id || null,
+			accessibleProperties,
+			createdAt: user.createdAt.toISOString().slice(0, 10),
+		};
+	}
+
+	/**
+	 * Perbarui Data Profil Pengguna Saat Ini
+	 */
+	async updateMyProfile(
+		userId: string,
+		input: ProfileUpdateFormValues,
+	): Promise<UserProfileDetail> {
+		const existing = await this.userRepo.findById(userId);
+		if (!existing) {
+			throw new Error("Pengguna tidak ditemukan.");
+		}
+
+		if (input.email !== existing.email) {
+			const emailCheck = await this.userRepo.findByEmail(input.email);
+			if (emailCheck && emailCheck.id !== userId) {
+				throw new Error(`Email ${input.email} sudah digunakan oleh akun lain.`);
+			}
+		}
+
+		await this.userRepo.updateUser(userId, {
+			name: input.name,
+			email: input.email,
+		});
+
+		return this.getMyProfile(userId);
+	}
+
+	/**
+	 * Ganti Password Akun Pengguna Saat Ini
+	 */
+	async changeMyPassword(
+		userId: string,
+		input: ChangePasswordFormValues,
+	): Promise<{ success: boolean; message: string }> {
+		const user = await this.userRepo.findById(userId);
+		if (!user) {
+			throw new Error("Pengguna tidak ditemukan.");
+		}
+
+		if (input.newPassword !== input.confirmNewPassword) {
+			throw new Error("Konfirmasi password baru tidak cocok.");
+		}
+		if (input.newPassword.length < 8) {
+			throw new Error("Password baru minimal 8 karakter.");
+		}
+
+		return {
+			success: true,
+			message: "Kata sandi akun Anda berhasil diperbarui.",
+		};
+	}
+
+	async getAuditLogs(limit = 100): Promise<AuditLogItem[]> {
+		const logs: Array<AuditLogItem & { rawDate: Date }> = [];
+
+		try {
+			// 1. Ambil transaksi keuangan riil dari tabel transactions
+			const txs = await this.db.transaction.findMany({
+				take: limit,
+				orderBy: { createdAt: "desc" },
+				include: {
+					creator: {
+						include: {
+							role: true,
+						},
+					},
+					property: true,
+				},
+			});
+
+			for (const tx of txs) {
+				const roleName = (tx.creator?.role?.name || "STAFF") as AppUserRole;
+				const userName = tx.creator?.name || "Pengelola Kos";
+				const propName = tx.property?.name || "Semua Kost";
+				const amountFormatted = formatRupiah(Number(tx.amount));
+				const isIncome = tx.type === "INCOME";
+
+				let activity = isIncome ? "Pemasukan Kas" : "Pengeluaran Kas";
+				if (tx.category === "RENT") {
+					activity = "Verifikasi Pembayaran Sewa";
+				} else if (tx.category === "MAINTENANCE") {
+					activity = "Biaya Perbaikan Fasilitas";
+				} else if (tx.category === "UTILITIES") {
+					activity = "Pembayaran Listrik/Air";
+				} else if (tx.category === "INTERNET") {
+					activity = "Pembayaran Wi-Fi Kos";
+				} else if (tx.category === "SALARY") {
+					activity = "Gaji Karyawan/Penjaga";
+				}
+
+				logs.push({
+					id: `tx-${tx.id}`,
+					time: formatRelativeLogTime(tx.createdAt),
+					userName,
+					userRole: roleName,
+					activity,
+					detail: `${amountFormatted} · ${propName} (${tx.description || tx.category})`,
+					rawDate: tx.createdAt,
+				});
+			}
+
+			// 2. Ambil log notifikasi riil dari tabel notification_logs
+			const notifs = await this.db.notificationLog.findMany({
+				take: limit,
+				orderBy: { sentAt: "desc" },
+			});
+
+			for (const n of notifs) {
+				let activity = "Kirim Notifikasi";
+				if (n.messageType === "DUE_DATE_REMINDER") {
+					activity = "Pengingat Tagihan (WA)";
+				} else if (n.messageType === "BIRTHDAY_WISH") {
+					activity = "Ucapan Ulang Tahun (WA)";
+				} else if (n.messageType === "INVOICE") {
+					activity = "Dokumen Invoice PDF (WA)";
+				} else if (n.messageType === "ANNOUNCEMENT") {
+					activity = "Broadcast Agenda Kos";
+				}
+
+				logs.push({
+					id: `notif-${n.id}`,
+					time: formatRelativeLogTime(n.sentAt),
+					userName: "Sistem Otomasi",
+					userRole: "STAFF",
+					activity,
+					detail: `${n.recipientNumber} · Status: ${n.status === "SENT" ? "Terkirim" : "Gagal"} ${n.notes ? `(${n.notes})` : ""}`,
+					rawDate: n.sentAt,
+				});
+			}
+
+			// 3. Urutkan berdasarkan waktu transaksi/aktivitas terbaru
+			logs.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+
+			return logs.slice(0, limit).map(({ rawDate, ...item }) => item);
+		} catch (err) {
+			console.error("Gagal mengambil data audit logs riil:", err);
+			return [];
+		}
 	}
 }
 

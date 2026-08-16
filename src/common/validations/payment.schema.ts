@@ -1,66 +1,83 @@
 import { z } from "zod";
 
 export const PAYMENT_STATUS = {
+	ALL: "ALL",
 	PAID: "PAID",
 	PENDING: "PENDING",
 	OVERDUE: "OVERDUE",
+	CANCELLED: "CANCELLED",
 } as const;
 
-export type PaymentStatus = keyof typeof PAYMENT_STATUS;
+export const paymentFilterSchema = z.object({
+	propertyId: z.string().optional(),
+	status: z.enum(["ALL", "PENDING", "PAID", "OVERDUE"]).optional(),
+	month: z.number().min(1).max(12).optional(),
+	year: z.number().min(2020).max(2050).optional(),
+	search: z.string().optional(),
+	sortBy: z.enum(["dueDate", "amount", "createdAt"]).optional(),
+	sortOrder: z.enum(["asc", "desc"]).optional(),
+	page: z.number().int().positive().optional(),
+	limit: z.number().int().positive().max(100).optional(),
+});
 
-export const paymentSchema = z
-	.object({
-		tenantName: z
-			.string()
-			.min(1, "Nama penghuni wajib diisi")
-			.min(2, "Nama penghuni minimal 2 karakter"),
-		roomNumber: z.string().min(1, "Nomor kamar wajib diisi"),
-		period: z
-			.string()
-			.min(1, "Periode wajib diisi")
-			.regex(
-				/^[A-Za-z]+ \d{4}$/,
-				"Format periode: Nama Bulan Tahun (contoh: Agustus 2026)",
-			),
-		dueDate: z.string().min(1, "Tanggal jatuh tempo wajib diisi"),
-		amount: z
-			.number({ message: "Nominal harus berupa angka" })
-			.min(1, "Nominal minimal Rp 1")
-			.max(100_000_000, "Nominal terlalu besar"),
-		status: z.enum(["PAID", "PENDING", "OVERDUE"], {
-			message: "Status wajib dipilih",
-		}),
-		paidAt: z.string().nullable().optional(),
-	})
-	.superRefine((data, ctx) => {
-		if (data.status === "PAID" && !data.paidAt) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message: "Tanggal bayar wajib diisi jika status Sudah Bayar",
-				path: ["paidAt"],
-			});
-		}
-	});
+export type PaymentFilterInput = z.infer<typeof paymentFilterSchema>;
 
-export type PaymentFormValues = z.infer<typeof paymentSchema>;
+export const confirmPaymentSchema = z.object({
+	invoiceId: z.string().min(1, "Invoice ID wajib disertakan"),
+	paymentMethod: z.enum(["TRANSFER", "CASH", "QRIS"], {
+		message: "Metode pembayaran wajib dipilih",
+	}),
+	paidDate: z
+		.string()
+		.min(1, "Tanggal pembayaran wajib diisi")
+		.regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
+	notes: z.string().optional(),
+	sendReceiptWhatsApp: z.boolean().optional().default(true),
+});
 
-// ─── Display Helpers ────────────────────────────────────────────────────────
-export const STATUS_LABEL: Record<PaymentStatus, string> = {
-	PAID: "Sudah bayar",
-	PENDING: "Jatuh tempo",
-	OVERDUE: "Terlambat",
-};
+export type ConfirmPaymentInput = z.infer<typeof confirmPaymentSchema>;
 
-export const STATUS_BADGE_CLASS: Record<PaymentStatus, string> = {
-	PAID: "badge green",
-	PENDING: "badge amber",
-	OVERDUE: "badge red",
-};
+export const createManualInvoiceSchema = z.object({
+	contractId: z.string().min(1, "Kontrak sewa penghuni wajib dipilih"),
+	periodMonth: z
+		.number({ message: "Bulan periode wajib dipilih" })
+		.min(1)
+		.max(12),
+	periodYear: z
+		.number({ message: "Tahun periode wajib dipilih" })
+		.min(2020)
+		.max(2050),
+	amount: z
+		.number({ message: "Nominal tagihan harus berupa angka" })
+		.min(1000, "Nominal minimal Rp 1.000"),
+	dueDate: z
+		.string()
+		.min(1, "Tanggal jatuh tempo wajib diisi")
+		.regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
+	notes: z.string().optional(),
+	sendWhatsApp: z.boolean().optional().default(false),
+});
 
-export function formatRupiah(amount: number): string {
-	return new Intl.NumberFormat("id-ID", {
-		style: "currency",
-		currency: "IDR",
-		minimumFractionDigits: 0,
-	}).format(amount);
-}
+export type CreateManualInvoiceInput = z.infer<
+	typeof createManualInvoiceSchema
+>;
+
+export const generateMonthlyInvoicesSchema = z.object({
+	propertyId: z.string().min(1, "Cabang kos wajib dipilih"),
+	periodMonth: z.number().min(1).max(12),
+	periodYear: z.number().min(2020).max(2050),
+	dueDateDay: z.number().min(1).max(31).optional().default(10),
+});
+
+export type GenerateMonthlyInvoicesInput = z.infer<
+	typeof generateMonthlyInvoicesSchema
+>;
+
+export const sendWhatsAppInvoiceSchema = z.object({
+	invoiceId: z.string().min(1, "Invoice ID wajib diisi"),
+	type: z.enum(["NEW_INVOICE", "REMINDER", "RECEIPT"]).default("NEW_INVOICE"),
+});
+
+export type SendWhatsAppInvoiceInput = z.infer<
+	typeof sendWhatsAppInvoiceSchema
+>;

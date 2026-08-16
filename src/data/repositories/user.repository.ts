@@ -59,6 +59,23 @@ export class UserRepository {
 		return this.db.role.findMany();
 	}
 
+	async findWithRole(id: string) {
+		return this.db.user.findUnique({
+			where: { id },
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				role: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
+		});
+	}
+
 	async createUser(data: {
 		name: string;
 		email: string;

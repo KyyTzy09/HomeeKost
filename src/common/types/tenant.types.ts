@@ -27,4 +27,6 @@ export interface TenantItem {
 	registrationDate: string;
 	notes?: string | null;
 	paymentStatus: TenantPaymentStatus;
+	contractId?: string;
+	roomId?: string;
 }
