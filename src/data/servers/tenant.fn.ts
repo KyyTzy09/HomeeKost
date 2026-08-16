@@ -1,24 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import type { TenantItem } from "../../common/types/index.ts";
 import {
 	type TenantFormValues,
 	tenantSchema,
 } from "../../common/validations/index.ts";
-import { auth } from "../../lib/auth.ts";
+import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { tenantService } from "../services/tenant.service.ts";
-
-async function requireAuthSession() {
-	const headers = getRequestHeaders();
-	const session = await auth.api.getSession({ headers });
-
-	if (!session || !session.user) {
-		throw new Error("Sesi login Anda tidak valid atau telah berakhir.");
-	}
-
-	return session;
-}
 
 export const getTenantsServerFn = createServerFn({
 	method: "GET",
@@ -32,8 +20,15 @@ export const getTenantsServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data }): Promise<TenantItem[]> => {
-		await requireAuthSession();
-		return tenantService.getTenants(data?.propertyId);
+		return executeWithLogging(
+			"getTenantsServerFn",
+			data,
+			() => tenantService.getTenants(data?.propertyId),
+			{
+				method: "GET",
+				summary: (res) => `${res.length} penyewa ditemukan`,
+			},
+		);
 	});
 
 export const getTenantByIdServerFn = createServerFn({
@@ -47,8 +42,15 @@ export const getTenantByIdServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { id } }): Promise<TenantItem | null> => {
-		await requireAuthSession();
-		return tenantService.getTenantById(id);
+		return executeWithLogging(
+			"getTenantByIdServerFn",
+			{ id },
+			() => tenantService.getTenantById(id),
+			{
+				method: "GET",
+				summary: (res) => (res ? `${res.name}` : "Not Found"),
+			},
+		);
 	});
 
 export const createTenantServerFn = createServerFn({
@@ -63,8 +65,15 @@ export const createTenantServerFn = createServerFn({
 			.parse(input);
 	})
 	.handler(async ({ data: { propertyId, data } }): Promise<TenantItem> => {
-		await requireAuthSession();
-		return tenantService.createTenant(propertyId, data);
+		return executeWithLogging(
+			"createTenantServerFn",
+			{ propertyId, ...data },
+			() => tenantService.createTenant(propertyId, data),
+			{
+				method: "POST",
+				summary: (res) => `Sukses dibuat: ${res.name}`,
+			},
+		);
 	});
 
 export const updateTenantServerFn = createServerFn({
@@ -82,8 +91,15 @@ export const updateTenantServerFn = createServerFn({
 		},
 	)
 	.handler(async ({ data: { id, propertyId, data } }): Promise<TenantItem> => {
-		await requireAuthSession();
-		return tenantService.updateTenant(id, propertyId, data);
+		return executeWithLogging(
+			"updateTenantServerFn",
+			{ id, propertyId, ...data },
+			() => tenantService.updateTenant(id, propertyId, data),
+			{
+				method: "POST",
+				summary: (res) => `Sukses diperbarui: ${res.name}`,
+			},
+		);
 	});
 
 export const deleteTenantServerFn = createServerFn({
@@ -98,7 +114,14 @@ export const deleteTenantServerFn = createServerFn({
 	})
 	.handler(
 		async ({ data: { id } }): Promise<{ success: boolean; id: string }> => {
-			await requireAuthSession();
-			return tenantService.deleteTenant(id);
+			return executeWithLogging(
+				"deleteTenantServerFn",
+				{ id },
+				() => tenantService.deleteTenant(id),
+				{
+					method: "POST",
+					summary: () => `Sukses dihapus: ${id}`,
+				},
+			);
 		},
 	);

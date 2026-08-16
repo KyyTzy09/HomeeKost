@@ -172,28 +172,22 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ## Phase 5: Modul Keuangan, Arus Kas & Sinkronisasi Komplain (Minggu 3)
 ### 5.1 Arus Kas & Transaksi Keuangan (Screen `#finance`)
-- [ ] 🔴 Repository & Service `src/data/repositories/transaction.repo.ts` & `src/data/services/cashflow.service.ts`:
+- [x] 🔴 Repository & Service `src/data/repositories/transaction.repository.ts` & `src/data/services/cashflow.service.ts`:
   - Pencatatan Pemasukan (`INCOME`) & Pengeluaran (`EXPENSE`)
   - Isolasi transaksi per `propertyId`
   - Audit Trail: Menyimpan `createdBy` / `recordedById` untuk setiap transaksi
   - Agregasi matematika PostgreSQL berpresisi `Decimal(12,2)`: Total Pemasukan, Total Pengeluaran, Saldo Bersih, Saldo Operasional
-- [ ] 🔴 Halaman `src/routes/transaksi/index.tsx` (atau tab Finance):
-  - 3 Ringkasan Widget Kas: Total Pemasukan Bulan Ini, Total Pengeluaran, Laba Bersih
-  - Toolbar Filter: Filter Rentang Tanggal, Filter Kategori Transaksi, Filter Cabang Kos, Pencarian
-  - Tabel Riwayat Arus Kas: Tanggal, Kategori, Deskripsi, Tipe (Pemasukan/Pengeluaran dengan badge hijau/merah), Nominal (Rp), Dicatat Oleh (User), Aksi (Edit, Hapus)
-- [ ] 🔴 Modal Form Transaksi Kas (`#financeModal`):
-  - Input: Tipe Transaksi (Pemasukan / Pengeluaran), Kategori (Sewa, Listrik, Air, Internet/WiFi, Kebersihan/Gaji, Maintenance, Lain-lain), Nominal (Rp), Tanggal Transaksi, Deskripsi/Keterangan
-
-### 5.2 Log Komplain & Sinkronisasi Biaya Perbaikan (Maintenance Engine)
-- [ ] 🔴 Repository & Service `src/data/repositories/complaint.repo.ts`:
-  - Pencatatan komplain fasilitas kamar kos
-  - Status lifecycle: `PENDING` -> `IN_PROGRESS` -> `DONE`
-- [ ] 🔴 Halaman Log Komplain `src/routes/komplain/index.tsx`:
-  - Tabel Komplain: Kamar, Kategori Kerusakan (AC, Plumbing, Listrik, Furniture, Lainnya), Deskripsi, Tanggal Lapor, Status Badge, Biaya Perbaikan
-  - Form Input Komplain baru oleh Admin
-- [ ] 🔴 Sinkronisasi Biaya Perbaikan ke Transaksi Kas:
-  - Saat komplain ditandai selesai (`status: DONE`), muncul dialog input total biaya perbaikan (Rp)
-  - Sistem mengeksekusi *Prisma atomic transaction* untuk otomatis menambah record `EXPENSE` (kategori: `MAINTENANCE`, `complaintId` terkait)
+- [x] 🔴 Halaman `src/routes/dashboard/finance.tsx`:
+  - 4 Ringkasan Widget Kas: Total Pemasukan Bulan Ini, Total Pengeluaran, Laba Bersih Kas, Rasio Beban
+  - Toolbar Filter: Filter Rentang Tanggal, Filter Kategori Transaksi, Filter Jenis Transaksi, Pencarian real-time
+  - Tabel Riwayat Arus Kas (`FinanceTransactionTable`): Tanggal, Kost, Kategori, Deskripsi, Tipe (Pemasukan/Pengeluaran badge hijau/merah), Nominal (Rp), Aksi (Detail, Edit, Hapus dengan RBAC)
+  - Grafik Tren Laba Bersih 6 Bulan (`FinanceNetProfitChart`) & Komposisi Beban Biaya (`FinanceCostComposition`)
+  - Laporan Laba Rugi P&L (`FinanceProfitLossTable`) dengan selector Bulan/Tahun dan tombol Ekspor CSV 12 Bulan
+- [x] 🔴 Modal Form Transaksi Kas (`FinanceFormDialog`) & Detail Transaksi (`TransactionDetailDialog`):
+  - Input: Tipe Transaksi (Pemasukan / Pengeluaran), Cabang Kos Terkait, Kategori, Klasifikasi (Operasional / Investasi), Nominal (Rp), Tanggal Transaksi, Metode Pembayaran, Deskripsi/Keterangan
+  - Validasi Zod & Error Handling lengkap
+- [x] 🔴 Rekap Matriks 12 Bulan & Generator Ekspor CSV (`exportAnnualFinancialCsvServerFn`):
+  - Perhitungan pendapatan, biaya operasional vs investasi, dan laba bersih 12 bulan penuh dengan format CSV kompatibel Excel (UTF-8 BOM).
 
 ---
 

@@ -9,6 +9,17 @@ export interface UserSessionData {
 	assignedPropertyId: string | null;
 }
 
+export interface SessionUser {
+	id: string;
+	email: string;
+	name: string;
+	roleId?: string;
+	role?: {
+		name: string;
+	};
+	assignedPropertyId?: string | null;
+}
+
 export interface DashboardContextData {
 	user: UserSessionData;
 	role: UserRole;
