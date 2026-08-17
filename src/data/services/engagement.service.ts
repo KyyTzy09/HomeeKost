@@ -17,6 +17,14 @@ import {
 	engagementRepository,
 } from "../repositories/engagement.repository.ts";
 import {
+	type InvoiceRepository,
+	invoiceRepository,
+} from "../repositories/invoice.repository.ts";
+import {
+	type PropertyRepository,
+	propertyRepository,
+} from "../repositories/property.repository.ts";
+import {
 	type TenantRepository,
 	tenantRepository,
 } from "../repositories/tenant.repository.ts";
@@ -25,6 +33,8 @@ export class EngagementService {
 	constructor(
 		private readonly repo: EngagementRepository = engagementRepository,
 		private readonly tenantRepo: TenantRepository = tenantRepository,
+		private readonly propertyRepo: PropertyRepository = propertyRepository,
+		private readonly invoiceRepo: InvoiceRepository = invoiceRepository,
 		private readonly fonnte: FonnteClient = fonnteClient,
 	) {}
 
@@ -241,6 +251,40 @@ export class EngagementService {
 			status: NotificationStatus;
 			notes?: string | null;
 		}> = [];
+
+		// ─── Task 0: Auto-generate Tagihan Invoice untuk Bulan Aktif / Periode Mendatang ─
+		try {
+			const now = new Date();
+			const curMonth = now.getMonth() + 1;
+			const curYear = now.getFullYear();
+
+			const properties = await this.propertyRepo.findAll();
+			for (const prop of properties) {
+				// Generate invoice bulan berjalan (jika belum ada)
+				await this.invoiceRepo.generateMonthlyInvoicesForProperty(
+					prop.id,
+					curMonth,
+					curYear,
+				);
+
+				// Jika tanggal sudah mendekati akhir bulan (>= 25), siapkan juga invoice bulan depan
+				if (now.getDate() >= 25) {
+					const nextMonthDate = new Date(curYear, curMonth, 1);
+					const nextMonth = nextMonthDate.getMonth() + 1;
+					const nextYear = nextMonthDate.getFullYear();
+					await this.invoiceRepo.generateMonthlyInvoicesForProperty(
+						prop.id,
+						nextMonth,
+						nextYear,
+					);
+				}
+			}
+		} catch (cronGenErr) {
+			console.error(
+				"[EngagementService] Gagal auto-generate invoice pada cron:",
+				cronGenErr,
+			);
+		}
 
 		// ─── Task 1: Pemeriksaan Tagihan Jatuh Tempo (H-3, H-0, Overdue) ─
 		const dueReminders = await this.repo.getDueInvoicesForReminder();

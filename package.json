@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
+    "postinstall": "prisma generate",
     "build": "vite build",
     "preview": "vite preview",
     "format": "biome format",
@@ -42,6 +43,7 @@
     "better-auth": "^1.6.29",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.31.0",
     "nitro": "3.0.260610-beta",
     "openai": "^7.4.0",

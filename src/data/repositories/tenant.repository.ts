@@ -115,9 +115,6 @@ export class TenantRepository {
 				where: { NIK: data.nik },
 			});
 
-			const initialPayment = Number(data.deposit ?? 0);
-			const totalRent = Number(data.rentAmount);
-
 			const tenantPayload = {
 				name: data.name,
 				phoneNumber: data.phone,
@@ -131,7 +128,7 @@ export class TenantRepository {
 				emergencyRelation: data.emergencyRelation ?? null,
 				emergencyPhone: data.emergencyPhone ?? null,
 				vehicle: data.vehicle ?? null,
-				deposit: initialPayment,
+				deposit: Number(data.deposit ?? 0),
 				notes: data.notes ?? null,
 				status: "ACTIVE" as const,
 			};
@@ -157,14 +154,32 @@ export class TenantRepository {
 				include: { property: true },
 			});
 
-			// 3. Create active rental contract
+			// Hitung durasi siklus sewa dalam bulan
+			let cycleMonths = 1;
+			if (data.billingCycle === "QUARTERLY") cycleMonths = 3;
+			else if (data.billingCycle === "SEMI_ANNUAL") cycleMonths = 6;
+			else if (data.billingCycle === "ANNUALLY") cycleMonths = 12;
+
+			const monthlyRent = Number(data.rentAmount);
+			const totalCycleRent = monthlyRent * cycleMonths;
+			const initialPayment = Number(data.deposit ?? 0);
+
+			const calculatedEndDate =
+				data.endDate ??
+				new Date(
+					data.startDate.getFullYear(),
+					data.startDate.getMonth() + cycleMonths,
+					data.startDate.getDate(),
+				);
+
+			// 3. Create active rental contract dengan periode akhir yang jelas
 			const contract = await tx.rentalContract.create({
 				data: {
 					roomId: data.roomId,
 					tenantId: tenant.id,
 					billingCycle: data.billingCycle,
 					startDate: data.startDate,
-					endDate: data.endDate ?? null,
+					endDate: calculatedEndDate,
 					dueDateDay: data.dueDateDay,
 					status: "ACTIVE",
 				},
@@ -183,42 +198,67 @@ export class TenantRepository {
 			}
 
 			const now = new Date();
-			const invoiceNum = `INV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-			// 5. Intelligent Invoice & Cashflow Settlement
-			if (initialPayment >= totalRent) {
-				// Skenario 1: Bayar Lunas Penuh di Awal (Deposit / Bayar Awal >= Total Sewa)
-				const inv = await tx.invoice.create({
-					data: {
-						contractId: contract.id,
-						invoiceNumber: invoiceNum,
-						periodMonth: now.getMonth() + 1,
-						periodYear: now.getFullYear(),
-						amount: totalRent,
-						dueDate: data.startDate,
-						paidAt: now,
-						status: "PAID",
-					},
-				});
+			// 5. Intelligent Multi-Month Invoice & Cashflow Settlement
+			if (initialPayment >= totalCycleRent) {
+				// Skenario 1: Bayar Lunas Penuh di Awal untuk Seluruh Siklus (Triwulan / Semester / Tahunan / Bulanan)
+				// Buat invoice per bulan agar catatan per bulan rapi dan tidak kosong
+				const createdInvoices = [];
+				for (let i = 0; i < cycleMonths; i++) {
+					const periodDate = new Date(
+						data.startDate.getFullYear(),
+						data.startDate.getMonth() + i,
+						data.dueDateDay || data.startDate.getDate(),
+					);
+					const pMonth = periodDate.getMonth() + 1;
+					const pYear = periodDate.getFullYear();
+					const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+					const inv = await tx.invoice.create({
+						data: {
+							contractId: contract.id,
+							invoiceNumber: invNum,
+							periodMonth: pMonth,
+							periodYear: pYear,
+							amount: monthlyRent,
+							dueDate: periodDate,
+							paidAt: now,
+							status: "PAID",
+						},
+					});
+					createdInvoices.push(inv);
+				}
+
+				// Catat 1 kali mutasi pemasukan kas riil untuk total uang yang diterima
 				if (createdByUserId) {
+					const cycleLabel =
+						cycleMonths === 3
+							? "Triwulan"
+							: cycleMonths === 6
+								? "Semesteran"
+								: cycleMonths === 12
+									? "Tahunan"
+									: "Bulanan";
+
 					await tx.transaction.create({
 						data: {
 							propertyId: room.propertyId,
 							createdBy: createdByUserId,
-							invoiceId: inv.id,
+							invoiceId: createdInvoices[0]?.id,
 							type: "INCOME",
 							category: "RENT",
 							classification: "OPERATIONAL",
 							paymentMethod: "TRANSFER",
-							amount: totalRent,
-							description: `Pembayaran Sewa Awal Lunas Kamar ${room.roomNumber} - ${data.name} (#${invoiceNum})`,
+							amount: initialPayment,
+							description: `Pembayaran Sewa Awal Lunas (${cycleLabel} · ${cycleMonths} Bulan) Kamar ${room.roomNumber} - ${data.name}`,
 							transactionDate: now,
 						},
 					});
 				}
 			} else if (initialPayment > 0) {
-				// Skenario 2: Bayar Sebagian / DP di Awal (0 < Deposit < Total Sewa)
+				// Skenario 2: Bayar Sebagian / Uang Muka (DP)
+				const invNum = `INV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
+
 				if (createdByUserId) {
 					await tx.transaction.create({
 						data: {
@@ -235,12 +275,12 @@ export class TenantRepository {
 					});
 				}
 
-				// Terbitkan invoice tagihan untuk sisa kekurangan
-				const remainingAmount = totalRent - initialPayment;
+				// Terbitkan invoice tagihan untuk sisa kekurangan siklus
+				const remainingAmount = totalCycleRent - initialPayment;
 				await tx.invoice.create({
 					data: {
 						contractId: contract.id,
-						invoiceNumber: invoiceNum,
+						invoiceNumber: invNum,
 						periodMonth: now.getMonth() + 1,
 						periodYear: now.getFullYear(),
 						amount: remainingAmount,
@@ -250,13 +290,14 @@ export class TenantRepository {
 				});
 			} else {
 				// Skenario 3: Belum Ada Pembayaran Sama Sekali (Deposit = 0)
+				const invNum = `INV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
 				await tx.invoice.create({
 					data: {
 						contractId: contract.id,
-						invoiceNumber: invoiceNum,
+						invoiceNumber: invNum,
 						periodMonth: now.getMonth() + 1,
 						periodYear: now.getFullYear(),
-						amount: totalRent,
+						amount: totalCycleRent,
 						dueDate: data.startDate,
 						status: "PENDING",
 					},
