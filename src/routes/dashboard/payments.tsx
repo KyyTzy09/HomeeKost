@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock, MessageSquare, Plus } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { useState } from "react";
-import { Button } from "../../common/shadcn/button.tsx";
 import type { PaymentItem } from "../../common/types/index.ts";
 import type {
 	ConfirmPaymentInput,
@@ -183,11 +182,11 @@ function PaymentsPage() {
 
 			if (res?.success) {
 				showToast(
-					`File dokumen & pesan WhatsApp berhasil dikirim ke ${payment.tenantName} (${payment.tenantPhone})`,
+					`Pesan WhatsApp berhasil dikirim ke ${payment.tenantName} (${payment.tenantPhone})`,
 				);
 			} else {
 				showToast(
-					`Fonnte: ${res?.detail || "Gagal mengirim. Pastikan device Fonnte tersambung & nomor WA valid."}`,
+					`Fonnte: ${res?.detail || "Gagal mengirim. Pastikan device tersambung & nomor WA valid."}`,
 				);
 			}
 		} catch (err: unknown) {
@@ -227,29 +226,8 @@ function PaymentsPage() {
 					</h1>
 					<p className="text-xs text-[#737873] mt-1">
 						Pantau jatuh tempo sewa, verifikasi pembayaran lunas, dan kirim
-						notifikasi WhatsApp otomatis (Fonnte API)
+						notifikasi WhatsApp otomatis
 					</p>
-				</div>
-
-				<div className="flex items-center gap-2.5">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => setIsGenerateOpen(true)}
-						className="h-9 px-3.5 text-xs font-semibold border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea] shadow-sm"
-					>
-						<Clock className="w-3.5 h-3.5 mr-1.5 text-[#568062]" />
-						Generate Bulanan
-					</Button>
-
-					<Button
-						type="button"
-						onClick={() => setIsFormOpen(true)}
-						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 rounded-xl shadow-sm"
-					>
-						<Plus className="w-3.5 h-3.5 mr-1.5" />
-						Buat Tagihan Manual
-					</Button>
 				</div>
 			</div>
 
