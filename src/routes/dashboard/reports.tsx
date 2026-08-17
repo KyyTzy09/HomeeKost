@@ -35,6 +35,7 @@ import {
 	useProperties,
 	useRegenerateAiInsight,
 } from "../../hooks/index.ts";
+import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
 export const Route = createFileRoute("/dashboard/reports")({
 	head: () => ({
@@ -180,6 +181,31 @@ function ReportsPage() {
 				err instanceof Error ? err.message : "Gagal memperbarui AI Insight.",
 				"error",
 			);
+		}
+	};
+
+	// Export Excel & CSV State
+	const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
+
+	const handleExportAnnualExcel = async () => {
+		if (!annualMatrix) {
+			showToast("Data matriks keuangan tahunan belum tersedia.", "error");
+			return;
+		}
+
+		try {
+			setIsExportingExcel(true);
+			await downloadAnnualFinancialExcel(annualMatrix);
+			showToast(
+				`File Excel Laporan-Keuangan-Tahunan-${annualMatrix.year}.xlsx berhasil diunduh dengan format styling rapi!`,
+			);
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Gagal mengekspor laporan Excel.",
+				"error",
+			);
+		} finally {
+			setIsExportingExcel(false);
 		}
 	};
 
@@ -471,10 +497,12 @@ function ReportsPage() {
 						expenses={monthlyReport.expenseBreakdown}
 					/>
 
-					{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor CSV */}
+					{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
 					<ReportAnnualMatrixCard
 						data={annualMatrix}
 						isLoading={isAnnualLoading}
+						onExportExcel={handleExportAnnualExcel}
+						isExportingExcel={isExportingExcel}
 						onExportCsv={handleExportAnnualCsv}
 						isExporting={exportCsvMutation.isPending}
 					/>

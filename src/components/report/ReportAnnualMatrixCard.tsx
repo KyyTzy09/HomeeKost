@@ -13,6 +13,8 @@ import { formatRupiah } from "../../lib/currency.ts";
 interface ReportAnnualMatrixCardProps {
 	data?: AnnualReportMatrixData | null;
 	isLoading?: boolean;
+	onExportExcel?: () => void;
+	isExportingExcel?: boolean;
 	onExportCsv: () => void;
 	isExporting?: boolean;
 }
@@ -35,6 +37,8 @@ const MONTH_LABELS = [
 export function ReportAnnualMatrixCard({
 	data,
 	isLoading,
+	onExportExcel,
+	isExportingExcel,
 	onExportCsv,
 	isExporting,
 }: ReportAnnualMatrixCardProps) {
@@ -74,20 +78,37 @@ export function ReportAnnualMatrixCard({
 					</p>
 				</div>
 
-				<Button
-					type="button"
-					onClick={onExportCsv}
-					disabled={isExporting}
-					variant="outline"
-					className="border-[#4f6958] text-[#4f6958] hover:bg-[#edf4ee] text-xs font-semibold h-9 px-3.5 shadow-2xs flex items-center gap-1.5 self-start sm:self-auto"
-				>
-					{isExporting ? (
-						<Loader2 className="w-3.5 h-3.5 animate-spin" />
-					) : (
-						<Download className="w-3.5 h-3.5" />
+				<div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+					{onExportExcel && (
+						<Button
+							type="button"
+							onClick={onExportExcel}
+							disabled={isExportingExcel}
+							className="bg-[#4f6958] text-white hover:bg-[#3d5244] text-xs font-semibold h-9 px-3.5 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+						>
+							{isExportingExcel ? (
+								<Loader2 className="w-3.5 h-3.5 animate-spin" />
+							) : (
+								<FileSpreadsheet className="w-3.5 h-3.5" />
+							)}
+							{isExportingExcel ? "Menyusun Excel..." : "Ekspor Excel (.XLSX)"}
+						</Button>
 					)}
-					{isExporting ? "Mengunduh..." : "Ekspor Laporan Tahunan (.CSV)"}
-				</Button>
+					<Button
+						type="button"
+						onClick={onExportCsv}
+						disabled={isExporting}
+						variant="outline"
+						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#edf4ee] text-xs font-medium h-9 px-3 shadow-2xs flex items-center gap-1.5"
+					>
+						{isExporting ? (
+							<Loader2 className="w-3.5 h-3.5 animate-spin" />
+						) : (
+							<Download className="w-3.5 h-3.5" />
+						)}
+						{isExporting ? "Mengunduh..." : "CSV"}
+					</Button>
+				</div>
 			</div>
 
 			{/* Mini Visual Chart Bar Tren Pendapatan 12 Bulan */}
