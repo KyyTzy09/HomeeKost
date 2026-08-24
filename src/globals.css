@@ -172,7 +172,7 @@ button {
 	width: 244px;
 	background: #ffffff;
 	border-right: 1px solid var(--border);
-	padding: 22px 15px;
+	padding: 20px 14px 14px;
 	position: fixed;
 	left: 0;
 	top: 0;
@@ -180,13 +180,15 @@ button {
 	z-index: 20;
 	display: flex;
 	flex-direction: column;
+	overflow: hidden;
 }
 
 .brand {
 	display: flex;
 	align-items: center;
-	padding: 0 10px 25px;
+	padding: 0 8px 18px;
 	border-bottom: 1px solid #edf0ed;
+	flex-shrink: 0;
 }
 
 .brand img {
@@ -196,10 +198,28 @@ button {
 }
 
 .nav {
-	padding-top: 20px;
+	padding-top: 14px;
+	padding-bottom: 10px;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 3px;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+.nav::-webkit-scrollbar {
+	width: 4px;
+}
+
+.nav::-webkit-scrollbar-thumb {
+	background-color: #dbe4dc;
+	border-radius: 4px;
+}
+
+.nav::-webkit-scrollbar-track {
+	background: transparent;
 }
 
 .nav button,
@@ -211,7 +231,7 @@ button {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	padding: 11px 12px;
+	padding: 10px 12px;
 	border-radius: 8px;
 	color: #6e746f;
 	font-size: 13px;
@@ -256,6 +276,8 @@ button {
 
 .sidebar-bottom {
 	margin-top: auto;
+	flex-shrink: 0;
+	padding-top: 8px;
 }
 
 .help {
@@ -1075,7 +1097,7 @@ td {
 	}
 }
 
-/* ─── Official Printable PDF Invoice Styles ───────────────────────── */
+/* ─── Official Printable PDF Invoice & Executive Report Styles ─── */
 @media print {
 	body {
 		background: #ffffff !important;
@@ -1087,7 +1109,8 @@ td {
 	nav,
 	aside,
 	button,
-	.btn {
+	.btn,
+	.print\:hidden {
 		display: none !important;
 	}
 	.main {
@@ -1100,7 +1123,9 @@ td {
 		margin: 0 !important;
 		max-width: 100% !important;
 	}
-	#printable-invoice-sheet {
+	#printable-invoice-sheet,
+	#printable-executive-report {
+		display: block !important;
 		border: 1px solid #d4ded6 !important;
 		box-shadow: none !important;
 		padding: 24px !important;

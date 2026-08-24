@@ -23,7 +23,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
-	const { user, isSuperAdmin } = dashboardContext;
+	const { user, isSuperAdmin, activeProperty } = dashboardContext;
 
 	const handleLogout = async () => {
 		try {
@@ -134,8 +134,30 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 
 			<aside className={`sidebar ${isOpen ? "open" : ""}`} id="sidebar">
 				{/* Brand Header */}
-				<div className="brand">
-					<img src="/logo.png" alt="HomeeKost Logo" />
+				<div className="brand flex items-center justify-between gap-2.5">
+					<div className="flex items-center gap-2.5 min-w-0">
+						<div className="w-8 h-8 rounded-lg bg-[#faf9f5] border border-[#e4e9e4] flex items-center justify-center shrink-0 overflow-hidden">
+							<img
+								src={activeProperty?.imageUrl || "/logo.png"}
+								alt={activeProperty?.name || "HomeeKost Logo"}
+								className="w-full h-full object-contain"
+								onError={(e) => {
+									(e.target as HTMLImageElement).src = "/logo.png";
+								}}
+							/>
+						</div>
+						<div className="min-w-0 flex-1">
+							<span className="text-[10px] font-bold uppercase tracking-wider text-[#4f6958] block leading-none">
+								HomeeKost
+							</span>
+							<strong
+								className="text-xs text-[#252925] truncate block leading-tight mt-0.5"
+								title={activeProperty?.name || "Semua Cabang Kos"}
+							>
+								{activeProperty?.name || "Semua Cabang"}
+							</strong>
+						</div>
+					</div>
 				</div>
 
 				{/* Navigation */}

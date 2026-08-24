@@ -15,12 +15,16 @@ import { formatDate } from "../../lib/date-utils.ts";
 interface InvoiceDocPreviewProps {
 	invoice: InvoiceItem | null;
 	propertyName?: string;
+	propertyImageUrl?: string | null;
+	propertyAddress?: string | null;
 	onDownloadPdf?: (invoice: InvoiceItem) => void;
 }
 
 export function InvoiceDocPreview({
 	invoice,
 	propertyName = "HomeeKost",
+	propertyImageUrl,
+	propertyAddress,
 	onDownloadPdf,
 }: InvoiceDocPreviewProps) {
 	if (!invoice) {
@@ -110,16 +114,23 @@ export function InvoiceDocPreview({
 				{/* Header Section */}
 				<header className="flex flex-col sm:flex-row justify-between sm:items-start border-b-2 border-[#4f6958]/20 pb-5 mb-6 gap-4">
 					<div>
-						<div className="flex items-center gap-2">
-							<div className="w-8 h-8 rounded-lg bg-[#4f6958] text-white flex items-center justify-center font-bold text-sm">
-								HK
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 rounded-xl border border-[#e4e9e4] bg-[#faf9f5] flex items-center justify-center p-1 shrink-0 overflow-hidden">
+								<img
+									src={propertyImageUrl || "/logo.png"}
+									alt={propertyName || "HomeeKost"}
+									className="w-full h-full object-contain"
+									onError={(e) => {
+										(e.target as HTMLImageElement).src = "/logo.png";
+									}}
+								/>
 							</div>
 							<div>
 								<h2 className="font-bold text-[#252925] text-base leading-tight">
 									{propertyName || "HomeeKost Management"}
 								</h2>
 								<p className="text-[11px] text-[#737873]">
-									Sistem Pengelolaan Kos & Hunian Modern
+									{propertyAddress || "Sistem Pengelolaan Kos & Hunian Modern"}
 								</p>
 							</div>
 						</div>

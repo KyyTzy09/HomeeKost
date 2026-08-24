@@ -68,56 +68,29 @@ export function generateDeterministicFinancialInsight(
 			? `Biaya penanganan komplain dan perbaikan fasilitas menyerap dana sebesar ${formatRupiah(payload.complaintExpenses.totalCost)} (${payload.complaintExpenses.percentageOfExpense.toFixed(1)}% dari total pengeluaran).`
 			: "Tidak tercatat pengeluaran biaya perbaikan kerusakan fasilitas yang signifikan pada periode ini.";
 
-	// 5. Susun Tepat 3 Rekomendasi Taktis
-	const recommendations: AiFinancialInsightData["strategicRecommendations"] = [
-		{
-			code: "01",
-			title: topExpense
-				? `Evaluasi & Efisiensi Biaya ${topExpense.category}`
-				: "Jaga Efisiensi Beban Operasional Rutin",
-			description: topExpense
-				? `Pos ${topExpense.category} menyumbang ${topExpense.percentageOfTotalExpense.toFixed(1)}% dari total pengeluaran (${formatRupiah(topExpense.amount)}). Lakukan pemeriksaan rutin dan audit pemakaian fasilitas untuk menjaga margin laba.`
-				: "Pertahankan kontrol pengeluaran operasional harian agar margin keuntungan tetap terjaga di atas target.",
-			priority:
-				topExpense && topExpense.percentageOfTotalExpense > 35
-					? "HIGH"
-					: "MEDIUM",
-		},
-		{
-			code: "02",
-			title:
-				occupancy.vacantRooms > 0
-					? `Optimalisasi Promosi ${occupancy.vacantRooms} Kamar Kosong`
-					: "Pertahankan Kepuasan & Retensi Penghuni",
-			description:
-				occupancy.vacantRooms > 0
-					? `Tingkatkan eksposur promosi atau program diskon awal sewa untuk mengisi ${occupancy.vacantRooms} kamar yang masih kosong guna mendongkrak omzet.`
-					: "Tingkat hunian sudah 100%. Fokuskan perhatian pada kebersihan dan kenyamanan fasilitas bersama untuk memperpanjang durasi tinggal penghuni.",
-			priority: occupancy.vacantRooms > 0 ? "HIGH" : "LOW",
-		},
-		{
-			code: "03",
-			title:
-				collection.overdueInvoices > 0
-					? "Perketat Jadwal Pengingat WhatsApp Jatuh Tempo"
-					: "Jadwalkan Maintenance Preventif Berkala",
-			description:
-				collection.overdueInvoices > 0
-					? `Terdapat ${collection.overdueInvoices} tagihan yang belum lunas. Optimalkan fitur WhatsApp Reminder otomatis (H-3 dan Hari H) untuk mempercepat perputaran kas.`
-					: "Lakukan inspeksi rutin fasilitas air, kelistrikan, dan AC untuk mencegah lonjakan biaya perbaikan mendadak di masa mendatang.",
-			priority: collection.overdueInvoices > 0 ? "HIGH" : "MEDIUM",
-		},
+	// 5. Susun Sorotan Fakta Kunci (Key Highlights Faktual)
+	const keyHighlights: string[] = [
+		topExpense
+			? `Beban pengeluaran utama pada pos ${topExpense.category} dengan total ${formatRupiah(topExpense.amount)} (${topExpense.percentageOfTotalExpense.toFixed(1)}% dari total pengeluaran).`
+			: "Pengeluaran operasional bulan ini tercatat efisien dan terkendali.",
+		occupancy.vacantRooms > 0
+			? `Tingkat okupansi unit ${occupancy.occupancyRatePercentage.toFixed(1)}% (${occupancy.occupiedRooms} terisi, ${occupancy.vacantRooms} kamar kosong).`
+			: `Okupansi unit mencapai kapasitas penuh 100% (${occupancy.occupiedRooms} kamar terisi).`,
+		collection.overdueInvoices > 0
+			? `Terdapat ${collection.overdueInvoices} tagihan overdue belum lunas dengan sisa piutang ${formatRupiah(collection.totalOutstandingAmount)}.`
+			: `Ketepatan penagihan sewa tercatat 100% lunas tepat waktu (${collection.paidInvoices} invoice lunas).`,
 	];
 
 	return {
 		executiveSummary,
 		financialHealthGrade: grade,
+		keyHighlights,
 		trendAnalysis: {
 			incomeTrend,
 			expenseTrend,
 			occupancyImpact,
 		},
 		complaintCostImpact,
-		strategicRecommendations: recommendations,
+		strategicRecommendations: [],
 	};
 }

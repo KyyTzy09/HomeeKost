@@ -323,6 +323,8 @@ function InvoicesPage() {
 					<InvoiceDocPreview
 						invoice={selectedInvoice}
 						propertyName={activeProperty?.name || "HomeeKost Management"}
+						propertyImageUrl={activeProperty?.imageUrl}
+						propertyAddress={activeProperty?.address}
 						onDownloadPdf={handleDownloadPdf}
 					/>
 				</div>

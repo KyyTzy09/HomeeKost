@@ -21,6 +21,7 @@ import {
 import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import {
 	AutomationSettingsDialog,
+	ExecutiveReportDoc,
 	ReportAiInsightPanel,
 	ReportAnnualMatrixCard,
 	ReportAutomationCard,
@@ -465,54 +466,66 @@ function ReportsPage() {
 			{/* Loaded Report Content */}
 			{monthlyReport && !isMonthlyLoading && (
 				<>
-					{/* 4 Top Stat KPI Cards */}
-					<ReportKpiCards
-						totalIncome={monthlyReport.totalIncome}
-						totalExpense={monthlyReport.totalExpense}
-						netProfit={monthlyReport.netProfit}
-						profitMarginPercentage={monthlyReport.profitMarginPercentage}
-						occupancyRate={monthlyReport.roomStatus.occupancyRate}
-						occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
-						totalRooms={monthlyReport.roomStatus.totalRooms}
-						periodLabel={periodLabel}
-					/>
+					{/* Printable A4 Executive Report Sheet (Visible during window.print()) */}
+					<div className="hidden print:block">
+						<ExecutiveReportDoc
+							report={monthlyReport}
+							activePropertyLogo={activeProperty?.imageUrl}
+							activePropertyAddress={activeProperty?.address}
+						/>
+					</div>
 
-					{/* Executive AI Narrative Insight & Strategic Recommendations */}
-					<ReportAiInsightPanel
-						periodLabel={periodLabel}
-						propertyName={monthlyReport.propertyName}
-						isClosedPeriod={monthlyReport.isClosedPeriod}
-						financialHealthGrade={monthlyReport.financialHealthGrade}
-						narrativeSummary={monthlyReport.narrativeSummary}
-						trendAnalysis={monthlyReport.trendAnalysis}
-						complaintCostImpact={monthlyReport.complaintCostImpact}
-						recommendations={monthlyReport.recommendations}
-						aiProviderUsed={monthlyReport.aiProviderUsed}
-					/>
+					<div className="space-y-6 print:hidden">
+						{/* 4 Top Stat KPI Cards */}
+						<ReportKpiCards
+							totalIncome={monthlyReport.totalIncome}
+							totalExpense={monthlyReport.totalExpense}
+							netProfit={monthlyReport.netProfit}
+							profitMarginPercentage={monthlyReport.profitMarginPercentage}
+							occupancyRate={monthlyReport.roomStatus.occupancyRate}
+							occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
+							totalRooms={monthlyReport.roomStatus.totalRooms}
+							periodLabel={periodLabel}
+						/>
 
-					{/* Room Status & Expense Breakdown */}
-					<ReportRoomExpenseBreakdown
-						propertyName={monthlyReport.propertyName}
-						roomStatus={monthlyReport.roomStatus}
-						expenses={monthlyReport.expenseBreakdown}
-					/>
+						{/* Executive AI Narrative Insight & Strategic Recommendations */}
+						<ReportAiInsightPanel
+							periodLabel={periodLabel}
+							propertyName={monthlyReport.propertyName}
+							isClosedPeriod={monthlyReport.isClosedPeriod}
+							financialHealthGrade={monthlyReport.financialHealthGrade}
+							narrativeSummary={monthlyReport.narrativeSummary}
+							keyHighlights={monthlyReport.keyHighlights}
+							trendAnalysis={monthlyReport.trendAnalysis}
+							complaintCostImpact={monthlyReport.complaintCostImpact}
+							recommendations={monthlyReport.recommendations}
+							aiProviderUsed={monthlyReport.aiProviderUsed}
+						/>
 
-					{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
-					<ReportAnnualMatrixCard
-						data={annualMatrix}
-						isLoading={isAnnualLoading}
-						onExportExcel={handleExportAnnualExcel}
-						isExportingExcel={isExportingExcel}
-						onExportCsv={handleExportAnnualCsv}
-						isExporting={exportCsvMutation.isPending}
-					/>
+						{/* Room Status & Expense Breakdown */}
+						<ReportRoomExpenseBreakdown
+							propertyName={monthlyReport.propertyName}
+							roomStatus={monthlyReport.roomStatus}
+							expenses={monthlyReport.expenseBreakdown}
+						/>
 
-					{/* Automasi Laporan Bulanan Card */}
-					<ReportAutomationCard
-						scheduleDay={automationSettings.scheduleDay}
-						aiModel={automationSettings.aiModel}
-						onOpenSettings={() => setIsSettingsOpen(true)}
-					/>
+						{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
+						<ReportAnnualMatrixCard
+							data={annualMatrix}
+							isLoading={isAnnualLoading}
+							onExportExcel={handleExportAnnualExcel}
+							isExportingExcel={isExportingExcel}
+							onExportCsv={handleExportAnnualCsv}
+							isExporting={exportCsvMutation.isPending}
+						/>
+
+						{/* Automasi Laporan Bulanan Card */}
+						<ReportAutomationCard
+							scheduleDay={automationSettings.scheduleDay}
+							aiModel={automationSettings.aiModel}
+							onOpenSettings={() => setIsSettingsOpen(true)}
+						/>
+					</div>
 				</>
 			)}
 
