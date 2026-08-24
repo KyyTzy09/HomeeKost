@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, CheckCircle2, Loader2, LogOut } from "lucide-react";
+import { AlertCircle, CheckCircle2, LogOut } from "lucide-react";
 import { useState } from "react";
 import type { PropertyItem } from "../../common/types/index.ts";
 import type { PropertyFormValues } from "../../common/validations/index.ts";
@@ -58,6 +58,9 @@ function SelectPropertyPage() {
 
 	const [toastMessage, setToastMessage] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [switchingPropertyId, setSwitchingPropertyId] = useState<string | null>(
+		null,
+	);
 
 	// Dialog states
 	const [isFormOpen, setIsFormOpen] = useState(false);
@@ -145,6 +148,7 @@ function SelectPropertyPage() {
 	};
 
 	const handleCardClick = (property: PropertyItem) => {
+		setSwitchingPropertyId(property.id);
 		setActivePropertyMutation.mutate(
 			{ propertyId: property.id },
 			{
@@ -152,6 +156,10 @@ function SelectPropertyPage() {
 					navigate({
 						to: "/dashboard",
 					});
+				},
+				onError: (err) => {
+					setSwitchingPropertyId(null);
+					showError(err instanceof Error ? err.message : "Gagal memilih kos");
 				},
 			},
 		);
@@ -198,23 +206,25 @@ function SelectPropertyPage() {
 					</p>
 				</div>
 				<div className="text-[11px] text-[#607066] bg-white border border-[#e2e9e3] px-3 py-2 rounded-[12px] font-medium shadow-xs self-start sm:self-auto">
-					Owner / SuperAdmin
+					Total Kos:{" "}
+					<strong className="text-[#29382e] font-bold">
+						{properties.length}
+					</strong>
 				</div>
 			</div>
 
-			{/* Property Grid */}
-			{isLoading || setActivePropertyMutation.isPending ? (
-				<div className="p-16 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-2 shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
-					<Loader2 className="w-7 h-7 text-[#4f6958] animate-spin" />
-					<p className="text-xs text-[#737873]">
-						{setActivePropertyMutation.isPending
-							? "Mengaktifkan properti terpilih..."
-							: "Memuat daftar properti kos..."}
-					</p>
+			{/* Grid Content */}
+			{isLoading ? (
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+					{[1, 2, 3].map((i) => (
+						<div
+							key={i}
+							className="bg-[#f0f4f1] border border-[#e1e8e2] rounded-[20px] p-[22px] min-h-[190px] animate-pulse"
+						/>
+					))}
 				</div>
 			) : queryError ? (
-				<div className="p-6 bg-[#fff7f6] border border-[#f5cfcc] rounded-2xl text-xs text-[#a45149]">
-					<b className="font-bold block mb-1">Gagal memuat data properti:</b>
+				<div className="bg-[#fff5f3] border border-[#efd3cf] text-[#a45d55] p-6 rounded-[20px] text-center text-xs">
 					{queryError instanceof Error
 						? queryError.message
 						: "Terjadi kesalahan pada server."}
@@ -225,6 +235,7 @@ function SelectPropertyPage() {
 						<PropertyCard
 							key={prop.id}
 							property={prop}
+							isLoading={switchingPropertyId === prop.id}
 							onEnter={handleCardClick}
 							onEdit={handleOpenEdit}
 							onDelete={setDeletingProperty}

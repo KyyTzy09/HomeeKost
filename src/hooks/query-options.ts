@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import type { DashboardContextData } from "../common/types/index.ts";
 import type {
 	AnnualFinancialQueryInput,
 	FinancialSummaryQueryInput,
@@ -36,7 +37,7 @@ import {
  * 1. Session / Auth & Dashboard Layout Context
  */
 export const sessionContextQueryOptions = () =>
-	queryOptions({
+	queryOptions<DashboardContextData | null>({
 		queryKey: ["dashboard-context"] as const,
 		queryFn: () => getDashboardContextServerFn(),
 		staleTime: 1000 * 60 * 5, // 5 menit: Sesi tidak perlu dicek ulang terus-menerus di setiap klik halaman
@@ -48,7 +49,7 @@ export const sessionContextQueryOptions = () =>
 export const dashboardOverviewQueryOptions = (propertyId?: string) =>
 	queryOptions({
 		queryKey: ["dashboard", "overview", propertyId || "all"] as const,
-		queryFn: () => getDashboardOverviewServerFn(),
+		queryFn: () => getDashboardOverviewServerFn({ data: { propertyId } }),
 	});
 
 export const topbarNotificationsQueryOptions = () =>

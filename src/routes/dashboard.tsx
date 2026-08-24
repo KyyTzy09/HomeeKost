@@ -7,7 +7,10 @@ import {
 import { useState } from "react";
 import { Sidebar } from "../components/layout/Sidebar.tsx";
 import { Topbar } from "../components/layout/Topbar.tsx";
-import { sessionContextQueryOptions } from "../hooks/index.ts";
+import {
+	sessionContextQueryOptions,
+	useDashboardContext,
+} from "../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard")({
 	beforeLoad: async ({ location, context }) => {
@@ -44,23 +47,35 @@ function getPageTitle(pathname: string): string {
 }
 
 function DashboardLayout() {
-	const { dashboard } = Route.useRouteContext();
+	const { dashboard: staticDashboard } = Route.useRouteContext();
+	const liveContext = useDashboardContext();
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const currentTitle = getPageTitle(pathname);
+
+	const activeDashboard = {
+		user: liveContext.user || staticDashboard.user,
+		role: liveContext.role,
+		isSuperAdmin: liveContext.isSuperAdmin,
+		activeProperty: liveContext.activeProperty,
+		accessibleProperties:
+			liveContext.accessibleProperties.length > 0
+				? liveContext.accessibleProperties
+				: staticDashboard.accessibleProperties,
+	};
 
 	return (
 		<div className="app">
 			<Sidebar
 				isOpen={sidebarOpen}
 				onClose={() => setSidebarOpen(false)}
-				dashboardContext={dashboard}
+				dashboardContext={activeDashboard}
 			/>
 			<main className="main">
 				<Topbar
 					onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
 					currentTitle={currentTitle}
-					dashboardContext={dashboard}
+					dashboardContext={activeDashboard}
 				/>
 				<div className="content" id="mainContent">
 					<Outlet />

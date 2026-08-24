@@ -52,6 +52,9 @@ export function Topbar({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showSearchResults, setShowSearchResults] = useState(false);
 	const [isSwitchingProperty, setIsSwitchingProperty] = useState(false);
+	const [switchingPropertyId, setSwitchingPropertyId] = useState<string | null>(
+		null,
+	);
 	const [readNotifIds, setReadNotifIds] = useState<Set<string>>(new Set());
 
 	const propertyDropdownRef = useRef<HTMLDivElement>(null);
@@ -122,12 +125,14 @@ export function Topbar({
 
 		try {
 			setIsSwitchingProperty(true);
+			setSwitchingPropertyId(property.id);
 			await setActivePropertyMutation.mutateAsync({ propertyId: property.id });
 			setShowPropertyDropdown(false);
 		} catch (err) {
 			console.error("Gagal mengganti cabang kos:", err);
 		} finally {
 			setIsSwitchingProperty(false);
+			setSwitchingPropertyId(null);
 		}
 	};
 
@@ -202,7 +207,11 @@ export function Topbar({
 								: `Cabang Kos: ${activeProperty?.name || "Ditugaskan"}`
 						}
 					>
-						<span className="property-dot w-2 h-2 rounded-full bg-[#5f896d] animate-pulse"></span>
+						{isSwitchingProperty ? (
+							<Loader2 className="w-3 h-3 text-[#4f6958] animate-spin shrink-0" />
+						) : (
+							<span className="property-dot w-2 h-2 rounded-full bg-[#5f896d] animate-pulse shrink-0" />
+						)}
 						<span
 							id="selectedPropertyLabel"
 							className="truncate max-w-[130px] sm:max-w-[180px]"
@@ -217,12 +226,19 @@ export function Topbar({
 					{/* SuperAdmin Property Selection Menu */}
 					{showPropertyDropdown && isSuperAdmin && (
 						<div className="absolute left-0 mt-2 w-64 bg-white border border-[#e4e9e4] rounded-xl shadow-[0_10px_30px_rgba(40,60,45,0.12)] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-							<div className="px-2 py-1.5 text-[11px] font-bold text-[#737873] uppercase tracking-wider">
-								Pilih Cabang Kos
+							<div className="px-2 py-1.5 text-[11px] font-bold text-[#737873] uppercase tracking-wider flex items-center justify-between">
+								<span>Pilih Cabang Kos</span>
+								{isSwitchingProperty && (
+									<span className="text-[10px] text-[#4f6958] flex items-center gap-1 normal-case font-medium">
+										<Loader2 className="w-2.5 h-2.5 animate-spin" />
+										Beralih...
+									</span>
+								)}
 							</div>
 							<div className="max-h-56 overflow-y-auto space-y-1 my-1">
 								{accessibleProperties.map((prop) => {
 									const isActive = activeProperty?.id === prop.id;
+									const isSwitchingThis = switchingPropertyId === prop.id;
 									return (
 										<button
 											key={prop.id}
@@ -233,14 +249,24 @@ export function Topbar({
 												isActive
 													? "bg-[#e8f0ea] text-[#4f6958] font-bold"
 													: "hover:bg-[#f3f7f3] text-[#252925]"
-											}`}
+											} ${isSwitchingProperty && !isSwitchingThis ? "opacity-50 cursor-not-allowed" : ""}`}
 										>
 											<div className="flex items-center gap-2 truncate">
-												<Building2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
+												{isSwitchingThis ? (
+													<Loader2 className="w-3.5 h-3.5 shrink-0 text-[#4f6958] animate-spin" />
+												) : (
+													<Building2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
+												)}
 												<span className="truncate">{prop.name}</span>
 											</div>
-											{isActive && (
-												<Check className="w-3.5 h-3.5 shrink-0 text-[#4f6958]" />
+											{isSwitchingThis ? (
+												<span className="text-[10px] text-[#4f6958] font-medium animate-pulse">
+													Memuat...
+												</span>
+											) : (
+												isActive && (
+													<Check className="w-3.5 h-3.5 shrink-0 text-[#4f6958]" />
+												)
 											)}
 										</button>
 									);

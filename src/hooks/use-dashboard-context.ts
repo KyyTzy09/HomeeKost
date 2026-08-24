@@ -17,6 +17,7 @@ export function useDashboardContext() {
 	return {
 		user: data?.user ?? null,
 		userName: data?.user?.name ?? "Admin",
+		role: data?.role ?? "ADMIN",
 		userRole: data?.role ?? "ADMIN",
 		isSuperAdmin: data?.isSuperAdmin ?? false,
 		activeProperty: data?.activeProperty ?? null,
