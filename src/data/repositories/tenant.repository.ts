@@ -161,7 +161,7 @@ export class TenantRepository {
 			else if (data.billingCycle === "ANNUALLY") cycleMonths = 12;
 
 			const monthlyRent = Number(data.rentAmount);
-			const totalCycleRent = monthlyRent * cycleMonths;
+			const totalCycleRent = monthlyRent;
 			const initialPayment = Number(data.deposit ?? 0);
 
 			const calculatedEndDate =
