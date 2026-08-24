@@ -21,15 +21,14 @@ export function useSetActiveProperty(): UseMutationResult<
 > {
 	const setActiveProperty = useServerFn(setActivePropertyServerFn);
 	const queryClient = useQueryClient();
-	const router = useRouter();
 
 	return useMutation<SetActivePropertyResult, Error, SetActivePropertyInput>({
 		mutationFn: async (input: SetActivePropertyInput) => {
 			return setActiveProperty({ data: input });
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries();
-			await router.invalidate();
+			// Hanya invalidate context sesi agar Topbar, Sidebar, dan activeProperty ter-update
+			await queryClient.invalidateQueries({ queryKey: ["dashboard-context"] });
 		},
 	});
 }

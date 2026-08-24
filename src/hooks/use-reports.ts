@@ -1,18 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	exportAnnualCsvServerFn,
-	getAnnualReportMatrixServerFn,
-	getMonthlyReportServerFn,
 	regenerateAiInsightServerFn,
 	triggerMonthlyReportCronServerFn,
 } from "../data/servers/index.ts";
 
+import {
+	annualReportMatrixQueryOptions,
+	monthlyReportQueryOptions,
+} from "./query-options.ts";
+
 export const REPORT_KEYS = {
 	all: ["reports"] as const,
 	monthly: (propertyId?: string, month?: number, year?: number) =>
-		[...REPORT_KEYS.all, "monthly", propertyId || "all", month, year] as const,
+		[
+			"monthly-report",
+			propertyId || "all",
+			month || new Date().getMonth() + 1,
+			year || new Date().getFullYear(),
+		] as const,
 	annual: (year: number, propertyId?: string) =>
-		[...REPORT_KEYS.all, "annual", year, propertyId || "all"] as const,
+		[
+			"annual-report-matrix",
+			propertyId || "all",
+			year || new Date().getFullYear(),
+		] as const,
 };
 
 /**
@@ -23,26 +35,14 @@ export function useMonthlyReport(
 	month?: number,
 	year?: number,
 ) {
-	return useQuery({
-		queryKey: REPORT_KEYS.monthly(propertyId, month, year),
-		queryFn: () =>
-			getMonthlyReportServerFn({
-				data: { propertyId, month, year },
-			}),
-	});
+	return useQuery(monthlyReportQueryOptions(propertyId, month, year));
 }
 
 /**
  * Query untuk mengambil Matriks Keuangan Tahunan (12 Bulan)
  */
 export function useAnnualReportMatrix(year: number, propertyId?: string) {
-	return useQuery({
-		queryKey: REPORT_KEYS.annual(year, propertyId),
-		queryFn: () =>
-			getAnnualReportMatrixServerFn({
-				data: { year, propertyId },
-			}),
-	});
+	return useQuery(annualReportMatrixQueryOptions(propertyId, year));
 }
 
 /**

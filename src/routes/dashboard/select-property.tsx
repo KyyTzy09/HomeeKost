@@ -10,6 +10,7 @@ import {
 	PropertyFormDialog,
 } from "../../components/property/index.ts";
 import {
+	propertiesQueryOptions,
 	useCreateProperty,
 	useDeleteProperty,
 	useProperties,
@@ -27,6 +28,9 @@ export const Route = createFileRoute("/dashboard/select-property")({
 				to: "/dashboard",
 			});
 		}
+	},
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(propertiesQueryOptions());
 	},
 	head: () => ({
 		meta: [

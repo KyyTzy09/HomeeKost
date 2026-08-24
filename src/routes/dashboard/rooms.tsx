@@ -18,6 +18,7 @@ import {
 	RoomFormDialog,
 } from "../../components/room/index.ts";
 import {
+	roomsQueryOptions,
 	useCreateRoom,
 	useDashboardContext,
 	useDeleteRoom,
@@ -29,6 +30,12 @@ export const Route = createFileRoute("/dashboard/rooms")({
 	head: () => ({
 		meta: [{ title: "Kamar — HomeeKost Management" }],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		await context.queryClient.ensureQueryData(
+			roomsQueryOptions(activePropertyId),
+		);
+	},
 	component: RoomsPage,
 });
 

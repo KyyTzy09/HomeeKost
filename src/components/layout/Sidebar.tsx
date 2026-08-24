@@ -190,7 +190,7 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 							</div>
 							<div className="flex-1 min-w-0">
 								<strong className="truncate block text-[#252925] text-xs font-bold leading-tight group-hover:text-[#4f6958] transition-colors">
-									{user.name}
+									{user?.name || "Admin"}
 								</strong>
 								<span className="truncate block text-[10.5px] text-[#737873]">
 									{isSuperAdmin ? "Owner" : "Admin Staf"}

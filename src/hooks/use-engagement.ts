@@ -6,24 +6,22 @@ import type {
 import {
 	broadcastAnnouncementServerFn,
 	deleteAnnouncementServerFn,
-	getEngagementDashboardServerFn,
 	runDailyCronTasksServerFn,
 	sendBirthdayWishServerFn,
 } from "../data/servers/index.ts";
 
+import { engagementDashboardQueryOptions } from "./query-options.ts";
+
 export const ENGAGEMENT_KEYS = {
 	all: ["engagement"] as const,
-	dashboard: () => [...ENGAGEMENT_KEYS.all, "dashboard"] as const,
+	dashboard: () => ["engagement", "dashboard"] as const,
 };
 
 /**
  * Query untuk mengambil data Engagement Dashboard (Ultah Terdekat, Pengumuman, Log)
  */
 export function useEngagementDashboard() {
-	return useQuery({
-		queryKey: ENGAGEMENT_KEYS.dashboard(),
-		queryFn: () => getEngagementDashboardServerFn(),
-	});
+	return useQuery(engagementDashboardQueryOptions());
 }
 
 /**

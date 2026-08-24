@@ -22,6 +22,8 @@ import {
 	EngagementTemplatePanel,
 } from "../../components/engagement/index.ts";
 import {
+	engagementDashboardQueryOptions,
+	propertiesQueryOptions,
 	useBroadcastAnnouncement,
 	useDashboardContext,
 	useDeleteAnnouncement,
@@ -40,6 +42,12 @@ export const Route = createFileRoute("/dashboard/engagement")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		await Promise.all([
+			context.queryClient.ensureQueryData(engagementDashboardQueryOptions()),
+			context.queryClient.ensureQueryData(propertiesQueryOptions()),
+		]);
+	},
 	component: EngagementPage,
 });
 

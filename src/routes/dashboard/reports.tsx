@@ -29,6 +29,9 @@ import {
 	ReportRoomExpenseBreakdown,
 } from "../../components/report/index.ts";
 import {
+	annualReportMatrixQueryOptions,
+	monthlyReportQueryOptions,
+	propertiesQueryOptions,
 	useAnnualReportMatrix,
 	useDashboardContext,
 	useExportAnnualReportCsv,
@@ -47,6 +50,22 @@ export const Route = createFileRoute("/dashboard/reports")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		const now = new Date();
+		const month = now.getMonth() + 1;
+		const year = now.getFullYear();
+
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				monthlyReportQueryOptions(activePropertyId, month, year),
+			),
+			context.queryClient.ensureQueryData(
+				annualReportMatrixQueryOptions(activePropertyId, year),
+			),
+			context.queryClient.ensureQueryData(propertiesQueryOptions()),
+		]);
+	},
 	component: ReportsPage,
 });
 

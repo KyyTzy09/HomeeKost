@@ -5,43 +5,31 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import type { TenantItem } from "../common/types/index.ts";
 import type { TenantFormValues } from "../common/validations/index.ts";
 import {
 	createTenantServerFn,
 	deleteTenantServerFn,
-	getTenantByIdServerFn,
-	getTenantsServerFn,
 	updateTenantServerFn,
 } from "../data/servers/index.ts";
+
+import {
+	tenantDetailQueryOptions,
+	tenantsQueryOptions,
+} from "./query-options.ts";
 
 export const TENANTS_QUERY_KEY = ["tenants"] as const;
 
 export function useTenants(
 	propertyId?: string,
 ): UseQueryResult<TenantItem[], Error> {
-	const getTenants = useServerFn(getTenantsServerFn);
-
-	return useQuery<TenantItem[], Error>({
-		queryKey: [...TENANTS_QUERY_KEY, propertyId ?? "all"],
-		queryFn: () => getTenants({ data: { propertyId } }),
-	});
+	return useQuery(tenantsQueryOptions(propertyId));
 }
 
 export function useTenant(
 	id?: string,
 ): UseQueryResult<TenantItem | null, Error> {
-	const getTenantById = useServerFn(getTenantByIdServerFn);
-
-	return useQuery<TenantItem | null, Error>({
-		queryKey: [...TENANTS_QUERY_KEY, "detail", id],
-		queryFn: () => {
-			if (!id) return null;
-			return getTenantById({ data: { id } });
-		},
-		enabled: Boolean(id),
-	});
+	return useQuery(tenantDetailQueryOptions(id || ""));
 }
 
 export function useCreateTenant(): UseMutationResult<
@@ -50,14 +38,13 @@ export function useCreateTenant(): UseMutationResult<
 	{ propertyId: string; data: TenantFormValues }
 > {
 	const queryClient = useQueryClient();
-	const createTenant = useServerFn(createTenantServerFn);
 
 	return useMutation<
 		TenantItem,
 		Error,
 		{ propertyId: string; data: TenantFormValues }
 	>({
-		mutationFn: (variables) => createTenant({ data: variables }),
+		mutationFn: (variables) => createTenantServerFn({ data: variables }),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: TENANTS_QUERY_KEY });
 			queryClient.invalidateQueries({
@@ -77,14 +64,13 @@ export function useUpdateTenant(): UseMutationResult<
 	{ id: string; propertyId: string; data: TenantFormValues }
 > {
 	const queryClient = useQueryClient();
-	const updateTenant = useServerFn(updateTenantServerFn);
 
 	return useMutation<
 		TenantItem,
 		Error,
 		{ id: string; propertyId: string; data: TenantFormValues }
 	>({
-		mutationFn: (variables) => updateTenant({ data: variables }),
+		mutationFn: (variables) => updateTenantServerFn({ data: variables }),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: TENANTS_QUERY_KEY });
 			queryClient.invalidateQueries({
@@ -104,14 +90,14 @@ export function useDeleteTenant(): UseMutationResult<
 	{ id: string; propertyId?: string }
 > {
 	const queryClient = useQueryClient();
-	const deleteTenant = useServerFn(deleteTenantServerFn);
 
 	return useMutation<
 		{ success: boolean; id: string },
 		Error,
 		{ id: string; propertyId?: string }
 	>({
-		mutationFn: (variables) => deleteTenant({ data: { id: variables.id } }),
+		mutationFn: (variables) =>
+			deleteTenantServerFn({ data: { id: variables.id } }),
 		onSuccess: (_, variables) => {
 			queryClient.invalidateQueries({ queryKey: TENANTS_QUERY_KEY });
 			if (variables.propertyId) {

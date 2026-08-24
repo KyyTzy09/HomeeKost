@@ -7,11 +7,13 @@ import {
 import { useState } from "react";
 import { Sidebar } from "../components/layout/Sidebar.tsx";
 import { Topbar } from "../components/layout/Topbar.tsx";
-import { getDashboardContextServerFn } from "../data/servers/index.ts";
+import { sessionContextQueryOptions } from "../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard")({
-	beforeLoad: async ({ location }) => {
-		const dashboardContext = await getDashboardContextServerFn();
+	beforeLoad: async ({ location, context }) => {
+		const dashboardContext = await context.queryClient.ensureQueryData(
+			sessionContextQueryOptions(),
+		);
 		if (!dashboardContext) {
 			throw redirect({
 				to: "/login",

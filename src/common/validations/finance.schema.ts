@@ -63,7 +63,8 @@ export const transactionFilterSchema = z.object({
 	limit: z.coerce.number().int().positive().optional().default(10),
 });
 
-export type TransactionFilterInput = z.infer<typeof transactionFilterSchema>;
+export type TransactionFilterInput = z.input<typeof transactionFilterSchema>;
+export type TransactionFilterOutput = z.output<typeof transactionFilterSchema>;
 
 export const financialSummaryQuerySchema = z.object({
 	propertyId: z.string().optional(),

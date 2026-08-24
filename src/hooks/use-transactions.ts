@@ -24,15 +24,17 @@ import {
 	createTransactionServerFn,
 	deleteTransactionServerFn,
 	exportAnnualFinancialCsvServerFn,
-	getAnnualFinancialMatrixServerFn,
-	getCostCompositionServerFn,
-	getFinancialSummaryServerFn,
-	getProfitLossStatementServerFn,
 	getRecentMonthlyTrendsServerFn,
-	getTransactionByIdServerFn,
-	getTransactionsServerFn,
 	updateTransactionServerFn,
 } from "../data/servers/index.ts";
+import {
+	annualFinancialMatrixQueryOptions,
+	costCompositionQueryOptions,
+	financeTransactionDetailQueryOptions,
+	financeTransactionsQueryOptions,
+	financialSummaryQueryOptions,
+	profitLossStatementQueryOptions,
+} from "./query-options.ts";
 import { DASHBOARD_CONTEXT_QUERY_KEY } from "./use-dashboard-context.ts";
 
 export const TRANSACTIONS_QUERY_KEY = ["transactions"] as const;
@@ -45,47 +47,27 @@ export const ANNUAL_MATRIX_QUERY_KEY = ["annual-matrix"] as const;
 export function useTransactions(
 	filters?: TransactionFilterInput,
 ): UseQueryResult<PaginatedTransactions, Error> {
-	return useQuery<PaginatedTransactions, Error>({
-		queryKey: [...TRANSACTIONS_QUERY_KEY, filters],
-		queryFn: async () => {
-			return getTransactionsServerFn({ data: filters });
-		},
-	});
+	return useQuery(financeTransactionsQueryOptions(filters));
 }
 
 export function useTransaction(
 	id?: string,
 ): UseQueryResult<TransactionItem | null, Error> {
-	return useQuery<TransactionItem | null, Error>({
-		queryKey: [...TRANSACTIONS_QUERY_KEY, id],
-		queryFn: async () => {
-			if (!id) return null;
-			return getTransactionByIdServerFn({ data: { id } });
-		},
-		enabled: Boolean(id),
-	});
+	return useQuery(financeTransactionDetailQueryOptions(id));
 }
 
 export function useFinancialSummary(
 	query?: FinancialSummaryQueryInput,
 ): UseQueryResult<FinancialSummary, Error> {
-	return useQuery<FinancialSummary, Error>({
-		queryKey: [...FINANCIAL_SUMMARY_QUERY_KEY, query],
-		queryFn: async () => {
-			return getFinancialSummaryServerFn({ data: query });
-		},
-	});
+	return useQuery(financialSummaryQueryOptions(query));
 }
 
 export function useCostComposition(
 	query?: FinancialSummaryQueryInput,
 ): UseQueryResult<CategoryCostItem[], Error> {
-	return useQuery<CategoryCostItem[], Error>({
-		queryKey: [...COST_COMPOSITION_QUERY_KEY, query],
-		queryFn: async () => {
-			return getCostCompositionServerFn({ data: query });
-		},
-	});
+	return useQuery(
+		costCompositionQueryOptions(query?.propertyId, query?.month, query?.year),
+	);
 }
 
 export function useRecentMonthlyTrends(query?: {
@@ -103,23 +85,19 @@ export function useRecentMonthlyTrends(query?: {
 export function useProfitLossStatement(
 	query?: FinancialSummaryQueryInput,
 ): UseQueryResult<ProfitLossRow[], Error> {
-	return useQuery<ProfitLossRow[], Error>({
-		queryKey: [...PROFIT_LOSS_QUERY_KEY, query],
-		queryFn: async () => {
-			return getProfitLossStatementServerFn({ data: query });
-		},
-	});
+	return useQuery(
+		profitLossStatementQueryOptions(
+			query?.propertyId,
+			query?.month,
+			query?.year,
+		),
+	);
 }
 
 export function useAnnualFinancialMatrix(
 	query?: AnnualFinancialQueryInput,
 ): UseQueryResult<AnnualFinancialMatrix, Error> {
-	return useQuery<AnnualFinancialMatrix, Error>({
-		queryKey: [...ANNUAL_MATRIX_QUERY_KEY, query],
-		queryFn: async () => {
-			return getAnnualFinancialMatrixServerFn({ data: query });
-		},
-	});
+	return useQuery(annualFinancialMatrixQueryOptions(query));
 }
 
 export function useCreateTransaction(): UseMutationResult<

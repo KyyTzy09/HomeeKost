@@ -20,7 +20,6 @@ export const getDashboardOverviewServerFn = createServerFn({
 			dashboardService.getOverviewData(activePropertyId, session.user),
 		{
 			method: "GET",
-			requireAuth: false,
 			summary: (res) =>
 				`Total: ${res.stats.totalRooms} kamar (${res.stats.occupiedRooms} terisi, ${res.stats.vacantRooms} kosong) · Omzet: ${res.stats.monthlyIncome}`,
 		},
@@ -37,7 +36,6 @@ export const getTopbarNotificationsServerFn = createServerFn({
 		() => dashboardService.getNotifications(activePropertyId),
 		{
 			method: "GET",
-			requireAuth: false,
 			summary: (res) => `${res.length} notifikasi operasional`,
 		},
 	);

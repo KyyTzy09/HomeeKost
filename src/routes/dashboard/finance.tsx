@@ -33,13 +33,51 @@ import {
 	FinanceTransactionTable,
 	TransactionDetailDialog,
 } from "../../components/finance/index.ts";
-import { useDashboardContext, useProperties } from "../../hooks/index.ts";
+import {
+	costCompositionQueryOptions,
+	financeTransactionsQueryOptions,
+	financialSummaryQueryOptions,
+	profitLossStatementQueryOptions,
+	propertiesQueryOptions,
+	useDashboardContext,
+	useProperties,
+} from "../../hooks/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 
 export const Route = createFileRoute("/dashboard/finance")({
 	head: () => ({
 		meta: [{ title: "Laporan Keuangan & Arus Kas — HomeeKost Management" }],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		const now = new Date();
+		const month = now.getMonth() + 1;
+		const year = now.getFullYear();
+
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				financialSummaryQueryOptions({
+					propertyId: activePropertyId,
+					month,
+					year,
+				}),
+			),
+			context.queryClient.ensureQueryData(
+				costCompositionQueryOptions(activePropertyId, month, year),
+			),
+			context.queryClient.ensureQueryData(
+				profitLossStatementQueryOptions(activePropertyId, month, year),
+			),
+			context.queryClient.ensureQueryData(
+				financeTransactionsQueryOptions({
+					propertyId: activePropertyId,
+					page: 1,
+					limit: 10,
+				}),
+			),
+			context.queryClient.ensureQueryData(propertiesQueryOptions()),
+		]);
+	},
 	component: FinancePage,
 });
 

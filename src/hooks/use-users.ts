@@ -19,42 +19,30 @@ import {
 	changeMyPasswordServerFn,
 	createUserServerFn,
 	deleteUserServerFn,
-	getMyProfileServerFn,
-	getUserAuditLogsServerFn,
-	getUsersServerFn,
 	updateMyProfileServerFn,
 	updateUserServerFn,
 } from "../data/servers/index.ts";
 
+import {
+	myProfileQueryOptions,
+	userAuditLogsQueryOptions,
+	usersQueryOptions,
+} from "./query-options.ts";
+
 export const USERS_QUERY_KEY = ["users"] as const;
-export const USER_AUDIT_LOGS_QUERY_KEY = ["user-audit-logs"] as const;
+export const USER_AUDIT_LOGS_QUERY_KEY = ["users", "audit-logs"] as const;
 export const MY_PROFILE_QUERY_KEY = ["my-profile"] as const;
 
 export function useUsers(): UseQueryResult<UserItem[], Error> {
-	return useQuery<UserItem[], Error>({
-		queryKey: USERS_QUERY_KEY,
-		queryFn: async () => {
-			return getUsersServerFn();
-		},
-	});
+	return useQuery(usersQueryOptions());
 }
 
 export function useUserAuditLogs(): UseQueryResult<AuditLogItem[], Error> {
-	return useQuery<AuditLogItem[], Error>({
-		queryKey: USER_AUDIT_LOGS_QUERY_KEY,
-		queryFn: async () => {
-			return getUserAuditLogsServerFn();
-		},
-	});
+	return useQuery(userAuditLogsQueryOptions());
 }
 
 export function useMyProfile(): UseQueryResult<UserProfileDetail, Error> {
-	return useQuery<UserProfileDetail, Error>({
-		queryKey: MY_PROFILE_QUERY_KEY,
-		queryFn: async () => {
-			return getMyProfileServerFn();
-		},
-	});
+	return useQuery(myProfileQueryOptions());
 }
 
 export function useUpdateMyProfile(): UseMutationResult<

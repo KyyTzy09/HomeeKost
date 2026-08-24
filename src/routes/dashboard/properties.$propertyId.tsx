@@ -28,6 +28,8 @@ import {
 	RoomFormDialog,
 } from "../../components/room/index.ts";
 import {
+	propertyDetailQueryOptions,
+	roomsQueryOptions,
 	useCreateRoom,
 	useDeleteProperty,
 	useDeleteRoom,
@@ -46,6 +48,14 @@ export const Route = createFileRoute("/dashboard/properties/$propertyId")({
 			},
 		],
 	}),
+	loader: async ({ context, params }) => {
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				propertyDetailQueryOptions(params.propertyId),
+			),
+			context.queryClient.ensureQueryData(roomsQueryOptions(params.propertyId)),
+		]);
+	},
 	component: PropertyDetailPage,
 });
 

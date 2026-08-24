@@ -16,6 +16,8 @@ import type { CreateManualInvoiceInput } from "../../common/validations/index.ts
 import { InvoiceDocPreview } from "../../components/invoice/index.ts";
 import { PaymentFormDialog } from "../../components/payment/index.ts";
 import {
+	paymentsQueryOptions,
+	tenantsQueryOptions,
 	useCreateManualInvoice,
 	useDashboardContext,
 	usePayments,
@@ -31,6 +33,17 @@ export const Route = createFileRoute("/dashboard/invoices")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				paymentsQueryOptions({ propertyId: activePropertyId }),
+			),
+			context.queryClient.ensureQueryData(
+				tenantsQueryOptions(activePropertyId),
+			),
+		]);
+	},
 	component: InvoicesPage,
 });
 
