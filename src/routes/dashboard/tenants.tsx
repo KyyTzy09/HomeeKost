@@ -20,6 +20,8 @@ import {
 	TenantTable,
 } from "../../components/tenant/index.ts";
 import {
+	roomsQueryOptions,
+	tenantsQueryOptions,
 	useCreateTenant,
 	useDashboardContext,
 	useDeleteTenant,
@@ -33,6 +35,15 @@ export const Route = createFileRoute("/dashboard/tenants")({
 	head: () => ({
 		meta: [{ title: "Penghuni & Kontrak Sewa — HomeeKost Management" }],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				tenantsQueryOptions(activePropertyId),
+			),
+			context.queryClient.ensureQueryData(roomsQueryOptions(activePropertyId)),
+		]);
+	},
 	component: TenantsPage,
 });
 

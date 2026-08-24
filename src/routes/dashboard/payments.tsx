@@ -18,6 +18,10 @@ import {
 	PaymentTable,
 } from "../../components/payment/index.ts";
 import {
+	paymentStatsQueryOptions,
+	paymentsQueryOptions,
+	propertiesQueryOptions,
+	tenantsQueryOptions,
 	useConfirmPayment,
 	useCreateManualInvoice,
 	useDashboardContext,
@@ -38,6 +42,21 @@ export const Route = createFileRoute("/dashboard/payments")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				paymentsQueryOptions({ propertyId: activePropertyId }),
+			),
+			context.queryClient.ensureQueryData(
+				paymentStatsQueryOptions({ propertyId: activePropertyId }),
+			),
+			context.queryClient.ensureQueryData(
+				tenantsQueryOptions(activePropertyId),
+			),
+			context.queryClient.ensureQueryData(propertiesQueryOptions()),
+		]);
+	},
 	component: PaymentsPage,
 });
 

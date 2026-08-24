@@ -19,7 +19,7 @@ import {
 import type {
 	AnnualFinancialQueryInput,
 	FinancialSummaryQueryInput,
-	TransactionFilterInput,
+	TransactionFilterOutput,
 	TransactionFormValues,
 } from "../../common/validations/index.ts";
 import type {
@@ -118,7 +118,7 @@ export class CashflowService {
 	}
 
 	async getTransactions(
-		input: TransactionFilterInput,
+		input: TransactionFilterOutput,
 		user: SessionUser,
 	): Promise<PaginatedTransactions> {
 		const propertyIds = await this.resolveAccessiblePropertyIds(
@@ -147,8 +147,8 @@ export class CashflowService {
 			? new Date(`${input.endDate}T23:59:59.999Z`)
 			: undefined;
 
-		const page = input.page || 1;
-		const limit = input.limit || 10;
+		const page = Number(input.page) || 1;
+		const limit = Number(input.limit) || 10;
 		const skip = (page - 1) * limit;
 
 		const [rawList, totalCount] = await Promise.all([

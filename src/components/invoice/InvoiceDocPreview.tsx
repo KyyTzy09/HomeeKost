@@ -15,12 +15,16 @@ import { formatDate } from "../../lib/date-utils.ts";
 interface InvoiceDocPreviewProps {
 	invoice: InvoiceItem | null;
 	propertyName?: string;
+	propertyImageUrl?: string | null;
+	propertyAddress?: string | null;
 	onDownloadPdf?: (invoice: InvoiceItem) => void;
 }
 
 export function InvoiceDocPreview({
 	invoice,
 	propertyName = "HomeeKost",
+	propertyImageUrl,
+	propertyAddress,
 	onDownloadPdf,
 }: InvoiceDocPreviewProps) {
 	if (!invoice) {
@@ -87,7 +91,7 @@ export function InvoiceDocPreview({
 			{/* ─── Printable Official Invoice Sheet (A4 Proportion) ───────── */}
 			<Card
 				id="printable-invoice-sheet"
-				className="p-8 md:p-10 bg-white border-[#e4e9e4] shadow-[0_4px_24px_rgba(48,65,53,0.07)] relative overflow-hidden"
+				className="p-8 md:p-10 bg-white border-[#e4e9e4] shadow-[0_4px_24px_rgba(48,65,53,0.07)] relative overflow-hidden print:border print:shadow-none print:p-6 print:m-0 print:w-full"
 			>
 				{/* Watermark Stamp: LUNAS / OFFICIAL INVOICE */}
 				{isPaid ? (
@@ -108,18 +112,25 @@ export function InvoiceDocPreview({
 				)}
 
 				{/* Header Section */}
-				<header className="flex flex-col sm:flex-row justify-between sm:items-start border-b-2 border-[#4f6958]/20 pb-5 mb-6 gap-4">
+				<div className="flex flex-col sm:flex-row justify-between sm:items-start border-b-2 border-[#4f6958]/20 pb-5 mb-6 gap-4 print:flex-row">
 					<div>
-						<div className="flex items-center gap-2">
-							<div className="w-8 h-8 rounded-lg bg-[#4f6958] text-white flex items-center justify-center font-bold text-sm">
-								HK
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 rounded-xl border border-[#e4e9e4] bg-[#faf9f5] flex items-center justify-center p-1 shrink-0 overflow-hidden">
+								<img
+									src={propertyImageUrl || "/logo.png"}
+									alt={propertyName || "HomeeKost"}
+									className="w-full h-full object-contain"
+									onError={(e) => {
+										(e.target as HTMLImageElement).src = "/logo.png";
+									}}
+								/>
 							</div>
 							<div>
 								<h2 className="font-bold text-[#252925] text-base leading-tight">
 									{propertyName || "HomeeKost Management"}
 								</h2>
 								<p className="text-[11px] text-[#737873]">
-									Sistem Pengelolaan Kos & Hunian Modern
+									{propertyAddress || "Sistem Pengelolaan Kos & Hunian Modern"}
 								</p>
 							</div>
 						</div>
@@ -136,7 +147,7 @@ export function InvoiceDocPreview({
 							Tanggal Terbit: <b>{formatDate(invoice.createdDate)}</b>
 						</small>
 					</div>
-				</header>
+				</div>
 
 				{/* Recipient & Billing Meta Information */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 rounded-xl bg-[#fafbfa] border border-[#e4e9e4] text-xs">
@@ -275,7 +286,7 @@ export function InvoiceDocPreview({
 				)}
 
 				{/* Signatures & Seal */}
-				<footer className="pt-4 border-t border-[#e4e9e4] flex flex-col sm:flex-row justify-between items-end gap-6 text-xs text-[#737873]">
+				<div className="pt-4 border-t border-[#e4e9e4] flex flex-col sm:flex-row justify-between items-end gap-6 text-xs text-[#737873] print:flex-row">
 					<div>
 						<p className="text-[11px] text-[#737873] max-w-[340px] leading-relaxed">
 							Dokumen ini diterbitkan secara resmi melalui sistem manajemen
@@ -289,7 +300,7 @@ export function InvoiceDocPreview({
 							{propertyName || "Manajemen Kos"}
 						</div>
 					</div>
-				</footer>
+				</div>
 			</Card>
 		</div>
 	);

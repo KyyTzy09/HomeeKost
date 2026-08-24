@@ -15,11 +15,12 @@ export type StrategicRecommendation = z.infer<
 >;
 
 /**
- * Skema Output Terstruktur Analisis Finansial Eksekutif AI
+ * Skema Output Terstruktur Analisis Finansial Eksekutif AI (Faktual & Deterministik)
  */
 export const AiFinancialInsightSchema = z.object({
 	executiveSummary: z.string().min(20),
 	financialHealthGrade: z.enum(["PRIMA", "SEHAT", "WASPADA", "KRITIS"]),
+	keyHighlights: z.array(z.string()).min(2).max(4).optional().default([]),
 	trendAnalysis: z.object({
 		incomeTrend: z.string(),
 		expenseTrend: z.string(),
@@ -28,8 +29,8 @@ export const AiFinancialInsightSchema = z.object({
 	complaintCostImpact: z.string(),
 	strategicRecommendations: z
 		.array(StrategicRecommendationSchema)
-		.min(3)
-		.max(3),
+		.optional()
+		.default([]),
 });
 
 export type AiFinancialInsightData = z.infer<typeof AiFinancialInsightSchema>;

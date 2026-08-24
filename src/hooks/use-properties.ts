@@ -10,34 +10,24 @@ import type { PropertyFormValues } from "../common/validations/index.ts";
 import {
 	createPropertyServerFn,
 	deletePropertyServerFn,
-	getPropertiesServerFn,
-	getPropertyByIdServerFn,
 	updatePropertyServerFn,
 } from "../data/servers/index.ts";
+import {
+	propertiesQueryOptions,
+	propertyDetailQueryOptions,
+} from "./query-options.ts";
 import { DASHBOARD_CONTEXT_QUERY_KEY } from "./use-dashboard-context.ts";
 
 export const PROPERTIES_QUERY_KEY = ["properties"] as const;
 
 export function useProperties(): UseQueryResult<PropertyItem[], Error> {
-	return useQuery<PropertyItem[], Error>({
-		queryKey: PROPERTIES_QUERY_KEY,
-		queryFn: async () => {
-			return getPropertiesServerFn();
-		},
-	});
+	return useQuery(propertiesQueryOptions());
 }
 
 export function useProperty(
 	id?: string,
 ): UseQueryResult<PropertyItem | null, Error> {
-	return useQuery<PropertyItem | null, Error>({
-		queryKey: [...PROPERTIES_QUERY_KEY, id],
-		queryFn: async () => {
-			if (!id) return null;
-			return getPropertyByIdServerFn({ data: { id } });
-		},
-		enabled: Boolean(id),
-	});
+	return useQuery(propertyDetailQueryOptions(id || ""));
 }
 
 export function useCreateProperty(): UseMutationResult<

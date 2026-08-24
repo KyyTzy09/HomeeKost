@@ -11,10 +11,13 @@ import {
 	UserTable,
 } from "../../components/user/index.ts";
 import {
+	propertiesQueryOptions,
 	useCreateUser,
 	useDashboardContext,
 	useDeleteUser,
 	useProperties,
+	userAuditLogsQueryOptions,
+	usersQueryOptions,
 	useUpdateUser,
 	useUserAuditLogs,
 	useUsers,
@@ -28,6 +31,13 @@ export const Route = createFileRoute("/dashboard/users")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		await Promise.all([
+			context.queryClient.ensureQueryData(usersQueryOptions()),
+			context.queryClient.ensureQueryData(userAuditLogsQueryOptions()),
+			context.queryClient.ensureQueryData(propertiesQueryOptions()),
+		]);
+	},
 	component: UsersPage,
 });
 

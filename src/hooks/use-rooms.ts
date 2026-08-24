@@ -10,10 +10,9 @@ import type { RoomFormValues } from "../common/validations/index.ts";
 import {
 	createRoomServerFn,
 	deleteRoomServerFn,
-	getRoomByIdServerFn,
-	getRoomsByPropertyServerFn,
 	updateRoomServerFn,
 } from "../data/servers/index.ts";
+import { roomDetailQueryOptions, roomsQueryOptions } from "./query-options.ts";
 import { PROPERTIES_QUERY_KEY } from "./use-properties.ts";
 
 export const ROOMS_QUERY_KEY = ["rooms"] as const;
@@ -21,25 +20,11 @@ export const ROOMS_QUERY_KEY = ["rooms"] as const;
 export function useRooms(
 	propertyId?: string,
 ): UseQueryResult<RoomItem[], Error> {
-	return useQuery<RoomItem[], Error>({
-		queryKey: [...ROOMS_QUERY_KEY, propertyId],
-		queryFn: async () => {
-			if (!propertyId) return [];
-			return getRoomsByPropertyServerFn({ data: { propertyId } });
-		},
-		enabled: Boolean(propertyId),
-	});
+	return useQuery(roomsQueryOptions(propertyId));
 }
 
 export function useRoom(id?: string): UseQueryResult<RoomItem | null, Error> {
-	return useQuery<RoomItem | null, Error>({
-		queryKey: [...ROOMS_QUERY_KEY, "detail", id],
-		queryFn: async () => {
-			if (!id) return null;
-			return getRoomByIdServerFn({ data: { id } });
-		},
-		enabled: Boolean(id),
-	});
+	return useQuery(roomDetailQueryOptions(id || ""));
 }
 
 export function useCreateRoom(): UseMutationResult<

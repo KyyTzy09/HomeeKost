@@ -83,12 +83,17 @@ export class ReportService {
 
 		const monthName = MONTH_NAMES[targetMonth - 1] || "Bulan";
 
-		// 1. Ambil Nama Properti
+		// 1. Ambil Nama & Info Properti
 		let propertyName = "Semua Cabang Kos (Konsolidasi)";
+		let propertyImageUrl: string | null = null;
+		let propertyAddress: string | null = null;
+
 		if (effectivePropertyId) {
 			const prop = await this.propertyRepo.findById(effectivePropertyId);
 			if (prop) {
 				propertyName = prop.name;
+				propertyImageUrl = prop.imageUrl || null;
+				propertyAddress = prop.address || null;
 			}
 		}
 
@@ -172,6 +177,7 @@ export class ReportService {
 					(savedSummary.executiveSummary as string) ||
 					(savedSummary.narrativeSummary as string) ||
 					"",
+				keyHighlights: (savedSummary.keyHighlights as string[]) || [],
 				trendAnalysis:
 					(savedSummary.trendAnalysis as AiFinancialInsightData["trendAnalysis"]) || {
 						incomeTrend: "",
@@ -220,6 +226,8 @@ export class ReportService {
 				`REP-${targetYear}${String(targetMonth).padStart(2, "0")}-${effectivePropertyId || "ALL"}`,
 			propertyId: effectivePropertyId || "all",
 			propertyName,
+			propertyImageUrl,
+			propertyAddress,
 			periodMonth: monthName,
 			periodMonthNumber: targetMonth,
 			periodYear: targetYear,
@@ -239,6 +247,7 @@ export class ReportService {
 			},
 			financialHealthGrade: aiData.financialHealthGrade,
 			narrativeSummary: aiData.executiveSummary,
+			keyHighlights: aiData.keyHighlights || [],
 			trendAnalysis: aiData.trendAnalysis,
 			complaintCostImpact: aiData.complaintCostImpact,
 			recommendations: (aiData.strategicRecommendations || []).map(
@@ -331,12 +340,17 @@ export class ReportService {
 			);
 		}
 
-		// 2. Ambil Nama Properti
+		// 2. Ambil Nama & Info Properti
 		let propertyName = "Semua Cabang Kos (Konsolidasi)";
+		let propertyImageUrl: string | null = null;
+		let propertyAddress: string | null = null;
+
 		if (effectivePropertyId) {
 			const prop = await this.propertyRepo.findById(effectivePropertyId);
 			if (prop) {
 				propertyName = prop.name;
+				propertyImageUrl = prop.imageUrl || null;
+				propertyAddress = prop.address || null;
 			}
 		}
 
@@ -431,6 +445,8 @@ export class ReportService {
 			id: savedReport.id,
 			propertyId: effectivePropertyId || "all",
 			propertyName,
+			propertyImageUrl,
+			propertyAddress,
 			periodMonth: monthName,
 			periodMonthNumber: targetMonth,
 			periodYear: targetYear,
@@ -450,6 +466,7 @@ export class ReportService {
 			},
 			financialHealthGrade: aiData.financialHealthGrade,
 			narrativeSummary: aiData.executiveSummary,
+			keyHighlights: aiData.keyHighlights || [],
 			trendAnalysis: aiData.trendAnalysis,
 			complaintCostImpact: aiData.complaintCostImpact,
 			recommendations: (aiData.strategicRecommendations || []).map(

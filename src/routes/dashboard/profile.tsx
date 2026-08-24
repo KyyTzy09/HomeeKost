@@ -19,6 +19,7 @@ import {
 	SecuritySettingsDialog,
 } from "../../components/profile/index.ts";
 import {
+	myProfileQueryOptions,
 	useChangeMyPassword,
 	useDashboardContext,
 	useMyProfile,
@@ -28,6 +29,9 @@ import {
 import { authClient } from "../../lib/auth-client.ts";
 
 export const Route = createFileRoute("/dashboard/profile")({
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(myProfileQueryOptions());
+	},
 	component: ProfilePage,
 });
 

@@ -26,6 +26,8 @@ export interface AiMonthlyReportData {
 	id: string | number;
 	propertyId: string;
 	propertyName: string;
+	propertyImageUrl?: string | null;
+	propertyAddress?: string | null;
 	periodMonth: string;
 	periodMonthNumber: number;
 	periodYear: number;
@@ -39,13 +41,14 @@ export interface AiMonthlyReportData {
 	roomStatus: PropertyRoomStatusSummary;
 	financialHealthGrade?: "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS";
 	narrativeSummary: string;
+	keyHighlights?: string[];
 	trendAnalysis?: {
 		incomeTrend: string;
 		expenseTrend: string;
 		occupancyImpact: string;
 	};
 	complaintCostImpact?: string;
-	recommendations: AiStrategicRecommendation[];
+	recommendations?: AiStrategicRecommendation[];
 	expenseBreakdown: ExpenseItemBreakdown[];
 	generatedAt: string;
 	isAutomated: boolean;

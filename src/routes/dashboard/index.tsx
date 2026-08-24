@@ -28,7 +28,11 @@ import { OccupancyDonutChart } from "../../components/dashboard/OccupancyDonutCh
 import { RevenueExpenseChart } from "../../components/dashboard/RevenueExpenseChart.tsx";
 import { UpcomingPaymentsTable } from "../../components/dashboard/UpcomingPaymentsTable.tsx";
 import { DashboardSkeleton } from "../../components/layout/DashboardSkeleton.tsx";
-import { useDashboardContext, useGetDashboardData } from "../../hooks/index.ts";
+import {
+	dashboardOverviewQueryOptions,
+	useDashboardContext,
+	useGetDashboardData,
+} from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/")({
 	head: () => ({
@@ -38,13 +42,21 @@ export const Route = createFileRoute("/dashboard/")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		await context.queryClient.ensureQueryData(
+			dashboardOverviewQueryOptions(activePropertyId),
+		);
+	},
 	component: DashboardHomePage,
 });
 
 export function DashboardHomePage() {
 	const navigate = useNavigate();
 	const { userName, activeProperty } = useDashboardContext();
-	const { data: dashboardData, isLoading } = useGetDashboardData();
+	const { data: dashboardData, isLoading } = useGetDashboardData(
+		activeProperty?.id,
+	);
 	const [toastMessage, setToastMessage] = useState<{
 		text: string;
 		type: "success" | "error";

@@ -16,13 +16,14 @@ interface ReportAiInsightPanelProps {
 	isClosedPeriod: boolean;
 	financialHealthGrade?: "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS";
 	narrativeSummary: string;
+	keyHighlights?: string[];
 	trendAnalysis?: {
 		incomeTrend: string;
 		expenseTrend: string;
 		occupancyImpact: string;
 	};
 	complaintCostImpact?: string;
-	recommendations: AiStrategicRecommendation[];
+	recommendations?: AiStrategicRecommendation[];
 	aiProviderUsed?: string;
 }
 
@@ -69,9 +70,10 @@ export function ReportAiInsightPanel({
 	isClosedPeriod,
 	financialHealthGrade = "SEHAT",
 	narrativeSummary,
+	keyHighlights = [],
 	trendAnalysis,
 	complaintCostImpact,
-	recommendations,
+	recommendations = [],
 	aiProviderUsed,
 }: ReportAiInsightPanelProps) {
 	const gradeBadge = getHealthGradeBadge(financialHealthGrade);
@@ -118,7 +120,28 @@ export function ReportAiInsightPanel({
 				</p>
 			</div>
 
-			{/* Mini Analisis Tren (Jika ada) */}
+			{/* Sorotan Kunci Fakta Data (Key Highlights) */}
+			{keyHighlights.length > 0 && (
+				<div className="mt-3.5 p-3.5 bg-[#fbfcfb] border border-[#e4e9e4] rounded-xl">
+					<h3 className="text-[11px] font-bold uppercase tracking-wider text-[#4f6958] mb-2 flex items-center gap-1.5">
+						<Zap className="w-3.5 h-3.5 text-[#4f6958]" />
+						Sorotan Fakta Kinerja Finansial
+					</h3>
+					<div className="space-y-1.5">
+						{keyHighlights.map((highlight) => (
+							<div
+								key={highlight}
+								className="flex items-start gap-2 text-xs text-[#425046] leading-relaxed"
+							>
+								<span className="w-1.5 h-1.5 rounded-full bg-[#4f6958] mt-1.5 shrink-0" />
+								<span>{highlight}</span>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Mini Analisis Tren */}
 			{trendAnalysis && (
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3.5">
 					<div className="p-3 bg-[#fbfcfb] border border-[#e4e9e4] rounded-xl">
@@ -161,54 +184,56 @@ export function ReportAiInsightPanel({
 				</div>
 			)}
 
-			{/* Rekomendasi Strategis (Tepat 3 butir) */}
-			<div className="mt-5">
-				<h3 className="text-xs font-bold uppercase tracking-wider mb-3 text-[#737873] flex items-center gap-1.5">
-					<Zap className="w-3.5 h-3.5 text-[#4f6958]" />
-					Rekomendasi Taktis Prioritas
-				</h3>
+			{/* Tampilkan Rekomendasi hanya jika ada (backward compatibility) */}
+			{recommendations.length > 0 && (
+				<div className="mt-5">
+					<h3 className="text-xs font-bold uppercase tracking-wider mb-3 text-[#737873] flex items-center gap-1.5">
+						<Zap className="w-3.5 h-3.5 text-[#4f6958]" />
+						Rekomendasi Taktis
+					</h3>
 
-				<div className="space-y-2.5">
-					{recommendations.map((rec) => {
-						const isHigh = rec.priority === "HIGH";
-						const isMed = rec.priority === "MEDIUM";
+					<div className="space-y-2.5">
+						{recommendations.map((rec) => {
+							const isHigh = rec.priority === "HIGH";
+							const isMed = rec.priority === "MEDIUM";
 
-						return (
-							<div
-								key={rec.id}
-								className="p-3.5 bg-[#fbfcfb] border border-[#e4e9e4] rounded-xl flex items-start gap-3.5 hover:bg-[#f7faf7] transition-colors"
-							>
-								<div className="w-7 h-7 rounded-lg bg-[#e8f0ea] text-[#4f6958] font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-									{rec.code}
-								</div>
-								<div className="min-w-0 flex-1">
-									<div className="flex items-center gap-2 mb-0.5">
-										<strong className="text-xs font-bold text-[#252925]">
-											{rec.title}
-										</strong>
-										{rec.priority && (
-											<span
-												className={`text-[9.5px] font-bold px-2 py-0.2 rounded-md ${
-													isHigh
-														? "bg-[#fceeed] text-[#b66b68]"
-														: isMed
-															? "bg-[#fbf4e6] text-[#b18a4b]"
-															: "bg-[#e8f2ea] text-[#568062]"
-												}`}
-											>
-												Prioritas {rec.priority}
-											</span>
-										)}
+							return (
+								<div
+									key={rec.id}
+									className="p-3.5 bg-[#fbfcfb] border border-[#e4e9e4] rounded-xl flex items-start gap-3.5 hover:bg-[#f7faf7] transition-colors"
+								>
+									<div className="w-7 h-7 rounded-lg bg-[#e8f0ea] text-[#4f6958] font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+										{rec.code}
 									</div>
-									<span className="text-[11px] text-[#737873] leading-relaxed block">
-										{rec.description}
-									</span>
+									<div className="min-w-0 flex-1">
+										<div className="flex items-center gap-2 mb-0.5">
+											<strong className="text-xs font-bold text-[#252925]">
+												{rec.title}
+											</strong>
+											{rec.priority && (
+												<span
+													className={`text-[9.5px] font-bold px-2 py-0.2 rounded-md ${
+														isHigh
+															? "bg-[#fceeed] text-[#b66b68]"
+															: isMed
+																? "bg-[#fbf4e6] text-[#b18a4b]"
+																: "bg-[#e8f2ea] text-[#568062]"
+													}`}
+												>
+													Prioritas {rec.priority}
+												</span>
+											)}
+										</div>
+										<span className="text-[11px] text-[#737873] leading-relaxed block">
+											{rec.description}
+										</span>
+									</div>
 								</div>
-							</div>
-						);
-					})}
+							);
+						})}
+					</div>
 				</div>
-			</div>
+			)}
 		</Card>
 	);
 }

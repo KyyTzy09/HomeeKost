@@ -11,28 +11,29 @@ import {
 	createManualInvoiceServerFn,
 	deleteInvoiceServerFn,
 	generateMonthlyInvoicesServerFn,
-	getPaymentStatsServerFn,
-	getPaymentsServerFn,
 	sendWhatsAppInvoiceServerFn,
 } from "../data/servers/payment.fn.ts";
+import {
+	invoicesQueryOptions,
+	paymentStatsQueryOptions,
+	paymentsQueryOptions,
+} from "./query-options.ts";
 
 export const PAYMENT_QUERY_KEY = ["payments"] as const;
 export const PAYMENT_STATS_QUERY_KEY = ["payments", "stats"] as const;
 
 export function usePayments(params: PaymentFilterParams = {}) {
-	return useQuery({
-		queryKey: [...PAYMENT_QUERY_KEY, params],
-		queryFn: () => getPaymentsServerFn({ data: params }),
-	});
+	return useQuery(paymentsQueryOptions(params));
 }
 
 export function usePaymentStats(
 	params: { propertyId?: string; month?: number; year?: number } = {},
 ) {
-	return useQuery({
-		queryKey: [...PAYMENT_STATS_QUERY_KEY, params],
-		queryFn: () => getPaymentStatsServerFn({ data: params }),
-	});
+	return useQuery(paymentStatsQueryOptions(params));
+}
+
+export function useInvoices(params: PaymentFilterParams = {}) {
+	return useQuery(invoicesQueryOptions(params));
 }
 
 export function useConfirmPayment() {

@@ -1,12 +1,13 @@
 import { Button } from "@base-ui/react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Pencil, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, Pencil, Trash2 } from "lucide-react";
 import type { PropertyItem } from "../../common/types/index.ts";
 
 export type { PropertyItem };
 
 interface PropertyCardProps {
 	property: PropertyItem;
+	isLoading?: boolean;
 	onEnter: (property: PropertyItem) => void;
 	onEdit: (property: PropertyItem) => void;
 	onDelete: (property: PropertyItem) => void;
@@ -14,6 +15,7 @@ interface PropertyCardProps {
 
 export function PropertyCard({
 	property,
+	isLoading,
 	onEnter,
 	onEdit,
 	onDelete,
@@ -24,11 +26,13 @@ export function PropertyCard({
 	};
 	return (
 		<div
-			onClick={() => onEnter(property)}
-			onKeyDown={(e) => e.key === "Enter" && onEnter(property)}
+			onClick={() => !isLoading && onEnter(property)}
+			onKeyDown={(e) => e.key === "Enter" && !isLoading && onEnter(property)}
 			role="button"
 			tabIndex={0}
-			className="bg-white border border-[#e1e8e2] rounded-[20px] p-[22px] min-h-[190px] cursor-pointer transition-all duration-180 relative shadow-[0_8px_30px_rgba(47,69,55,0.05)] hover:-translate-y-[3px] hover:border-[#b8c9ba] hover:shadow-[0_14px_35px_rgba(47,69,55,0.10)] group"
+			className={`bg-white border border-[#e1e8e2] rounded-[20px] p-[22px] min-h-[190px] cursor-pointer transition-all duration-180 relative shadow-[0_8px_30px_rgba(47,69,55,0.05)] hover:-translate-y-[3px] hover:border-[#b8c9ba] hover:shadow-[0_14px_35px_rgba(47,69,55,0.10)] group ${
+				isLoading ? "opacity-70 pointer-events-none" : ""
+			}`}
 		>
 			{/* Edit Button */}
 			<button
@@ -82,7 +86,7 @@ export function PropertyCard({
 				{property.address}
 			</p>
 
-			{/* Arrow Navigation */}
+			{/* Arrow Navigation or Loading Spinner */}
 			<Button
 				onClick={(e) => {
 					e.stopPropagation();
@@ -90,7 +94,11 @@ export function PropertyCard({
 				}}
 				className="absolute z-10 right-5 bottom-5 w-[30px] h-[30px] rounded-[9px] bg-[#f3f7f3] flex items-center justify-center text-[#6c8171] group-hover:bg-[#4f6958] group-hover:text-white transition-all"
 			>
-				<ArrowRight className="w-4 h-4" />
+				{isLoading ? (
+					<Loader2 className="w-4 h-4 animate-spin text-[#4f6958]" />
+				) : (
+					<ArrowRight className="w-4 h-4" />
+				)}
 			</Button>
 		</div>
 	);

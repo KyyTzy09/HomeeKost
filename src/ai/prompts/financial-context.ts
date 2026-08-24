@@ -44,43 +44,27 @@ Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria 
 3. "complaintCostImpact":
    - Jelaskan seberapa besar biaya perbaikan/komplain mempengaruhi laba bersih bulan ini (sebutkan nominal dan persentase).
 
-4. "strategicRecommendations":
-   - WAJIB menghasilkan TEPAT 3 butir rekomendasi yang realistis, terukur, dan taktis:
-     - Rekomendasi 1 (code "01"): Fokus pada Efisiensi Pos Pengeluaran Terbesar.
-     - Rekomendasi 2 (code "02"): Fokus pada Okupansi & Penjualan Kamar Kosong (atau retensi penyewa jika penuh).
-     - Rekomendasi 3 (code "03"): Fokus pada Operasional, Preventif Maintenance, atau Ketepatan Penagihan WA.
-   - Tentukan priority ("HIGH", "MEDIUM", "LOW") yang proporsional.
+4. "keyHighlights":
+   - Hasilkan 2-3 poin sorotan fakta angka utama (string murni per poin):
+     - Poin 1: Sorotan pos biaya terbesar dan porsi anggarannya.
+     - Poin 2: Sorotan tingkat okupansi dan jumlah unit kosong/terisi.
+     - Poin 3: Sorotan ketepatan penagihan sewa atau mutasi kas penting.
 
 # FORMAT OUTPUT JSON WAJIB (STRICT JSON ONLY)
 {
   "executiveSummary": "string (2-3 kalimat)",
   "financialHealthGrade": "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS",
+  "keyHighlights": [
+    "string poin 1 fakta beban terbesar",
+    "string poin 2 fakta okupansi kamar",
+    "string poin 3 fakta perputaran sewa"
+  ],
   "trendAnalysis": {
     "incomeTrend": "string",
     "expenseTrend": "string",
     "occupancyImpact": "string"
   },
-  "complaintCostImpact": "string",
-  "strategicRecommendations": [
-    {
-      "code": "01",
-      "title": "string",
-      "description": "string",
-      "priority": "HIGH" | "MEDIUM" | "LOW"
-    },
-    {
-      "code": "02",
-      "title": "string",
-      "description": "string",
-      "priority": "HIGH" | "MEDIUM" | "LOW"
-    },
-    {
-      "code": "03",
-      "title": "string",
-      "description": "string",
-      "priority": "HIGH" | "MEDIUM" | "LOW"
-    }
-  ]
+  "complaintCostImpact": "string"
 }
 
 # BATASAN KERAS:

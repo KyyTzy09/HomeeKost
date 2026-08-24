@@ -1,3 +1,4 @@
+export * from "./query-options.ts";
 export * from "./use-dashboard-context.ts";
 export * from "./use-engagement.ts";
 export * from "./use-get-dashboard-data.ts";

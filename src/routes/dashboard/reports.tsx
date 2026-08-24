@@ -21,6 +21,7 @@ import {
 import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import {
 	AutomationSettingsDialog,
+	ExecutiveReportDoc,
 	ReportAiInsightPanel,
 	ReportAnnualMatrixCard,
 	ReportAutomationCard,
@@ -28,6 +29,9 @@ import {
 	ReportRoomExpenseBreakdown,
 } from "../../components/report/index.ts";
 import {
+	annualReportMatrixQueryOptions,
+	monthlyReportQueryOptions,
+	propertiesQueryOptions,
 	useAnnualReportMatrix,
 	useDashboardContext,
 	useExportAnnualReportCsv,
@@ -46,6 +50,22 @@ export const Route = createFileRoute("/dashboard/reports")({
 			},
 		],
 	}),
+	loader: async ({ context }) => {
+		const activePropertyId = context.dashboard?.activeProperty?.id;
+		const now = new Date();
+		const month = now.getMonth() + 1;
+		const year = now.getFullYear();
+
+		await Promise.all([
+			context.queryClient.ensureQueryData(
+				monthlyReportQueryOptions(activePropertyId, month, year),
+			),
+			context.queryClient.ensureQueryData(
+				annualReportMatrixQueryOptions(activePropertyId, year),
+			),
+			context.queryClient.ensureQueryData(propertiesQueryOptions()),
+		]);
+	},
 	component: ReportsPage,
 });
 
@@ -275,7 +295,7 @@ function ReportsPage() {
 			)}
 
 			{/* Page Header */}
-			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
 				<div>
 					<div className="flex items-center gap-2 mb-1">
 						<span className="text-[11px] font-semibold text-[#4f6958] bg-[#eef3ee] px-2.5 py-0.5 rounded-md flex items-center gap-1.5 border border-[#d6dfd7]">
@@ -443,7 +463,7 @@ function ReportsPage() {
 
 			{/* Loading State */}
 			{isMonthlyLoading && (
-				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-3">
+				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-3 print:hidden">
 					<Loader2 className="w-6 h-6 animate-spin text-[#4f6958]" />
 					<p className="text-xs text-[#737873] font-medium">
 						Menghitung data keuangan deterministik & menyusun AI Insight...
@@ -453,7 +473,7 @@ function ReportsPage() {
 
 			{/* Error State */}
 			{isMonthlyError && !isMonthlyLoading && (
-				<div className="p-6 bg-[#fdf4f4] border border-[#f0c3c1] rounded-xl flex items-center gap-3 text-xs text-[#a45149]">
+				<div className="p-6 bg-[#fdf4f4] border border-[#f0c3c1] rounded-xl flex items-center gap-3 text-xs text-[#a45149] print:hidden">
 					<AlertCircle className="w-5 h-5 shrink-0" />
 					<span>
 						Gagal memuat laporan untuk periode {periodLabel}. Silakan coba
@@ -465,54 +485,66 @@ function ReportsPage() {
 			{/* Loaded Report Content */}
 			{monthlyReport && !isMonthlyLoading && (
 				<>
-					{/* 4 Top Stat KPI Cards */}
-					<ReportKpiCards
-						totalIncome={monthlyReport.totalIncome}
-						totalExpense={monthlyReport.totalExpense}
-						netProfit={monthlyReport.netProfit}
-						profitMarginPercentage={monthlyReport.profitMarginPercentage}
-						occupancyRate={monthlyReport.roomStatus.occupancyRate}
-						occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
-						totalRooms={monthlyReport.roomStatus.totalRooms}
-						periodLabel={periodLabel}
-					/>
+					{/* Printable A4 Executive Report Sheet (Visible during window.print()) */}
+					<div className="hidden print:block">
+						<ExecutiveReportDoc
+							report={monthlyReport}
+							activePropertyLogo={activeProperty?.imageUrl}
+							activePropertyAddress={activeProperty?.address}
+						/>
+					</div>
 
-					{/* Executive AI Narrative Insight & Strategic Recommendations */}
-					<ReportAiInsightPanel
-						periodLabel={periodLabel}
-						propertyName={monthlyReport.propertyName}
-						isClosedPeriod={monthlyReport.isClosedPeriod}
-						financialHealthGrade={monthlyReport.financialHealthGrade}
-						narrativeSummary={monthlyReport.narrativeSummary}
-						trendAnalysis={monthlyReport.trendAnalysis}
-						complaintCostImpact={monthlyReport.complaintCostImpact}
-						recommendations={monthlyReport.recommendations}
-						aiProviderUsed={monthlyReport.aiProviderUsed}
-					/>
+					<div className="space-y-6 print:hidden">
+						{/* 4 Top Stat KPI Cards */}
+						<ReportKpiCards
+							totalIncome={monthlyReport.totalIncome}
+							totalExpense={monthlyReport.totalExpense}
+							netProfit={monthlyReport.netProfit}
+							profitMarginPercentage={monthlyReport.profitMarginPercentage}
+							occupancyRate={monthlyReport.roomStatus.occupancyRate}
+							occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
+							totalRooms={monthlyReport.roomStatus.totalRooms}
+							periodLabel={periodLabel}
+						/>
 
-					{/* Room Status & Expense Breakdown */}
-					<ReportRoomExpenseBreakdown
-						propertyName={monthlyReport.propertyName}
-						roomStatus={monthlyReport.roomStatus}
-						expenses={monthlyReport.expenseBreakdown}
-					/>
+						{/* Executive AI Narrative Insight & Strategic Recommendations */}
+						<ReportAiInsightPanel
+							periodLabel={periodLabel}
+							propertyName={monthlyReport.propertyName}
+							isClosedPeriod={monthlyReport.isClosedPeriod}
+							financialHealthGrade={monthlyReport.financialHealthGrade}
+							narrativeSummary={monthlyReport.narrativeSummary}
+							keyHighlights={monthlyReport.keyHighlights}
+							trendAnalysis={monthlyReport.trendAnalysis}
+							complaintCostImpact={monthlyReport.complaintCostImpact}
+							recommendations={monthlyReport.recommendations}
+							aiProviderUsed={monthlyReport.aiProviderUsed}
+						/>
 
-					{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
-					<ReportAnnualMatrixCard
-						data={annualMatrix}
-						isLoading={isAnnualLoading}
-						onExportExcel={handleExportAnnualExcel}
-						isExportingExcel={isExportingExcel}
-						onExportCsv={handleExportAnnualCsv}
-						isExporting={exportCsvMutation.isPending}
-					/>
+						{/* Room Status & Expense Breakdown */}
+						<ReportRoomExpenseBreakdown
+							propertyName={monthlyReport.propertyName}
+							roomStatus={monthlyReport.roomStatus}
+							expenses={monthlyReport.expenseBreakdown}
+						/>
 
-					{/* Automasi Laporan Bulanan Card */}
-					<ReportAutomationCard
-						scheduleDay={automationSettings.scheduleDay}
-						aiModel={automationSettings.aiModel}
-						onOpenSettings={() => setIsSettingsOpen(true)}
-					/>
+						{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
+						<ReportAnnualMatrixCard
+							data={annualMatrix}
+							isLoading={isAnnualLoading}
+							onExportExcel={handleExportAnnualExcel}
+							isExportingExcel={isExportingExcel}
+							onExportCsv={handleExportAnnualCsv}
+							isExporting={exportCsvMutation.isPending}
+						/>
+
+						{/* Automasi Laporan Bulanan Card */}
+						<ReportAutomationCard
+							scheduleDay={automationSettings.scheduleDay}
+							aiModel={automationSettings.aiModel}
+							onOpenSettings={() => setIsSettingsOpen(true)}
+						/>
+					</div>
 				</>
 			)}
 
