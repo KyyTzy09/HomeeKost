@@ -64,7 +64,7 @@ export function ExecutiveReportDoc({
 	return (
 		<div
 			id="printable-executive-report"
-			className="bg-white border border-[#d8e2da] rounded-xl p-8 max-w-[840px] mx-auto text-[#252925] shadow-xs print:border-0 print:shadow-none print:p-0 print:max-w-none"
+			className="bg-white border border-[#d8e2da] rounded-xl p-8 max-w-[840px] mx-auto text-[#252925] shadow-xs print:border print:border-[#d8e2da] print:shadow-none print:max-w-none print:w-full print:m-0"
 		>
 			{/* 1. KOP SURAT RESMI */}
 			<div className="flex items-center justify-between pb-6 border-b-2 border-[#4f6958] gap-4">

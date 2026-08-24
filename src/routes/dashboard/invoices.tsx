@@ -195,7 +195,7 @@ function InvoicesPage() {
 			</div>
 
 			{/* Invoice Preview Split View */}
-			<div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 items-start">
+			<div className="invoice-split-container grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 items-start">
 				{/* Left Column: List of Invoices & Search Filters */}
 				<Card
 					className={`bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] overflow-hidden print:hidden ${
@@ -331,7 +331,9 @@ function InvoicesPage() {
 
 				{/* Right Column: Live Document Preview */}
 				<div
-					className={`w-full ${mobileTab === "preview" ? "block" : "hidden lg:block"}`}
+					className={`w-full invoice-preview-wrapper print:block ${
+						mobileTab === "preview" ? "block" : "hidden lg:block"
+					}`}
 				>
 					<InvoiceDocPreview
 						invoice={selectedInvoice}

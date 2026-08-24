@@ -1099,39 +1099,81 @@ td {
 
 /* ─── Official Printable PDF Invoice & Executive Report Styles ─── */
 @media print {
+	@page {
+		size: A4 portrait;
+		margin: 0;
+	}
+
+	*,
+	*::before,
+	*::after {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	html,
 	body {
 		background: #ffffff !important;
 		color: #000000 !important;
-	}
-	.sidebar,
-	.topbar,
-	header,
-	nav,
-	aside,
-	button,
-	.btn,
-	.print\:hidden {
-		display: none !important;
-	}
-	.main {
 		margin: 0 !important;
 		padding: 0 !important;
 		width: 100% !important;
+		height: auto !important;
+		min-height: 0 !important;
 	}
+
+	/* Sembunyikan elemen shell navigasi, tombol, dan elemen yang ditandai print:hidden */
+	.sidebar,
+	.topbar,
+	.print\:hidden,
+	[data-print-hide="true"] {
+		display: none !important;
+	}
+
+	.app,
+	.main,
 	.content {
-		padding: 0 !important;
+		display: block !important;
 		margin: 0 !important;
+		padding: 0 !important;
+		width: 100% !important;
 		max-width: 100% !important;
+		min-height: 0 !important;
 	}
+
+	.invoice-split-container {
+		display: block !important;
+		width: 100% !important;
+	}
+
+	.invoice-preview-wrapper {
+		display: block !important;
+		width: 100% !important;
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
 	#printable-invoice-sheet,
 	#printable-executive-report {
 		display: block !important;
 		border: 1px solid #d4ded6 !important;
+		border-radius: 12px !important;
 		box-shadow: none !important;
-		padding: 24px !important;
-		width: 100% !important;
-		max-width: 100% !important;
+		padding: 10mm 12mm !important;
+		margin: 8mm auto !important;
+		width: calc(100% - 16mm) !important;
+		max-width: calc(100% - 16mm) !important;
+		background: #ffffff !important;
 		page-break-inside: avoid;
+		break-inside: avoid;
+		box-sizing: border-box !important;
+	}
+
+	#printable-invoice-sheet header,
+	#printable-invoice-sheet footer,
+	#printable-executive-report header,
+	#printable-executive-report footer {
+		display: flex !important;
 	}
 }
 
