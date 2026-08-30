@@ -113,7 +113,7 @@ export function TenantTable({
 								onClick={() => onDelete(tenant)}
 								className="text-[10.5px] font-semibold text-[#b66b68] hover:underline cursor-pointer bg-transparent border-0 p-0"
 							>
-								Hapus
+								Check-Out
 							</button>
 						</div>
 					);

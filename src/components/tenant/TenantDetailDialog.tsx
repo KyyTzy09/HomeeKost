@@ -190,6 +190,40 @@ export function TenantDetailDialog({
 						</div>
 					</div>
 
+					{/* Section: Foto Dokumen KTP */}
+					{tenant.ktpUrl && (
+						<div>
+							<h4 className="text-[11.5px] font-bold text-[#24342b] uppercase tracking-wider mb-2">
+								Dokumen KTP Terlampir
+							</h4>
+							<div className="bg-[#fcfdfc] border border-[#e7ece7] rounded-[12px] p-3 flex flex-col sm:flex-row items-center gap-3">
+								<div className="w-full sm:w-[140px] aspect-[16/10] rounded-[8px] overflow-hidden border border-[#d8e4da] bg-black/5 shrink-0">
+									<img
+										src={tenant.ktpUrl}
+										alt={`KTP ${tenant.name}`}
+										className="w-full h-full object-cover"
+									/>
+								</div>
+								<div className="text-[11px] text-[#55695a] space-y-1">
+									<strong className="text-[#252925] block">
+										Foto KTP Penghuni
+									</strong>
+									<p className="text-[10px] text-[#737873] m-0">
+										Arsip foto kartu identitas tersimpan aman dan terenkripsi.
+									</p>
+									<a
+										href={tenant.ktpUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="inline-block text-[10.5px] font-bold text-[#4f6958] hover:underline pt-1"
+									>
+										🔍 Lihat Ukuran Penuh
+									</a>
+								</div>
+							</div>
+						</div>
+					)}
+
 					{/* Section 3: Kontak Darurat */}
 					<div>
 						<h4 className="text-[11.5px] font-bold text-[#24342b] uppercase tracking-wider mb-2">
@@ -228,7 +262,7 @@ export function TenantDetailDialog({
 						className="h-[38px] px-3.5 rounded-[9px] border-[#efd4d0] bg-[#fff5f3] text-[#a45149] hover:bg-[#faeae8] text-[12px] font-semibold flex items-center gap-1.5"
 					>
 						<Trash2 className="w-3.5 h-3.5" />
-						Hapus Data
+						Check-Out Penghuni
 					</Button>
 
 					<Button

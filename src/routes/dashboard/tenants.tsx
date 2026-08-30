@@ -201,7 +201,9 @@ function TenantsPage() {
 			},
 			{
 				onSuccess: () => {
-					showToast(`Penghuni "${deletingTenant.name}" telah dikeluarkan`);
+					showToast(
+						`Penghuni "${deletingTenant.name}" berhasil di-checkout. Kamar ${deletingTenant.roomNo} telah kembali kosong.`,
+					);
 					setDeletingTenant(null);
 					setSelectedDetailTenant(null);
 				},
@@ -209,7 +211,7 @@ function TenantsPage() {
 					showError(
 						err instanceof Error
 							? err.message
-							: "Gagal menghapus data penghuni",
+							: "Gagal memproses check-out penghuni",
 					);
 				},
 			},
