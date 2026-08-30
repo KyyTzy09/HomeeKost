@@ -6,7 +6,6 @@ import {
 	History,
 	Loader2,
 	Search,
-	Sparkles,
 	UploadCloud,
 	UserCheck,
 	X,
