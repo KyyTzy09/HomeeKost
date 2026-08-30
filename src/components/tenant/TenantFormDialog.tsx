@@ -1,5 +1,16 @@
 import { useForm } from "@tanstack/react-form";
-import { Check, ChevronsUpDown, Search, UserCheck } from "lucide-react";
+import {
+	Check,
+	CheckCircle2,
+	ChevronsUpDown,
+	History,
+	Loader2,
+	Search,
+	Sparkles,
+	UploadCloud,
+	UserCheck,
+	X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
@@ -21,6 +32,7 @@ import {
 	type TenantFormValues,
 	tenantSchema,
 } from "../../common/validations/index.ts";
+import { useScanKtp } from "../../hooks/use-tenants.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import {
 	calculateDueDate,
@@ -129,6 +141,18 @@ export function TenantFormDialog({
 	const [isComboboxOpen, setIsComboboxOpen] = useState(false);
 	const comboboxRef = useRef<HTMLDivElement>(null);
 
+	// KTP Upload & AI OCR states
+	const [ktpPreview, setKtpPreview] = useState<string | null>(
+		editingTenant?.ktpUrl || null,
+	);
+	const [ktpFileName, setKtpFileName] = useState<string>("");
+	const [scanStatus, setScanStatus] = useState<
+		"idle" | "scanning" | "success" | "error"
+	>("idle");
+	const [scanFeedback, setScanFeedback] = useState<string>("");
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const scanKtpMutation = useScanKtp();
+
 	const initialStartDate =
 		toInputDateFormat(editingTenant?.startDate) || todayStr;
 	const initialDuration = (editingTenant?.duration ??
@@ -167,6 +191,8 @@ export function TenantFormDialog({
 			registrationDate:
 				toInputDateFormat(editingTenant?.registrationDate) || todayStr,
 			notes: editingTenant?.notes ?? "",
+			ktpUrl: editingTenant?.ktpUrl ?? "",
+			markPastPeriodsPaid: true,
 			agreement: true,
 		},
 		validators: {
@@ -233,9 +259,9 @@ export function TenantFormDialog({
 				form.setFieldValue(
 					"rent",
 					editingTenant.rent ||
-						(roomOptions[0]
-							? formatRupiah(roomOptions[0].monthlyPrice)
-							: "Rp850.000"),
+					(roomOptions[0]
+						? formatRupiah(roomOptions[0].monthlyPrice)
+						: "Rp850.000"),
 				);
 				form.setFieldValue("duration", duration);
 				form.setFieldValue("startDate", startDate);
@@ -256,7 +282,13 @@ export function TenantFormDialog({
 					toInputDateFormat(editingTenant.registrationDate) || todayStr,
 				);
 				form.setFieldValue("notes", editingTenant.notes || "");
+				form.setFieldValue("ktpUrl", editingTenant.ktpUrl || "");
+				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
+				setKtpPreview(editingTenant.ktpUrl || null);
+				setKtpFileName("");
+				setScanStatus("idle");
+				setScanFeedback("");
 			} else {
 				form.reset();
 				const defaultRoom = roomOptions[0];
@@ -285,10 +317,88 @@ export function TenantFormDialog({
 				form.setFieldValue("emergencyPhone", "");
 				form.setFieldValue("registrationDate", todayStr);
 				form.setFieldValue("notes", "");
+				form.setFieldValue("ktpUrl", "");
+				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
+				setKtpPreview(null);
+				setKtpFileName("");
+				setScanStatus("idle");
+				setScanFeedback("");
 			}
 		}
 	}, [open, editingTenant, roomOptions, todayStr, form]);
+
+	const handleKtpFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		if (!file.type.startsWith("image/")) {
+			setScanStatus("error");
+			setScanFeedback("File harus berupa format gambar (JPG, PNG, WebP).");
+			return;
+		}
+
+		setKtpFileName(file.name);
+		const reader = new FileReader();
+		reader.onload = async () => {
+			const base64 = reader.result as string;
+			setKtpPreview(base64);
+			form.setFieldValue("ktpUrl", base64);
+
+			// Call Gemini Multimodal OCR
+			setScanStatus("scanning");
+			setScanFeedback(
+				"Sedang menganalisis foto KTP",
+			);
+			try {
+				const res = await scanKtpMutation.mutateAsync({ imageBase64: base64 });
+				if (res.success && res.data) {
+					if (res.data.nik) form.setFieldValue("nik", res.data.nik);
+					if (res.data.name) form.setFieldValue("name", res.data.name);
+					if (res.data.birthDate)
+						form.setFieldValue(
+							"birthDate",
+							toInputDateFormat(res.data.birthDate),
+						);
+					if (res.data.originAddress)
+						form.setFieldValue("originAddress", res.data.originAddress);
+					if (res.data.occupation)
+						form.setFieldValue("occupationStatus", res.data.occupation);
+					if (res.data.institution)
+						form.setFieldValue("institution", res.data.institution);
+					if (res.ktpUrl) form.setFieldValue("ktpUrl", res.ktpUrl);
+
+					setScanStatus("success");
+					setScanFeedback(
+						"Foto KTP berhasil dianalisis! Data NIK, Nama, dan Tanggal Lahir telah terisi otomatis.",
+					);
+				} else {
+					setScanStatus("error");
+					setScanFeedback(
+						res.error ||
+						"Tidak dapat membaca KTP dengan jelas. Silakan periksa atau isi formulir secara manual.",
+					);
+				}
+			} catch {
+				setScanStatus("error");
+				setScanFeedback(
+					"Deteksi KTP tidak tersedia, silakan isi data identitas secara manual.",
+				);
+			}
+		};
+		reader.readAsDataURL(file);
+	};
+
+	const handleClearKtp = () => {
+		setKtpPreview(null);
+		setKtpFileName("");
+		setScanStatus("idle");
+		setScanFeedback("");
+		form.setFieldValue("ktpUrl", "");
+		if (fileInputRef.current) {
+			fileInputRef.current.value = "";
+		}
+	};
 
 	// Close combobox when clicking outside
 	useEffect(() => {
@@ -337,7 +447,7 @@ export function TenantFormDialog({
 		const basePrice = matchedRoom
 			? matchedRoom.monthlyPrice
 			: parseRupiah(form.getFieldValue("rent")) /
-				getDurationMonths(form.getFieldValue("duration"));
+			getDurationMonths(form.getFieldValue("duration"));
 
 		const months = getDurationMonths(newDuration);
 		const newTotalRent = (basePrice || 850000) * months;
@@ -402,6 +512,100 @@ export function TenantFormDialog({
 					}}
 					className="space-y-5"
 				>
+					{/* TOP SECTION: Upload & Scan KTP dengan Asisten AI */}
+					<div className="bg-gradient-to-br from-[#f8faf8] to-[#edf4ee] border border-[#d8e4da] rounded-[16px] p-4 mb-2">
+						<div className="flex items-center justify-between gap-3 mb-2.5">
+							<div className="flex items-center gap-2">
+								<div>
+									<h4 className="text-[12px] font-bold text-[#24342b] m-0">
+										Upload Foto KTP
+									</h4>
+								</div>
+							</div>
+							{ktpPreview && (
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={handleClearKtp}
+									className="h-7 px-2 text-[10px] text-[#b66b68] hover:bg-[#faeae8]"
+								>
+									<X className="w-3 h-3 mr-1" />
+									Hapus Foto
+								</Button>
+							)}
+						</div>
+
+						<div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+							{/* Upload Dropzone / Button */}
+							<div className={ktpPreview ? "sm:col-span-8" : "sm:col-span-12"}>
+								<input
+									type="file"
+									ref={fileInputRef}
+									onChange={handleKtpFileChange}
+									accept="image/*"
+									className="hidden"
+								/>
+								<div
+									onClick={() => fileInputRef.current?.click()}
+									className="border-2 border-dashed border-[#b8cbbd] hover:border-[#4f6958] bg-white/80 hover:bg-white rounded-[12px] p-3 text-center cursor-pointer transition-all flex flex-col sm:flex-row items-center justify-center gap-2.5"
+								>
+									<div className="w-8 h-8 rounded-full bg-[#edf4ee] text-[#4f6958] flex items-center justify-center shrink-0">
+										<UploadCloud className="w-4 h-4" />
+									</div>
+									<div className="text-left">
+										<p className="text-[11.5px] font-bold text-[#2d3e33] line-clamp-2">
+											{ktpFileName ||
+												(ktpPreview
+													? "Ganti foto KTP"
+													: "Pilih foto KTP")}
+										</p>
+										<span className="text-[10px] text-[#78857b]">
+											Format JPG, PNG, atau WebP (Maks 5MB)
+										</span>
+									</div>
+								</div>
+							</div>
+
+							{/* KTP Thumbnail Preview */}
+							{ktpPreview && (
+								<div className="sm:col-span-4 relative group rounded-[10px] overflow-hidden border border-[#cfdfd1] bg-black/5 aspect-[16/10] max-h-[80px] flex items-center justify-center">
+									<img
+										src={ktpPreview}
+										alt="Foto KTP"
+										className="w-full h-full object-cover"
+									/>
+									<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+										<span className="text-white text-[10px] font-medium bg-black/60 px-2 py-0.5 rounded">
+											KTP Terlampir
+										</span>
+									</div>
+								</div>
+							)}
+						</div>
+
+						{/* Scan Feedback status */}
+						{scanFeedback && (
+							<div
+								className={`mt-2.5 p-2 rounded-[8px] text-[10.5px] flex items-start gap-1.5 font-medium ${scanStatus === "success"
+									? "bg-[#eaf4ec] text-[#346641] border border-[#c4e2cb]"
+									: scanStatus === "error"
+										? "bg-[#fdf0ee] text-[#b66b68] border border-[#f5cfcc]"
+										: "bg-[#edf4ee] text-[#4f6958] border border-[#d6e4d9]"
+									}`}
+							>
+								{scanStatus === "success" ? (
+									<CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+								) : scanStatus === "error" ? (
+									<X className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+								) : (
+									<Loader2 className="w-3.5 h-3.5 shrink-0 mt-0.5 animate-spin" />
+								)}
+								<span>{scanFeedback}</span>
+							</div>
+						)}
+					</div>
+
 					{/* Section A: Informasi Pribadi */}
 					<div className="border-t border-[#edf1ed] pt-3">
 						<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
@@ -431,11 +635,10 @@ export function TenantFormDialog({
 												value={field.state.value}
 												onChange={(e) => field.handleChange(e.target.value)}
 												placeholder="Nama lengkap penghuni"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -471,11 +674,10 @@ export function TenantFormDialog({
 												max={todayStr}
 												value={field.state.value}
 												onChange={(e) => field.handleChange(e.target.value)}
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -505,7 +707,7 @@ export function TenantFormDialog({
 									return (
 										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
-												Nomor Induk Kependudukan (NIK){" "}
+												Nomor Induk Kependudukan
 												<span className="text-[#b66b68]">*</span>
 											</Label>
 											<Input
@@ -518,12 +720,11 @@ export function TenantFormDialog({
 													);
 													field.handleChange(digitsOnly);
 												}}
-												placeholder="Contoh: 3201011234567890 (16 digit)"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
+												placeholder="Contoh: 3201011234567890"
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 											/>
 											<span className="text-[9.5px] text-[#737873] block">
 												{field.state.value.length}/16 digit
@@ -569,11 +770,10 @@ export function TenantFormDialog({
 													field.handleChange(cleaned);
 												}}
 												placeholder="08xxxxxxxxxx"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -627,11 +827,10 @@ export function TenantFormDialog({
 												value={field.state.value}
 												onChange={(e) => field.handleChange(e.target.value)}
 												placeholder="nama@email.com"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -739,11 +938,10 @@ export function TenantFormDialog({
 												<button
 													type="button"
 													onClick={() => setIsComboboxOpen((prev) => !prev)}
-													className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${
-														hasError
-															? "border-[#b66b68]"
-															: "border-[#dfe7e0] hover:border-[#8fa594]"
-													}`}
+													className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${hasError
+														? "border-[#b66b68]"
+														: "border-[#dfe7e0] hover:border-[#8fa594]"
+														}`}
 												>
 													<span>
 														{field.state.value ? (
@@ -792,11 +990,10 @@ export function TenantFormDialog({
 																			key={room.roomNo}
 																			type="button"
 																			onClick={() => handleSelectRoom(room)}
-																			className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${
-																				isSelected
-																					? "bg-[#edf4ee] text-[#3e5646] font-bold"
-																					: "hover:bg-[#f6faf6] text-[#37443c]"
-																			}`}
+																			className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${isSelected
+																				? "bg-[#edf4ee] text-[#3e5646] font-bold"
+																				: "hover:bg-[#f6faf6] text-[#37443c]"
+																				}`}
 																		>
 																			<div className="flex items-center gap-2">
 																				<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
@@ -886,12 +1083,8 @@ export function TenantFormDialog({
 											<div className="space-y-1">
 												<div className="flex items-center justify-between">
 													<Label className="text-[11px] font-bold text-[#506257]">
-														Harga Total Sewa{" "}
-														<span className="text-[#b66b68]">*</span>
+														Harga Total Sewa
 													</Label>
-													<span className="text-[9.5px] text-[#55705d] font-semibold">
-														Otomatis terhitung
-													</span>
 												</div>
 												<Input
 													value={field.state.value}
@@ -906,11 +1099,10 @@ export function TenantFormDialog({
 														);
 													}}
 													placeholder="Rp850.000"
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${
-														hasError
-															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+														}`}
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -935,8 +1127,7 @@ export function TenantFormDialog({
 										return (
 											<div className="space-y-1">
 												<Label className="text-[11px] font-bold text-[#506257]">
-													Tanggal Mulai Sewa{" "}
-													<span className="text-[#b66b68]">*</span>
+													Tanggal Mulai Sewa
 												</Label>
 												<Input
 													type="date"
@@ -944,11 +1135,10 @@ export function TenantFormDialog({
 													onChange={(e) =>
 														handleChangeStartDate(e.target.value)
 													}
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-														hasError
-															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+														}`}
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -959,6 +1149,52 @@ export function TenantFormDialog({
 										);
 									}}
 								</form.Field>
+
+								{/* Smart Multi-Period Historical Settlement Banner */}
+								<form.Subscribe selector={(state) => state.values.startDate}>
+									{(startDateValue) => {
+										const isPast = Boolean(
+											startDateValue &&
+											new Date(startDateValue) < new Date(todayStr),
+										);
+										if (!isPast) return null;
+
+										return (
+											<div className="col-span-1 sm:col-span-2 bg-[#f4f8f4] border border-[#cfdfd1] rounded-[12px] p-3 text-[11.5px] space-y-2 mt-1">
+												<div className="flex items-center gap-2 text-[#314a38] font-bold">
+													<History className="w-4 h-4 text-[#4f6958]" />
+													<span>
+														Deteksi Migrasi Data Lampau (Mulai: {startDateValue}
+														)
+													</span>
+												</div>
+												<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
+													Tanggal mulai sewa berada di masa lalu. Sistem dapat
+													otomatis mencatat seluruh periode sewa lampau yang
+													telah berjalan sejak tanggal tersebut sebagai{" "}
+													<strong>LUNAS (PAID)</strong> dalam 1 kali simpan.
+												</p>
+												<form.Field name="markPastPeriodsPaid">
+													{(pastField) => (
+														<label className="flex items-center gap-2 cursor-pointer pt-1 font-semibold text-[#273a2d]">
+															<input
+																type="checkbox"
+																checked={Boolean(pastField.state.value)}
+																onChange={(e) =>
+																	pastField.handleChange(e.target.checked)
+																}
+																className="w-4 h-4 accent-[#4f6958] rounded"
+															/>
+															<span>
+																Tandai semua periode sewa sebagai LUNAS
+															</span>
+														</label>
+													)}
+												</form.Field>
+											</div>
+										);
+									}}
+								</form.Subscribe>
 
 								{/* Tanggal Jatuh Tempo (Input Date, Auto-calculated) */}
 								<form.Field
@@ -975,21 +1211,16 @@ export function TenantFormDialog({
 												<div className="flex items-center justify-between">
 													<Label className="text-[11px] font-bold text-[#506257]">
 														Tanggal Jatuh Tempo{" "}
-														<span className="text-[#b66b68]">*</span>
 													</Label>
-													<span className="text-[9.5px] text-[#55705d] font-semibold">
-														Otomatis +periode sewa
-													</span>
 												</div>
 												<Input
 													type="date"
 													value={field.state.value}
 													onChange={(e) => field.handleChange(e.target.value)}
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-														hasError
-															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+														}`}
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1160,11 +1391,10 @@ export function TenantFormDialog({
 													type="date"
 													value={field.state.value}
 													onChange={(e) => field.handleChange(e.target.value)}
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-														hasError
-															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+														}`}
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">

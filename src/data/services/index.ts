@@ -3,6 +3,7 @@ export * from "./cashflow.service.ts";
 export * from "./dashboard.service.ts";
 export * from "./engagement.service.ts";
 export * from "./fonnte.service.ts";
+export * from "./ktp-ocr.service.ts";
 export * from "./payment.service.ts";
 export * from "./property.service.ts";
 export * from "./property-session.service.ts";

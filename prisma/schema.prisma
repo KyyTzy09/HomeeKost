@@ -277,6 +277,7 @@ model Tenant {
   vehicle            String?
   deposit            Decimal?         @default(0) @db.Decimal(12, 2)
   notes              String?          @db.Text
+  ktpUrl             String?          @db.Text
   status             TenantStatus     @default(ACTIVE)
   rentalContracts    RentalContract[]
   createdAt          DateTime         @default(now())

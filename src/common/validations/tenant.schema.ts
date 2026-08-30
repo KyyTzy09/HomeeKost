@@ -51,6 +51,8 @@ export const tenantSchema = z.object({
 		.or(z.literal("")),
 	registrationDate: z.string().min(1, "Tanggal pendaftaran wajib diisi"),
 	notes: z.string().optional(),
+	ktpUrl: z.string().optional().nullable(),
+	markPastPeriodsPaid: z.boolean().optional(),
 	agreement: z.boolean().refine((val) => val === true, {
 		message: "Persetujuan formulir wajib dicentang",
 	}),

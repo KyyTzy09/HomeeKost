@@ -155,18 +155,23 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ### 4.2 Manajemen Penyewa & Kontrak Sewa (Tenant Management — Screen `#tenants`)
 - [x] 🔴 Repository & Service `src/data/repositories/tenant.repository.ts` & `src/data/services/tenant.service.ts`:
-  - CRUD Penyewa & Kontrak Sewa
+  - CRUD Penyewa & Kontrak Sewa dengan penyimpanan foto arsip KTP (`ktpUrl`)
   - Logic sanitasi nomor WhatsApp (`sanitizePhone` format canonical `628xxx` & UI display `08xxx`)
   - Relasi penyewa ke kamar & siklus pembayaran (`MONTHLY`, `QUARTERLY`, `SEMI_ANNUAL`, `ANNUALLY`)
-  - Auto-update status kamar menjadi `OCCUPIED` saat kontrak aktif, dan kembali ke `VACANT` saat keluar
+  - Auto-update status kamar menjadi `OCCUPIED` saat kontrak aktif, dan kembali ke `VACANT` saat check-out/selesai sewa
+  - **Smart Historical Multi-Period Settlement (1-Click)**: Otomasi kalkulasi dan penerbitan invoice periode lampau berstatus `PAID` untuk kemudahan migrasi data lama tanpa ribet
+  - **Asisten AI Vision OCR KTP (`ktp-ocr.service.ts`)**: Ekstraksi identitas NIK 16 digit, Nama Lengkap, Tanggal Lahir, dan Alamat Asal berbasis Google Gemini Multimodal Vision dengan arsitektur anti-crash (*safe error fallback*)
 - [x] 🔴 Halaman `src/routes/dashboard/tenants.tsx`:
-  - Tabel Data Penyewa: Nama, Kamar Disewa, Status Pekerjaan (Mahasiswa/Karyawan), Nomor WhatsApp, NIK, Tanggal Lahir, Jatuh Tempo, Status Pembayaran (Lancar/Terlambat)
+  - Tabel Data Penyewa: Nama, Kamar Disewa, Status Pekerjaan (Mahasiswa/Karyawan), Nomor WhatsApp, NIK, Tanggal Lahir, Jatuh Tempo, Status Pembayaran (Lancar/Terlambat), dan tombol aksi **"Check-Out"**
   - Search & Filtering berdasarkan status dan pencarian instan
-  - Server Functions (`tenant.fn.ts`) & TanStack Query Hooks (`useTenants`, `useCreateTenant`, `useUpdateTenant`, `useDeleteTenant`)
+  - Server Functions (`tenant.fn.ts`), `scanKtpServerFn`, & TanStack Query Hooks (`useTenants`, `useCreateTenant`, `useUpdateTenant`, `useDeleteTenant`, `useScanKtp`)
 - [x] 🔴 Modal Form Tambah / Edit Penyewa (`TenantFormDialog`):
-  - Input: Nama Lengkap, Nomor KTP (NIK), Tanggal Lahir (datepicker untuk Birthday Reminder), Nomor WhatsApp aktif, Email, Alamat Asal, Pekerjaan, Pilihan Kamar (Dynamic Combobox dari `useRooms`), Siklus Pembayaran, Tanggal Mulai Sewa, Tanggal Jatuh Tempo
-- [x] 🔴 Modal Detail Penyewa (`TenantDetailDialog`):
-  - Profil lengkap, kontak WA dengan link langsung, NIK, riwayat pembayaran & invoice, status kontrak
+  - Area Upload & AI Vision Scan KTP di **bagian paling atas form**
+  - Banner Deteksi Migrasi Data Lampau & Checkbox *"Tandai semua periode lampau sebagai LUNAS"*
+  - Input: Nama Lengkap, Nomor KTP (NIK), Tanggal Lahir, Nomor WhatsApp aktif, Email, Alamat Asal, Pekerjaan, Pilihan Kamar, Siklus Pembayaran, Tanggal Mulai Sewa, Tanggal Jatuh Tempo
+- [x] 🔴 Modal Detail Penyewa (`TenantDetailDialog`) & Dialog Check-Out (`TenantDeleteDialog`):
+  - Profil lengkap, kartu pratinjau dokumen foto KTP, kontak WA, NIK, riwayat pembayaran & invoice, status kontrak
+  - Dialog konfirmasi Check-Out / Selesai Sewa informatif (Kamar kembali `VACANT`, seluruh arsip transaksi kas & invoice tetap tersimpan aman di database)
 
 ---
 

@@ -6,7 +6,12 @@ import {
 	tenantSchema,
 } from "../../common/validations/index.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
-import { tenantService } from "../services/tenant.service.ts";
+import {
+	type KtpExtractedData,
+	ktpOcrService,
+	storageService,
+	tenantService,
+} from "../services/index.ts";
 
 export const getTenantsServerFn = createServerFn({
 	method: "GET",
@@ -121,6 +126,59 @@ export const deleteTenantServerFn = createServerFn({
 				{
 					method: "POST",
 					summary: () => `Sukses dihapus: ${id}`,
+				},
+			);
+		},
+	);
+
+export const scanKtpServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: { imageBase64: string }) => {
+		return z
+			.object({
+				imageBase64: z.string().min(1, "Data gambar KTP diperlukan"),
+			})
+			.parse(input);
+	})
+	.handler(
+		async ({
+			data: { imageBase64 },
+		}): Promise<{
+			success: boolean;
+			ktpUrl?: string;
+			data?: KtpExtractedData;
+			error?: string;
+		}> => {
+			return executeWithLogging(
+				"scanKtpServerFn",
+				{ hasImage: Boolean(imageBase64) },
+				async () => {
+					let ktpUrl = "";
+					try {
+						const uploadRes = await storageService.uploadImage(imageBase64, {
+							folder: "homeekost/ktp",
+						});
+						ktpUrl = uploadRes.url;
+					} catch (uploadErr) {
+						console.warn("[scanKtpServerFn] Gagal simpan file KTP:", uploadErr);
+					}
+
+					const ocrResult = await ktpOcrService.processKtpImage(imageBase64);
+
+					return {
+						success: ocrResult.success,
+						ktpUrl: ktpUrl || imageBase64,
+						data: ocrResult.data,
+						error: ocrResult.error,
+					};
+				},
+				{
+					method: "POST",
+					summary: (res) =>
+						res.success
+							? `KTP berhasil dipindai: ${res.data?.name || "OK"}`
+							: `KTP scan fallback: ${res.error || "Gagal"}`,
 				},
 			);
 		},

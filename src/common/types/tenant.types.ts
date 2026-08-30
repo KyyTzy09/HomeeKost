@@ -26,6 +26,7 @@ export interface TenantItem {
 	emergencyPhone?: string | null;
 	registrationDate: string;
 	notes?: string | null;
+	ktpUrl?: string | null;
 	paymentStatus: TenantPaymentStatus;
 	contractId?: string;
 	roomId?: string;

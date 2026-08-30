@@ -10,6 +10,7 @@ import type { TenantFormValues } from "../common/validations/index.ts";
 import {
 	createTenantServerFn,
 	deleteTenantServerFn,
+	scanKtpServerFn,
 	updateTenantServerFn,
 } from "../data/servers/index.ts";
 
@@ -110,5 +111,28 @@ export function useDeleteTenant(): UseMutationResult<
 			}
 			queryClient.invalidateQueries({ queryKey: ["properties"] });
 		},
+	});
+}
+
+export function useScanKtp(): UseMutationResult<
+	{
+		success: boolean;
+		ktpUrl?: string;
+		data?: {
+			nik: string;
+			name: string;
+			birthDate: string;
+			originAddress: string;
+			occupation: "Mahasiswa" | "Karyawan" | "Lainnya";
+			institution: string;
+		};
+		error?: string;
+	},
+	Error,
+	{ imageBase64: string }
+> {
+	return useMutation({
+		mutationFn: (variables: { imageBase64: string }) =>
+			scanKtpServerFn({ data: variables }),
 	});
 }
