@@ -854,7 +854,7 @@ export class DashboardService {
 			});
 
 			for (const r of rooms) {
-				const roomPrice = Number(r.monthlyPrice || r.price || 0);
+				const roomPrice = Number(r.price || 0);
 				results.push({
 					id: `room-${r.id}`,
 					title: `Kamar ${r.roomNumber}`,

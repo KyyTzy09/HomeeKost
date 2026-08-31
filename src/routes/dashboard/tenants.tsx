@@ -6,7 +6,6 @@ import {
 	Loader2,
 	Plus,
 	Search,
-	UserPlus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
@@ -87,7 +86,7 @@ function TenantsPage() {
 				| "Standard"
 				| "Deluxe"
 				| "Suite",
-			monthlyPrice: parseRupiah(r.price),
+			price: parseRupiah(r.price),
 		}));
 	}, [rooms, editingTenant]);
 
@@ -251,15 +250,6 @@ function TenantsPage() {
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={handleOpenAdd}
-						className="h-9 px-3.5 rounded-lg border-[#e4e9e4] bg-white text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-					>
-						<UserPlus className="w-3.5 h-3.5 text-[#506257]" />
-						Formulir Pendaftaran
-					</Button>
 					<Button
 						type="button"
 						onClick={handleOpenAdd}

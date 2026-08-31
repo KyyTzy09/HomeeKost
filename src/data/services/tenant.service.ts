@@ -7,6 +7,7 @@ import type {
 } from "../../common/types/index.ts";
 import type { TenantFormValues } from "../../common/validations/index.ts";
 import type { BillingCycle } from "../../generated/prisma/client.js";
+import { getMonthName } from "../../lib/date-utils.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import { formatDisplayPhone, sanitizePhone } from "../../lib/phone-utils.ts";
 import { roomRepository } from "../repositories/room.repository.ts";
@@ -45,6 +46,21 @@ export class TenantService {
 				return "ANNUALLY";
 			default:
 				return "MONTHLY";
+		}
+	}
+
+	private getCycleMonths(cycle?: BillingCycle | null): number {
+		switch (cycle) {
+			case "MONTHLY":
+				return 1;
+			case "QUARTERLY":
+				return 3;
+			case "SEMI_ANNUAL":
+				return 6;
+			case "ANNUALLY":
+				return 12;
+			default:
+				return 1;
 		}
 	}
 
@@ -127,7 +143,19 @@ export class TenantService {
 			}
 
 			const phoneCanonical = sanitizePhone(t.phoneNumber);
-			const monthlyPrice = room ? Number(room.monthlyPrice) : 850000;
+			const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
+			let actualRent = 0;
+			if (
+				activeContract?.invoices?.[0]?.amount &&
+				Number(activeContract.invoices[0].amount) > 0
+			) {
+				actualRent = Number(activeContract.invoices[0].amount);
+			} else if (room && Number(room.price) > 0) {
+				actualRent = Number(room.price) * cycleMonths;
+			} else {
+				actualRent = 850000 * cycleMonths;
+			}
+
 			const dueDateDay = activeContract?.dueDateDay || 10;
 			const depositAmount = t.deposit ? Number(t.deposit) : 0;
 
@@ -147,7 +175,7 @@ export class TenantService {
 					: "Lainnya") as OccupationStatus,
 				institution: t.institution || t.occupation || "—",
 				roomNo: room?.roomNumber || "—",
-				rent: formatRupiah(monthlyPrice),
+				rent: formatRupiah(actualRent),
 				duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 				startDate: activeContract?.startDate
 					? this.formatDate(activeContract.startDate)
@@ -190,7 +218,19 @@ export class TenantService {
 		}
 
 		const phoneCanonical = sanitizePhone(t.phoneNumber);
-		const monthlyPrice = room ? Number(room.monthlyPrice) : 850000;
+		const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
+		let actualRent = 0;
+		if (
+			activeContract?.invoices?.[0]?.amount &&
+			Number(activeContract.invoices[0].amount) > 0
+		) {
+			actualRent = Number(activeContract.invoices[0].amount);
+		} else if (room && Number(room.price) > 0) {
+			actualRent = Number(room.price) * cycleMonths;
+		} else {
+			actualRent = 850000 * cycleMonths;
+		}
+
 		const dueDateDay = activeContract?.dueDateDay || 10;
 		const depositAmount = t.deposit ? Number(t.deposit) : 0;
 
@@ -210,7 +250,7 @@ export class TenantService {
 				: "Lainnya") as OccupationStatus,
 			institution: t.institution || t.occupation || "—",
 			roomNo: room?.roomNumber || "—",
-			rent: formatRupiah(monthlyPrice),
+			rent: formatRupiah(actualRent),
 			duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 			startDate: activeContract?.startDate
 				? this.formatDate(activeContract.startDate)
@@ -246,41 +286,248 @@ export class TenantService {
 			);
 		}
 
-		const rentAmount = parseRupiah(input.rent) || Number(room.monthlyPrice);
-		const depositAmount = input.deposit ? parseRupiah(input.deposit) : 0;
 		const billingCycle = this.mapDurationToBillingCycle(input.duration);
+		let cycleMonths = 1;
+		if (billingCycle === "QUARTERLY") cycleMonths = 3;
+		else if (billingCycle === "SEMI_ANNUAL") cycleMonths = 6;
+		else if (billingCycle === "ANNUALLY") cycleMonths = 12;
+
+		const parsedRent = parseRupiah(input.rent);
+		const totalCycleRent =
+			parsedRent > 0 ? parsedRent : Number(room.price) * cycleMonths;
+		const monthlyRent =
+			Number(room.price) > 0
+				? Number(room.price)
+				: Math.round(totalCycleRent / cycleMonths);
+		const depositAmount = input.deposit ? parseRupiah(input.deposit) : 0;
+		const initialPayment = depositAmount;
+
 		const startDate = new Date(input.startDate || new Date());
 		const birthDate = input.birthDate ? new Date(input.birthDate) : null;
 		const dueDateDay = startDate.getDate() || 10;
 		const emergencyPhoneClean = input.emergencyPhone
 			? sanitizePhone(input.emergencyPhone)
 			: null;
+		const now = new Date();
+
+		const invoicesToCreate: Array<{
+			invoiceNumber: string;
+			periodMonth: number;
+			periodYear: number;
+			amount: number;
+			dueDate: Date;
+			paidAt?: Date | null;
+			status: "PAID" | "PENDING" | "OVERDUE";
+		}> = [];
+
+		const transactionsToCreate: Array<{
+			propertyId: string;
+			createdBy?: string | null;
+			type: "INCOME";
+			category: "RENT";
+			classification: "OPERATIONAL";
+			paymentMethod: "TRANSFER";
+			amount: number;
+			description: string;
+			transactionDate: Date;
+		}> = [];
+
+		let calculatedEndDate: Date;
+
+		if (input.markPastPeriodsPaid && startDate < now) {
+			// Skenario 1: Migrasi Data Lampau (Banyak Periode Siklus Sewa LUNAS)
+			const startY = startDate.getFullYear();
+			const startM = startDate.getMonth();
+			const curY = now.getFullYear();
+			const curM = now.getMonth();
+			const elapsedTotalMonths = Math.max(
+				1,
+				(curY - startY) * 12 + (curM - startM) + 1,
+			);
+			const numCycles = Math.max(
+				1,
+				Math.ceil(elapsedTotalMonths / cycleMonths),
+			);
+
+			calculatedEndDate = new Date(
+				startY,
+				startM + numCycles * cycleMonths,
+				dueDateDay,
+			);
+
+			for (let c = 0; c < numCycles; c++) {
+				const cycleStart = new Date(
+					startY,
+					startM + c * cycleMonths,
+					dueDateDay,
+				);
+				const isPastOrCurrent = cycleStart <= now;
+				const invStatus = isPastOrCurrent
+					? ("PAID" as const)
+					: ("PENDING" as const);
+				const pMonth = cycleStart.getMonth() + 1;
+				const pYear = cycleStart.getFullYear();
+				const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-${c + 1}`;
+
+				// 1 Invoice per Siklus Sewa (misal Rp 5.100.000 per Semester)
+				invoicesToCreate.push({
+					invoiceNumber: invNum,
+					periodMonth: pMonth,
+					periodYear: pYear,
+					amount: totalCycleRent,
+					dueDate: cycleStart,
+					paidAt: isPastOrCurrent ? cycleStart : null,
+					status: invStatus,
+				});
+
+				// Jika LUNAS: Distribusikan pencatatan kas per bulan (misal Rp 850.000 / bulan)
+				if (isPastOrCurrent) {
+					for (let m = 0; m < cycleMonths; m++) {
+						const monthDate = new Date(
+							startY,
+							startM + c * cycleMonths + m,
+							dueDateDay,
+						);
+						const monthName = getMonthName(monthDate.getMonth() + 1);
+						transactionsToCreate.push({
+							propertyId: room.propertyId,
+							createdBy: user?.id,
+							type: "INCOME",
+							category: "RENT",
+							classification: "OPERATIONAL",
+							paymentMethod: "TRANSFER",
+							amount: monthlyRent,
+							description: `Pembayaran Sewa Kamar ${room.roomNumber} - ${input.name} (${monthName} ${monthDate.getFullYear()} · Bulan ${m + 1}/${cycleMonths})`,
+							transactionDate: monthDate,
+						});
+					}
+				}
+			}
+		} else if (initialPayment >= totalCycleRent) {
+			// Skenario 2: Bayar Lunas Penuh di Awal untuk 1 Siklus Pertama
+			calculatedEndDate = new Date(
+				startDate.getFullYear(),
+				startDate.getMonth() + cycleMonths,
+				dueDateDay,
+			);
+			const pMonth = startDate.getMonth() + 1;
+			const pYear = startDate.getFullYear();
+			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+
+			invoicesToCreate.push({
+				invoiceNumber: invNum,
+				periodMonth: pMonth,
+				periodYear: pYear,
+				amount: totalCycleRent,
+				dueDate: startDate,
+				paidAt: now,
+				status: "PAID",
+			});
+
+			for (let m = 0; m < cycleMonths; m++) {
+				const monthDate = new Date(
+					startDate.getFullYear(),
+					startDate.getMonth() + m,
+					dueDateDay,
+				);
+				const monthName = getMonthName(monthDate.getMonth() + 1);
+				transactionsToCreate.push({
+					propertyId: room.propertyId,
+					createdBy: user?.id,
+					type: "INCOME",
+					category: "RENT",
+					classification: "OPERATIONAL",
+					paymentMethod: "TRANSFER",
+					amount: monthlyRent,
+					description: `Pembayaran Sewa Awal Kamar ${room.roomNumber} - ${input.name} (${monthName} ${monthDate.getFullYear()} · Bulan ${m + 1}/${cycleMonths})`,
+					transactionDate: monthDate,
+				});
+			}
+		} else if (initialPayment > 0) {
+			// Skenario 3: DP / Uang Muka
+			calculatedEndDate = new Date(
+				startDate.getFullYear(),
+				startDate.getMonth() + cycleMonths,
+				dueDateDay,
+			);
+			const pMonth = startDate.getMonth() + 1;
+			const pYear = startDate.getFullYear();
+			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+
+			transactionsToCreate.push({
+				propertyId: room.propertyId,
+				createdBy: user?.id,
+				type: "INCOME",
+				category: "RENT",
+				classification: "OPERATIONAL",
+				paymentMethod: "TRANSFER",
+				amount: initialPayment,
+				description: `Uang Muka (DP) Sewa Kamar ${room.roomNumber} - ${input.name}`,
+				transactionDate: now,
+			});
+
+			const remainingAmount =
+				totalCycleRent > initialPayment
+					? totalCycleRent - initialPayment
+					: totalCycleRent;
+			invoicesToCreate.push({
+				invoiceNumber: invNum,
+				periodMonth: pMonth,
+				periodYear: pYear,
+				amount: remainingAmount,
+				dueDate: startDate,
+				status: "PENDING",
+			});
+		} else {
+			// Skenario 4: Belum Bayar Sama Sekali (Pending)
+			calculatedEndDate = new Date(
+				startDate.getFullYear(),
+				startDate.getMonth() + cycleMonths,
+				dueDateDay,
+			);
+			const pMonth = startDate.getMonth() + 1;
+			const pYear = startDate.getFullYear();
+			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+
+			invoicesToCreate.push({
+				invoiceNumber: invNum,
+				periodMonth: pMonth,
+				periodYear: pYear,
+				amount: totalCycleRent,
+				dueDate: startDate,
+				status: "PENDING",
+			});
+		}
 
 		const { tenant, contract } = await this.tenantRepo.createTenantWithContract(
 			{
-				name: input.name,
-				nik: input.nik,
-				phone: canonicalPhone,
-				whatsappNumber: canonicalPhone,
-				email: input.email || null,
-				birthDate,
-				occupation: input.occupationStatus,
-				institution: input.institution || null,
-				originAddress: input.originAddress || null,
-				emergencyName: input.emergencyName || null,
-				emergencyRelation: input.emergencyRelation || null,
-				emergencyPhone: emergencyPhoneClean,
-				vehicle: input.vehicle || null,
-				deposit: depositAmount,
-				notes: input.notes || null,
-				ktpUrl: input.ktpUrl || null,
-				markPastPeriodsPaid: input.markPastPeriodsPaid,
-				roomId: room.id,
-				billingCycle,
-				startDate,
-				dueDateDay,
-				rentAmount,
-				recordedById: user?.id,
+				tenantPayload: {
+					name: input.name,
+					nik: input.nik,
+					phone: canonicalPhone,
+					whatsappNumber: canonicalPhone,
+					email: input.email || null,
+					birthDate,
+					occupation: input.occupationStatus,
+					institution: input.institution || null,
+					originAddress: input.originAddress || null,
+					emergencyName: input.emergencyName || null,
+					emergencyRelation: input.emergencyRelation || null,
+					emergencyPhone: emergencyPhoneClean,
+					vehicle: input.vehicle || null,
+					deposit: depositAmount,
+					notes: input.notes || null,
+					ktpUrl: input.ktpUrl || null,
+				},
+				contractPayload: {
+					roomId: room.id,
+					billingCycle,
+					startDate,
+					endDate: calculatedEndDate,
+					dueDateDay,
+				},
+				invoices: invoicesToCreate,
+				transactions: transactionsToCreate,
 			},
 		);
 
@@ -299,7 +546,7 @@ export class TenantService {
 			occupationStatus: input.occupationStatus,
 			institution: input.institution || input.occupationStatus,
 			roomNo: room.roomNumber,
-			rent: formatRupiah(rentAmount),
+			rent: formatRupiah(totalCycleRent),
 			duration: input.duration,
 			startDate: this.formatDate(contract.startDate),
 			dueDate: this.formatDueDate(dueDateDay),

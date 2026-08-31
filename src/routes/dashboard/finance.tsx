@@ -3,7 +3,6 @@ import {
 	ArrowDownRight,
 	ArrowUpRight,
 	Coins,
-	FileSpreadsheet,
 	Plus,
 	TrendingUp,
 } from "lucide-react";
@@ -287,19 +286,6 @@ function FinancePage() {
 					</div>
 
 					<div className="flex items-center gap-2.5">
-						<Button
-							type="button"
-							variant="outline"
-							onClick={handleExportCsv}
-							disabled={exportCsvMutation.isPending}
-							className="h-9 px-3.5 text-xs font-semibold border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea] shadow-sm"
-						>
-							<FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-[#568062]" />
-							{exportCsvMutation.isPending
-								? "Mengekspor..."
-								: "Ekspor CSV 12 Bulan"}
-						</Button>
-
 						<Button
 							type="button"
 							onClick={() => {

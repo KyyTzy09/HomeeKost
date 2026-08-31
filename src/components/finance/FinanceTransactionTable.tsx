@@ -11,7 +11,6 @@ import {
 	Eye,
 	Loader2,
 	Pencil,
-	Plus,
 	Search,
 	Trash2,
 	X,
@@ -102,7 +101,7 @@ export function FinanceTransactionTable({
 	onSortToggle,
 	onPageChange,
 	isLoading = false,
-	onAddNew,
+	onAddNew: _onAddNew,
 	onDetail,
 	onEdit,
 	onDelete,
@@ -317,19 +316,6 @@ export function FinanceTransactionTable({
 						Daftar seluruh arus kas masuk dan keluar per properti dengan
 						pencarian dan filter
 					</p>
-				</div>
-
-				<div className="flex items-center gap-2">
-					{onAddNew && (
-						<Button
-							type="button"
-							onClick={onAddNew}
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-8.5 rounded-lg shadow-sm"
-						>
-							<Plus className="w-3.5 h-3.5 mr-1.5" />
-							Tambah Transaksi
-						</Button>
-					)}
 				</div>
 			</div>
 

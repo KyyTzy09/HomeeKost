@@ -334,6 +334,16 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 - [x] 🟢 Memastikan konsistensi tipografi `Inter` dan kepadatan informasi (*High Information Density*)
 
 ### 10.3 Testing, Containerization & VPS Deployment
+- [x] 🟢 **Unit Testing Suite (Vitest)**:
+  - 38 unit test cases terisolasi untuk fungsi murni di `tests/unit/`:
+    - `currency.test.ts` (Format Rupiah, Parse Integer, Edge Cases)
+    - `phone-sanitizer.test.ts` (Canonical 628xxx, UI Display 08xxx, Validasi Seluler Indonesia, wa.me Link)
+    - `date-utils.test.ts` (Jatuh Tempo +1/+3/+6/+12 Bulan, Nama Bulan Indonesia, Rentang Sewa)
+    - `whatsapp-templates.test.ts` (Template Tagihan, H-3/H-0/Overdue, Ucapan Ulang Tahun)
+    - `validations.test.ts` (Zod Schemas: Tenant, Room, Finance)
+  - Hasil eksekusi: **38 tests passed (100% lulus)**
+- [x] 🟢 **Production Build Verification**:
+  - `npm run build` sukses menghasilkan artifact bundle TanStack Start + Nitro SSR (`.output/server/index.mjs`)
 - [x] 🟢 Verifikasi `Dockerfile` multi-stage build untuk aplikasi TanStack Start Nitro SSR (`node .output/server/index.mjs`)
 - [x] 🟢 Konfigurasi Docker Compose 2-Tier (`app` + `db` PostgreSQL 16 Alpine dengan healthcheck otomatis)
 - [x] 🟢 Konfigurasi Environment Variable (`.env.example`) lengkap untuk Fonnte WhatsApp, Google Gemini GenAI SDK, Groq Cloud OpenAI SDK, dan Better-Auth Secret
