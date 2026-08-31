@@ -253,15 +253,6 @@ function TenantsPage() {
 				<div className="flex flex-wrap items-center gap-2">
 					<Button
 						type="button"
-						variant="outline"
-						onClick={handleOpenAdd}
-						className="h-9 px-3.5 rounded-lg border-[#e4e9e4] bg-white text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-					>
-						<UserPlus className="w-3.5 h-3.5 text-[#506257]" />
-						Formulir Pendaftaran
-					</Button>
-					<Button
-						type="button"
 						onClick={handleOpenAdd}
 						className="h-9 px-4 rounded-lg bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer"
 					>

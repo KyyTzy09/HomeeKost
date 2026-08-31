@@ -8,14 +8,13 @@ import {
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import type { AnnualReportMatrixData } from "../../common/types/index.ts";
-import { formatRupiah } from "../../lib/currency.ts";
+import { formatCompactRupiah, formatRupiah } from "../../lib/currency.ts";
 
 interface ReportAnnualMatrixCardProps {
 	data?: AnnualReportMatrixData | null;
 	isLoading?: boolean;
 	onExportExcel?: () => void;
 	isExportingExcel?: boolean;
-	onExportCsv: () => void;
 	isExporting?: boolean;
 }
 
@@ -39,8 +38,6 @@ export function ReportAnnualMatrixCard({
 	isLoading,
 	onExportExcel,
 	isExportingExcel,
-	onExportCsv,
-	isExporting,
 }: ReportAnnualMatrixCardProps) {
 	if (isLoading) {
 		return (
@@ -68,8 +65,7 @@ export function ReportAnnualMatrixCard({
 							Tahun {data.year}
 						</span>
 						<h2 className="text-sm font-bold text-[#252925] flex items-center gap-1.5">
-							<FileSpreadsheet className="w-4 h-4 text-[#4f6958]" />
-							Matriks Keuangan Tahunan (Bulan 1 – 12)
+							Matriks Keuangan Tahunan
 						</h2>
 					</div>
 					<p className="text-[11px] text-[#737873] mt-0.5">
@@ -94,20 +90,6 @@ export function ReportAnnualMatrixCard({
 							{isExportingExcel ? "Menyusun Excel..." : "Ekspor Excel (.XLSX)"}
 						</Button>
 					)}
-					<Button
-						type="button"
-						onClick={onExportCsv}
-						disabled={isExporting}
-						variant="outline"
-						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#edf4ee] text-xs font-medium h-9 px-3 shadow-2xs flex items-center gap-1.5"
-					>
-						{isExporting ? (
-							<Loader2 className="w-3.5 h-3.5 animate-spin" />
-						) : (
-							<Download className="w-3.5 h-3.5" />
-						)}
-						{isExporting ? "Mengunduh..." : "CSV"}
-					</Button>
 				</div>
 			</div>
 
@@ -203,7 +185,7 @@ export function ReportAnnualMatrixCard({
 										key={`${prop.propertyId}-${MONTH_LABELS[i]}`}
 										className="py-2 px-2 text-center text-[#737873] font-mono text-[10.5px]"
 									>
-										{val > 0 ? (val / 1_000_000).toFixed(1) : "-"}
+										{formatCompactRupiah(val)}
 									</td>
 								))}
 								<td className="py-2 px-3 text-right font-bold text-[#252925] font-mono bg-[#fafcfa]">
@@ -220,7 +202,7 @@ export function ReportAnnualMatrixCard({
 									key={`tot-inc-${MONTH_LABELS[i]}`}
 									className="py-2 px-2 text-center text-[#3e724d] font-mono"
 								>
-									{val > 0 ? (val / 1_000_000).toFixed(1) : "-"}
+									{formatCompactRupiah(val)}
 								</td>
 							))}
 							<td className="py-2 px-3 text-right text-[#3e724d] font-mono bg-[#edf5ee]">
@@ -248,7 +230,7 @@ export function ReportAnnualMatrixCard({
 									key={`op-exp-${MONTH_LABELS[i]}`}
 									className="py-2 px-2 text-center text-[#737873] font-mono text-[10.5px]"
 								>
-									{val > 0 ? (val / 1_000_000).toFixed(1) : "-"}
+									{formatCompactRupiah(val)}
 								</td>
 							))}
 							<td className="py-2 px-3 text-right font-semibold text-[#a45149] font-mono bg-[#fafcfa]">
@@ -266,7 +248,7 @@ export function ReportAnnualMatrixCard({
 									key={`inv-exp-${MONTH_LABELS[i]}`}
 									className="py-2 px-2 text-center text-[#737873] font-mono text-[10.5px]"
 								>
-									{val > 0 ? (val / 1_000_000).toFixed(1) : "-"}
+									{formatCompactRupiah(val)}
 								</td>
 							))}
 							<td className="py-2 px-3 text-right font-semibold text-[#a45149] font-mono bg-[#fafcfa]">
@@ -282,7 +264,7 @@ export function ReportAnnualMatrixCard({
 									key={`tot-exp-${MONTH_LABELS[i]}`}
 									className="py-2 px-2 text-center text-[#a45149] font-mono"
 								>
-									{val > 0 ? (val / 1_000_000).toFixed(1) : "-"}
+									{formatCompactRupiah(val)}
 								</td>
 							))}
 							<td className="py-2 px-3 text-right text-[#a45149] font-mono bg-[#fbeaea]">
@@ -302,7 +284,7 @@ export function ReportAnnualMatrixCard({
 										val >= 0 ? "text-[#3e724d]" : "text-[#b66b68]"
 									}`}
 								>
-									{val !== 0 ? (val / 1_000_000).toFixed(1) : "-"}
+									{formatCompactRupiah(val)}
 								</td>
 							))}
 							<td className="py-2.5 px-3 text-right font-bold text-[#253129] font-mono bg-[#e2ede3]">
@@ -313,7 +295,7 @@ export function ReportAnnualMatrixCard({
 				</table>
 				<div className="p-2.5 bg-[#f9faf9] border-t border-[#e4e9e4] text-[10.5px] text-[#737873] flex items-center justify-between">
 					<span>
-						* Angka kolom bulanan ditampilkan dalam satuan Juta Rupiah (Jt)
+						* Angka kolom bulanan disajikan dalam format ringkas (rb: Ribu, jt: Juta, M: Miliar)
 					</span>
 					<span>
 						Margin Laba Bersih Rata-rata:{" "}
