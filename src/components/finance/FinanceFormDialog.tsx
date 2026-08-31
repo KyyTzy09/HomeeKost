@@ -40,7 +40,6 @@ interface FinanceFormDialogProps {
 }
 
 export const CATEGORY_FORM_OPTIONS = [
-	{ label: "Sewa Kamar", value: "RENT", type: "INCOME" },
 	{ label: "Pemasukan Lain-lain", value: "OTHER", type: "INCOME" },
 	{ label: "Listrik & Air", value: "UTILITIES", type: "EXPENSE" },
 	{ label: "WiFi / Internet", value: "INTERNET", type: "EXPENSE" },
@@ -126,7 +125,7 @@ export function FinanceFormDialog({
 		setFormData((prev) => ({
 			...prev,
 			type: newType,
-			category: isIncome ? "RENT" : "UTILITIES",
+			category: isIncome ? "OTHER" : "UTILITIES",
 		}));
 	};
 

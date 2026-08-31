@@ -49,6 +49,21 @@ export class TenantService {
 		}
 	}
 
+	private getCycleMonths(cycle?: BillingCycle | null): number {
+		switch (cycle) {
+			case "MONTHLY":
+				return 1;
+			case "QUARTERLY":
+				return 3;
+			case "SEMI_ANNUAL":
+				return 6;
+			case "ANNUALLY":
+				return 12;
+			default:
+				return 1;
+		}
+	}
+
 	private formatDate(date?: Date | null): string {
 		if (!date) return "—";
 		const d = new Date(date);
@@ -128,7 +143,19 @@ export class TenantService {
 			}
 
 			const phoneCanonical = sanitizePhone(t.phoneNumber);
-			const monthlyPrice = room ? Number(room.monthlyPrice) : 850000;
+			const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
+			let actualRent = 0;
+			if (
+				activeContract?.invoices?.[0]?.amount &&
+				Number(activeContract.invoices[0].amount) > 0
+			) {
+				actualRent = Number(activeContract.invoices[0].amount);
+			} else if (room && Number(room.monthlyPrice) > 0) {
+				actualRent = Number(room.monthlyPrice) * cycleMonths;
+			} else {
+				actualRent = 850000 * cycleMonths;
+			}
+
 			const dueDateDay = activeContract?.dueDateDay || 10;
 			const depositAmount = t.deposit ? Number(t.deposit) : 0;
 
@@ -148,7 +175,7 @@ export class TenantService {
 					: "Lainnya") as OccupationStatus,
 				institution: t.institution || t.occupation || "—",
 				roomNo: room?.roomNumber || "—",
-				rent: formatRupiah(monthlyPrice),
+				rent: formatRupiah(actualRent),
 				duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 				startDate: activeContract?.startDate
 					? this.formatDate(activeContract.startDate)
@@ -191,7 +218,19 @@ export class TenantService {
 		}
 
 		const phoneCanonical = sanitizePhone(t.phoneNumber);
-		const monthlyPrice = room ? Number(room.monthlyPrice) : 850000;
+		const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
+		let actualRent = 0;
+		if (
+			activeContract?.invoices?.[0]?.amount &&
+			Number(activeContract.invoices[0].amount) > 0
+		) {
+			actualRent = Number(activeContract.invoices[0].amount);
+		} else if (room && Number(room.monthlyPrice) > 0) {
+			actualRent = Number(room.monthlyPrice) * cycleMonths;
+		} else {
+			actualRent = 850000 * cycleMonths;
+		}
+
 		const dueDateDay = activeContract?.dueDateDay || 10;
 		const depositAmount = t.deposit ? Number(t.deposit) : 0;
 
@@ -211,7 +250,7 @@ export class TenantService {
 				: "Lainnya") as OccupationStatus,
 			institution: t.institution || t.occupation || "—",
 			roomNo: room?.roomNumber || "—",
-			rent: formatRupiah(monthlyPrice),
+			rent: formatRupiah(actualRent),
 			duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 			startDate: activeContract?.startDate
 				? this.formatDate(activeContract.startDate)

@@ -90,15 +90,14 @@ export function FinanceProfitLossTable({
 
 					return (
 						<div
-							className={`flex items-center gap-1.5 ${
-								isSub
+							className={`flex items-center gap-1.5 ${isSub
 									? "pl-5 text-[#4c524d]"
 									: isProfit
 										? "text-[#252925] font-bold text-sm"
 										: isTotal
 											? "text-[#252925] font-bold text-xs"
 											: "text-[#252925]"
-							}`}
+								}`}
 						>
 							{isSub && <span className="text-[#8fa594]">↳</span>}
 							<span>{info.getValue()}</span>
@@ -125,13 +124,12 @@ export function FinanceProfitLossTable({
 
 					return (
 						<div
-							className={`text-xs text-right whitespace-nowrap ${
-								isProfit
+							className={`text-xs text-right whitespace-nowrap ${isProfit
 									? "text-[#568062] font-bold text-sm"
 									: isTotal
 										? "text-[#252925] font-bold"
 										: "text-[#4c524d]"
-							}`}
+								}`}
 						>
 							{formatRupiah(info.getValue())}
 						</div>
@@ -182,7 +180,7 @@ export function FinanceProfitLossTable({
 								<SelectItem
 									key={m.value}
 									value={String(m.value)}
-									disabled={m.value > new Date().getMonth() + 1}
+									disabled={m.value > new Date().getMonth() + 1 && selectedYear.value === new Date().getFullYear()}
 								>
 									{m.label}
 								</SelectItem>
@@ -247,9 +245,9 @@ export function FinanceProfitLossTable({
 										{header.isPlaceholder
 											? null
 											: flexRender(
-													header.column.columnDef.header,
-													header.getContext(),
-												)}
+												header.column.columnDef.header,
+												header.getContext(),
+											)}
 									</TableHead>
 								))}
 							</TableRow>
