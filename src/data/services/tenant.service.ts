@@ -150,8 +150,8 @@ export class TenantService {
 				Number(activeContract.invoices[0].amount) > 0
 			) {
 				actualRent = Number(activeContract.invoices[0].amount);
-			} else if (room && Number(room.monthlyPrice) > 0) {
-				actualRent = Number(room.monthlyPrice) * cycleMonths;
+			} else if (room && Number(room.price) > 0) {
+				actualRent = Number(room.price) * cycleMonths;
 			} else {
 				actualRent = 850000 * cycleMonths;
 			}
@@ -225,8 +225,8 @@ export class TenantService {
 			Number(activeContract.invoices[0].amount) > 0
 		) {
 			actualRent = Number(activeContract.invoices[0].amount);
-		} else if (room && Number(room.monthlyPrice) > 0) {
-			actualRent = Number(room.monthlyPrice) * cycleMonths;
+		} else if (room && Number(room.price) > 0) {
+			actualRent = Number(room.price) * cycleMonths;
 		} else {
 			actualRent = 850000 * cycleMonths;
 		}
@@ -294,10 +294,10 @@ export class TenantService {
 
 		const parsedRent = parseRupiah(input.rent);
 		const totalCycleRent =
-			parsedRent > 0 ? parsedRent : Number(room.monthlyPrice) * cycleMonths;
+			parsedRent > 0 ? parsedRent : Number(room.price) * cycleMonths;
 		const monthlyRent =
-			Number(room.monthlyPrice) > 0
-				? Number(room.monthlyPrice)
+			Number(room.price) > 0
+				? Number(room.price)
 				: Math.round(totalCycleRent / cycleMonths);
 		const depositAmount = input.deposit ? parseRupiah(input.deposit) : 0;
 		const initialPayment = depositAmount;

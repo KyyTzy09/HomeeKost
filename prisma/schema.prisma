@@ -248,7 +248,6 @@ model Room {
   roomNumber      String
   type            String           @default("Standard")
   price           Decimal          @default(0) @db.Decimal(12, 2)
-  monthlyPrice    Decimal          @default(0) @db.Decimal(12, 2)
   facilities      String?
   status          RoomStatus       @default(VACANT)
   rentalContracts RentalContract[]

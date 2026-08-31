@@ -43,7 +43,7 @@ import { sanitizePhone } from "../../lib/phone-utils.ts";
 export interface RoomOption {
 	roomNo: string;
 	type: "Standard" | "Deluxe" | "Suite";
-	monthlyPrice: number;
+	price: number;
 }
 
 interface TenantFormDialogProps {
@@ -177,7 +177,7 @@ export function TenantFormDialog({
 			rent:
 				editingTenant?.rent ??
 				(defaultInitialRoom
-					? formatRupiah(defaultInitialRoom.monthlyPrice)
+					? formatRupiah(defaultInitialRoom.price)
 					: "Rp850.000"),
 			duration: initialDuration,
 			startDate: initialStartDate,
@@ -259,7 +259,7 @@ export function TenantFormDialog({
 					"rent",
 					editingTenant.rent ||
 					(roomOptions[0]
-						? formatRupiah(roomOptions[0].monthlyPrice)
+						? formatRupiah(roomOptions[0].price)
 						: "Rp850.000"),
 				);
 				form.setFieldValue("duration", duration);
@@ -292,7 +292,7 @@ export function TenantFormDialog({
 				form.reset();
 				const defaultRoom = roomOptions[0];
 				const defaultRent = defaultRoom
-					? formatRupiah(defaultRoom.monthlyPrice)
+					? formatRupiah(defaultRoom.price)
 					: "Rp0";
 				const defaultDue = calculateDueDate(todayStr, "Bulanan");
 
@@ -421,7 +421,7 @@ export function TenantFormDialog({
 			(r) =>
 				r.roomNo.toLowerCase().includes(query) ||
 				r.type.toLowerCase().includes(query) ||
-				formatRupiah(r.monthlyPrice).toLowerCase().includes(query),
+				formatRupiah(r.price).toLowerCase().includes(query),
 		);
 	}, [roomOptions, roomQuery]);
 
@@ -430,7 +430,7 @@ export function TenantFormDialog({
 		form.setFieldValue("roomNo", room.roomNo);
 		const currentDuration = form.getFieldValue("duration");
 		const months = getDurationMonths(currentDuration);
-		const totalRent = room.monthlyPrice * months;
+		const totalRent = room.price * months;
 		form.setFieldValue("rent", formatRupiah(totalRent));
 		setIsComboboxOpen(false);
 		setRoomQuery("");
@@ -444,7 +444,7 @@ export function TenantFormDialog({
 		const currentRoomNo = form.getFieldValue("roomNo");
 		const matchedRoom = roomOptions.find((r) => r.roomNo === currentRoomNo);
 		const basePrice = matchedRoom
-			? matchedRoom.monthlyPrice
+			? matchedRoom.price
 			: parseRupiah(form.getFieldValue("rent")) /
 			getDurationMonths(form.getFieldValue("duration"));
 
@@ -547,19 +547,25 @@ export function TenantFormDialog({
 								/>
 								<div
 									onClick={() => fileInputRef.current?.click()}
-									className="border-2 border-dashed border-[#b8cbbd] hover:border-[#4f6958] bg-white/80 hover:bg-white rounded-[12px] p-3 text-center cursor-pointer transition-all flex flex-col sm:flex-row items-center justify-center gap-2.5"
+									className="border-2 border-dashed border-[#b8cbbd] hover:border-[#4f6958] bg-white/80 hover:bg-white rounded-[12px] p-3 text-center cursor-pointer transition-all flex flex-col sm:flex-row items-center sm:justify-start gap-2.5 min-w-0 overflow-hidden"
 								>
 									<div className="w-8 h-8 rounded-full bg-[#edf4ee] text-[#4f6958] flex items-center justify-center shrink-0">
 										<UploadCloud className="w-4 h-4" />
 									</div>
-									<div className="text-left">
-										<p className="text-[11.5px] font-bold text-[#2d3e33] line-clamp-2">
+									<div className="text-left min-w-0 flex-1 overflow-hidden">
+										<p
+											className="text-[11.5px] font-bold text-[#2d3e33] truncate block max-w-full"
+											title={
+												ktpFileName ||
+												(ktpPreview ? "Ganti foto KTP" : "Pilih foto KTP")
+											}
+										>
 											{ktpFileName ||
 												(ktpPreview
 													? "Ganti foto KTP"
 													: "Pilih foto KTP")}
 										</p>
-										<span className="text-[10px] text-[#78857b]">
+										<span className="text-[10px] text-[#78857b] block truncate">
 											Format JPG, PNG, atau WebP (Maks 5MB)
 										</span>
 									</div>
@@ -1003,7 +1009,7 @@ export function TenantFormDialog({
 																			</div>
 																			<div className="flex items-center gap-2">
 																				<span className="text-[11px] text-[#55705d] font-mono">
-																					{formatRupiah(room.monthlyPrice)}/bln
+																					{formatRupiah(room.price)}/bln
 																				</span>
 																				{isSelected && (
 																					<Check className="w-3.5 h-3.5 text-[#4f6958]" />

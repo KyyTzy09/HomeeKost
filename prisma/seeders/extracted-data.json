@@ -1,0 +1,1640 @@
+{
+  "rooms": [
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "1",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "2",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "3",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "4",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "5",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "6",
+      "price": 1300000,
+      "status": "VACANT"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "7",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "8",
+      "price": 1300000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "1",
+      "price": 2800000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "2",
+      "price": 2600000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "3",
+      "price": 2600000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "4",
+      "price": 2600000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "5",
+      "price": 2600000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "6",
+      "price": 2500000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "7",
+      "price": 2800000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "8",
+      "price": 2700000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "9",
+      "price": 2700000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "10",
+      "price": 2700000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "11",
+      "price": 2700000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "HomeeKost",
+      "roomNo": "12",
+      "price": 2700000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "9",
+      "price": 500000,
+      "status": "OCCUPIED"
+    },
+    {
+      "kostName": "Kost Bahari",
+      "roomNo": "10",
+      "price": 500000,
+      "status": "OCCUPIED"
+    }
+  ],
+  "expenses": [
+    {
+      "date": "2026-04-03",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-04-05",
+      "classification": "INVESTMENT",
+      "category": "INTERNET",
+      "desc": "Internet / WiFi",
+      "amount": 1614500,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-04-10",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Iuran Sampah",
+      "amount": 100000,
+      "costType": "Fixed Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-05-01",
+      "classification": "OPERATIONAL",
+      "category": "SALARY",
+      "desc": "Gaji Penjaga Kost",
+      "amount": 1500000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-05-11",
+      "classification": "INVESTMENT",
+      "category": "OTHER",
+      "desc": "Box Paket",
+      "amount": 1850000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-09",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-03",
+      "classification": "OPERATIONAL",
+      "category": "INTERNET",
+      "desc": "Abonemen Wifi",
+      "amount": 777000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-05-06",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Selametan Kost",
+      "amount": 2600000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-06",
+      "classification": "INVESTMENT",
+      "category": "OTHER",
+      "desc": "Pemegang Saham",
+      "amount": 5000000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-05-14",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Plastik sampah",
+      "amount": 45352,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-14",
+      "classification": "INVESTMENT",
+      "category": "MAINTENANCE",
+      "desc": "DP Teralis",
+      "amount": 500000,
+      "costType": "Fixed Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-13",
+      "classification": "INVESTMENT",
+      "category": "MAINTENANCE",
+      "desc": "Stop kontak",
+      "amount": 220972,
+      "costType": "Fixed Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-13",
+      "classification": "INVESTMENT",
+      "category": "INTERNET",
+      "desc": "Router TP Link",
+      "amount": 677838,
+      "costType": "Fixed Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-14",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Shopee",
+      "amount": 103500,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-15",
+      "classification": "INVESTMENT",
+      "category": "MAINTENANCE",
+      "desc": "Pelunasan teralis, perbaikan pagar dan pemasangan box paket",
+      "amount": 2100000,
+      "costType": "Fixed Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-18",
+      "classification": "INVESTMENT",
+      "category": "OTHER",
+      "desc": "Alat dapur",
+      "amount": 309000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-15",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-25",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Shopee",
+      "amount": 1088657,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-05-26",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-05-27",
+      "classification": "OPERATIONAL",
+      "category": "INTERNET",
+      "desc": "Abonemen Wifi",
+      "amount": 777000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-06-01",
+      "classification": "OPERATIONAL",
+      "category": "SALARY",
+      "desc": "Gaji Penjaga Kost",
+      "amount": 1500000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-06-01",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Shopee (tabung gas 5kg, cobek, sabun2, kotak P3K)",
+      "amount": 400000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-01",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Isi ulang 3 galon",
+      "amount": 100000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-02",
+      "classification": "INVESTMENT",
+      "category": "UTILITIES",
+      "desc": "Tambah daya 1300 ke 2200",
+      "amount": 633000,
+      "costType": "Fixed Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-02",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Shopee (sponge cuci piring)",
+      "amount": 50000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-02",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Isi ulang 3 galon",
+      "amount": 60000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-02",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Sampah",
+      "amount": 200000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-06-03",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Shopee",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-05",
+      "classification": "INVESTMENT",
+      "category": "MAINTENANCE",
+      "desc": "Filter air",
+      "amount": 4200000,
+      "costType": "Fixed Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-05",
+      "classification": "INVESTMENT",
+      "category": "OTHER",
+      "desc": "Pemegang Saham",
+      "amount": 5000000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-06-14",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-06-20",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-06-20",
+      "classification": "OPERATIONAL",
+      "category": "SALARY",
+      "desc": "Gaji Penjaga Kost",
+      "amount": 1500000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-06-25",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Sprei",
+      "amount": 290000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-06-29",
+      "classification": "OPERATIONAL",
+      "category": "INTERNET",
+      "desc": "Abonemen Wifi",
+      "amount": 777000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-07-01",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Owner",
+      "amount": 3395930,
+      "costType": "Variable Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-07-01",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Sampah",
+      "amount": 200000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-07-01",
+      "classification": "INVESTMENT",
+      "category": "MAINTENANCE",
+      "desc": "Cat kamar, Sprei, bantal, guling",
+      "amount": 1000000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-07-16",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Bantal Guling",
+      "amount": 132000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-07-10",
+      "classification": "INVESTMENT",
+      "category": "OTHER",
+      "desc": "Pemegang Saham",
+      "amount": 8000000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-07-12",
+      "classification": "INVESTMENT",
+      "category": "MAINTENANCE",
+      "desc": "Lemari Kamar No. 5",
+      "amount": 1350000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-07-26",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-07-23",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Owner",
+      "amount": 3553691,
+      "costType": "Variable Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-07-23",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Refill gas 5kg dan 3kg",
+      "amount": 150000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-07-22",
+      "classification": "OPERATIONAL",
+      "category": "INTERNET",
+      "desc": "Abonemen Wifi",
+      "amount": 777000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-07-20",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 500000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-08-01",
+      "classification": "OPERATIONAL",
+      "category": "SALARY",
+      "desc": "Gaji Penjaga Kost",
+      "amount": 1500000,
+      "costType": "Fixed Cost",
+      "property": "Both"
+    },
+    {
+      "date": "2026-08-02",
+      "classification": "OPERATIONAL",
+      "category": "UTILITIES",
+      "desc": "Token listrik PLN",
+      "amount": 1000000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    },
+    {
+      "date": "2026-08-04",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Mamikost",
+      "amount": 130000,
+      "costType": "Variable Cost",
+      "property": "Homeekost"
+    },
+    {
+      "date": "2026-08-05",
+      "classification": "OPERATIONAL",
+      "category": "OTHER",
+      "desc": "Bantal Guling",
+      "amount": 150000,
+      "costType": "Variable Cost",
+      "property": "Bahari"
+    }
+  ],
+  "incomes": [
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "3",
+      "tenantName": "Virda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "4",
+      "tenantName": "Nora",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "5",
+      "tenantName": "Balqis",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-02",
+      "roomNo": "6",
+      "tenantName": "Cici",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "7",
+      "tenantName": "Isma",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "9",
+      "tenantName": "Wono",
+      "type": "Sewa Bulanan",
+      "amount": 400000,
+      "method": "CASH"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-01",
+      "roomNo": "10",
+      "tenantName": "Subur",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "CASH"
+    },
+    {
+      "month": "2026-04",
+      "kost": "Kost Bahari",
+      "date": "2026-04-04",
+      "roomNo": "2",
+      "tenantName": "Jeni",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-04",
+      "roomNo": "1",
+      "tenantName": "Heni",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-04",
+      "roomNo": "2",
+      "tenantName": "Jeni",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "3",
+      "tenantName": "Virda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "4",
+      "tenantName": "Nora",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "5",
+      "tenantName": "Balqis",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-02",
+      "roomNo": "6",
+      "tenantName": "Cici",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "7",
+      "tenantName": "Isma",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Biaya Inap Tamu",
+      "amount": 50000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "9",
+      "tenantName": "Wono",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "Kost Bahari",
+      "date": "2026-05-01",
+      "roomNo": "10",
+      "tenantName": "Subur",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "CASH"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-01",
+      "roomNo": "3",
+      "tenantName": "Ros",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-01",
+      "roomNo": "6",
+      "tenantName": "Arin",
+      "type": "Sewa Bulanan",
+      "amount": 2500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-04",
+      "roomNo": "7",
+      "tenantName": "Jilly",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-10",
+      "roomNo": "7",
+      "tenantName": "Jilly",
+      "type": "Sewa Bulanan",
+      "amount": 1900000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-11",
+      "roomNo": "8",
+      "tenantName": "Eny",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-11",
+      "roomNo": "2",
+      "tenantName": "Santy",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-12",
+      "roomNo": "5",
+      "tenantName": "Zira",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-14",
+      "roomNo": "2",
+      "tenantName": "Santy",
+      "type": "Sewa Bulanan",
+      "amount": 800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-15",
+      "roomNo": "5",
+      "tenantName": "Zira",
+      "type": "Sewa Bulanan",
+      "amount": 800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-16",
+      "roomNo": "9",
+      "tenantName": "Rizki",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-17",
+      "roomNo": "4",
+      "tenantName": "Vivi",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-17",
+      "roomNo": "10",
+      "tenantName": "Vania",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-17",
+      "roomNo": "11",
+      "tenantName": "Vike",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-21",
+      "roomNo": "1",
+      "tenantName": "Amel",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-05",
+      "kost": "HomeeKost",
+      "date": "2026-05-21",
+      "roomNo": "12",
+      "tenantName": "Angel",
+      "type": "Booking Fee",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-02",
+      "roomNo": "1",
+      "tenantName": "Henny",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "3",
+      "tenantName": "Virda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "4",
+      "tenantName": "Nora",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-02",
+      "roomNo": "5",
+      "tenantName": "Balqis",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-02",
+      "roomNo": "6",
+      "tenantName": "Cici",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "7",
+      "tenantName": "Isma",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Biaya Inap Tamu",
+      "amount": 450000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "9",
+      "tenantName": "Wono",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "Kost Bahari",
+      "date": "2026-06-01",
+      "roomNo": "10",
+      "tenantName": "Subur",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "CASH"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "1",
+      "tenantName": "Amel",
+      "type": "Sewa Bulanan",
+      "amount": 2800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "9",
+      "tenantName": "Rizki",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "4",
+      "tenantName": "Vivi",
+      "type": "Sewa Bulanan",
+      "amount": 2100000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "10",
+      "tenantName": "Vania",
+      "type": "Sewa Bulanan",
+      "amount": 2200000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "8",
+      "tenantName": "Eny",
+      "type": "Sewa Bulanan",
+      "amount": 2200000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "6",
+      "tenantName": "Arin",
+      "type": "Sewa Bulanan",
+      "amount": 2400000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "12",
+      "tenantName": "Angel",
+      "type": "Sewa Bulanan",
+      "amount": 2200000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-01",
+      "roomNo": "2",
+      "tenantName": "Santy",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-02",
+      "roomNo": "3",
+      "tenantName": "Ros",
+      "type": "Sewa Bulanan",
+      "amount": 2500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-03",
+      "roomNo": "5",
+      "tenantName": "Zira",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-04",
+      "roomNo": "11",
+      "tenantName": "Vike",
+      "type": "Sewa Bulanan",
+      "amount": 2200000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-06",
+      "kost": "HomeeKost",
+      "date": "2026-06-05",
+      "roomNo": "7",
+      "tenantName": "Jilly",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-02",
+      "roomNo": "1",
+      "tenantName": "Henny",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-04",
+      "roomNo": "2",
+      "tenantName": "Jeni",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-01",
+      "roomNo": "3",
+      "tenantName": "Virda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-01",
+      "roomNo": "4",
+      "tenantName": "Nora",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-02",
+      "roomNo": "5",
+      "tenantName": "Kina",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-02",
+      "roomNo": "6",
+      "tenantName": "Cici",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-12",
+      "roomNo": "7",
+      "tenantName": "Petra",
+      "type": "Sewa Bulanan",
+      "amount": 700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-01",
+      "roomNo": "9",
+      "tenantName": "Wono",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "Kost Bahari",
+      "date": "2026-07-01",
+      "roomNo": "10",
+      "tenantName": "Subur",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "CASH"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-01",
+      "roomNo": "1",
+      "tenantName": "Amel",
+      "type": "Sewa Bulanan",
+      "amount": 2800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-01",
+      "roomNo": "2",
+      "tenantName": "Santy",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-01",
+      "roomNo": "3",
+      "tenantName": "Ros",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-10",
+      "roomNo": "3",
+      "tenantName": "Ros",
+      "type": "Biaya Inap Tamu",
+      "amount": 50000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-31",
+      "roomNo": "3",
+      "tenantName": "Ros",
+      "type": "Biaya Inap Tamu",
+      "amount": 50000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-03",
+      "roomNo": "4",
+      "tenantName": "Vivi",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-02",
+      "roomNo": "5",
+      "tenantName": "Zira",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-01",
+      "roomNo": "6",
+      "tenantName": "Arin",
+      "type": "Sewa Bulanan",
+      "amount": 2500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-05",
+      "roomNo": "7",
+      "tenantName": "Jilly",
+      "type": "Sewa Bulanan",
+      "amount": 2800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-01",
+      "roomNo": "8",
+      "tenantName": "Eny",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-01",
+      "roomNo": "9",
+      "tenantName": "Rizki",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-05",
+      "roomNo": "10",
+      "tenantName": "Vania",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-03",
+      "roomNo": "11",
+      "tenantName": "Vike",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-06",
+      "roomNo": "12",
+      "tenantName": "Yola",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-07",
+      "kost": "HomeeKost",
+      "date": "2026-07-12",
+      "roomNo": "12",
+      "tenantName": "Yola",
+      "type": "Sewa Parkir Mobil",
+      "amount": 150000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-04",
+      "roomNo": "1",
+      "tenantName": "Henny",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-04",
+      "roomNo": "2",
+      "tenantName": "Jeni",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-01",
+      "roomNo": "3",
+      "tenantName": "Virda",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-01",
+      "roomNo": "4",
+      "tenantName": "Nora",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-01",
+      "roomNo": "5",
+      "tenantName": "Kina",
+      "type": "Sewa Bulanan",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-04",
+      "roomNo": "6",
+      "tenantName": "Balqis",
+      "type": "DP",
+      "amount": 650000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-01",
+      "roomNo": "7",
+      "tenantName": "Petra",
+      "type": "Sewa Bulanan",
+      "amount": 700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-01",
+      "roomNo": "8",
+      "tenantName": "Hilda",
+      "type": "Sewa Bulanan",
+      "amount": 1200000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-01",
+      "roomNo": "9",
+      "tenantName": "Wono",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "Kost Bahari",
+      "date": "2026-08-02",
+      "roomNo": "10",
+      "tenantName": "Subur",
+      "type": "Sewa Bulanan",
+      "amount": 500000,
+      "method": "CASH"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-04",
+      "roomNo": "1",
+      "tenantName": "Amel",
+      "type": "Sewa Bulanan",
+      "amount": 2800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-03",
+      "roomNo": "2",
+      "tenantName": "Santy",
+      "type": "Extend Kost",
+      "amount": 300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-02",
+      "roomNo": "3",
+      "tenantName": "Ros",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-03",
+      "roomNo": "4",
+      "tenantName": "Vivi",
+      "type": "Sewa Bulanan",
+      "amount": 2600000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-01",
+      "roomNo": "5",
+      "tenantName": "Alivadilla",
+      "type": "DP",
+      "amount": 1300000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-01",
+      "roomNo": "6",
+      "tenantName": "Arin",
+      "type": "Sewa Bulanan",
+      "amount": 2500000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-05",
+      "roomNo": "7",
+      "tenantName": "Jilly",
+      "type": "Sewa Bulanan",
+      "amount": 2800000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-01",
+      "roomNo": "8",
+      "tenantName": "Eny",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-01",
+      "roomNo": "9",
+      "tenantName": "Rizki",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-05",
+      "roomNo": "10",
+      "tenantName": "Vania",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-01",
+      "roomNo": "11",
+      "tenantName": "Vike",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-01",
+      "roomNo": "11",
+      "tenantName": "Vike",
+      "type": "Biaya Inap Tamu",
+      "amount": 50000,
+      "method": "TRANSFER"
+    },
+    {
+      "month": "2026-08",
+      "kost": "HomeeKost",
+      "date": "2026-08-03",
+      "roomNo": "12",
+      "tenantName": "Yola",
+      "type": "Sewa Bulanan",
+      "amount": 2700000,
+      "method": "TRANSFER"
+    }
+  ]
+}

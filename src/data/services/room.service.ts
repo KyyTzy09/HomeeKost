@@ -58,7 +58,7 @@ export class RoomService {
 				? this.formatDueDay(activeContract.dueDateDay)
 				: null;
 
-			const priceNum = Number(r.price);
+			const priceNum = Number(r.price) || 0;
 			const formattedPrice = `Rp${priceNum.toLocaleString("id-ID")}`;
 
 			return {
@@ -85,7 +85,7 @@ export class RoomService {
 			? this.formatDueDay(activeContract.dueDateDay)
 			: null;
 
-		const priceNum = Number(r.price);
+		const priceNum = Number(r.price) || 0;
 		const formattedPrice = `Rp${priceNum.toLocaleString("id-ID")}`;
 
 		return {

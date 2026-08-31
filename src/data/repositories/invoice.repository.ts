@@ -368,8 +368,7 @@ export class InvoiceRepository {
 			const monthPadded = String(periodMonth).padStart(2, "0");
 			const invoiceNumber = `INV-${periodYear}${monthPadded}-${timestamp}${String(i + 1).padStart(3, "0")}`;
 			const dueDate = new Date(periodYear, periodMonth - 1, dueDateDay);
-			const amount =
-				Number(contract.room.monthlyPrice) || Number(contract.room.price);
+			const amount = Number(contract.room.price);
 
 			toCreate.push({
 				contractId: contract.id,

@@ -86,7 +86,7 @@ function TenantsPage() {
 				| "Standard"
 				| "Deluxe"
 				| "Suite",
-			monthlyPrice: parseRupiah(r.price),
+			price: parseRupiah(r.price),
 		}));
 	}, [rooms, editingTenant]);
 

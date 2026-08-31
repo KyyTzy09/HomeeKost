@@ -29,7 +29,7 @@ export interface TenantOption {
 export interface RoomOption {
 	roomNo: string;
 	type: string;
-	monthlyPrice: number;
+	price: number;
 }
 
 export const DEFAULT_TENANT_OPTIONS: TenantOption[] = [
@@ -52,15 +52,15 @@ export const DEFAULT_TENANT_OPTIONS: TenantOption[] = [
 ];
 
 export const DEFAULT_ROOM_OPTIONS: RoomOption[] = [
-	{ roomNo: "A-01", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-02", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-03", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "A-07", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "B-01", type: "Standard", monthlyPrice: 900000 },
-	{ roomNo: "B-02", type: "Deluxe", monthlyPrice: 950000 },
-	{ roomNo: "C-01", type: "Deluxe", monthlyPrice: 1200000 },
-	{ roomNo: "C-02", type: "Standard", monthlyPrice: 850000 },
-	{ roomNo: "C-03", type: "Standard", monthlyPrice: 800000 },
+	{ roomNo: "A-01", type: "Standard", price: 850000 },
+	{ roomNo: "A-02", type: "Standard", price: 850000 },
+	{ roomNo: "A-03", type: "Standard", price: 850000 },
+	{ roomNo: "A-07", type: "Standard", price: 850000 },
+	{ roomNo: "B-01", type: "Standard", price: 900000 },
+	{ roomNo: "B-02", type: "Deluxe", price: 950000 },
+	{ roomNo: "C-01", type: "Deluxe", price: 1200000 },
+	{ roomNo: "C-02", type: "Standard", price: 850000 },
+	{ roomNo: "C-03", type: "Standard", price: 800000 },
 ];
 
 interface InvoiceFormDialogProps {
@@ -210,7 +210,7 @@ export function InvoiceFormDialog({
 		// Find price of tenant's room
 		const matchedRoom = roomOptions.find((r) => r.roomNo === tenant.roomNo);
 		if (matchedRoom) {
-			form.setFieldValue("amount", matchedRoom.monthlyPrice);
+			form.setFieldValue("amount", matchedRoom.price);
 		}
 		setIsTenantDropdownOpen(false);
 		setTenantQuery("");
@@ -223,7 +223,7 @@ export function InvoiceFormDialog({
 			"description",
 			`Sewa kamar ${room.roomNo} - ${form.getFieldValue("period") || currentPeriod}`,
 		);
-		form.setFieldValue("amount", room.monthlyPrice);
+		form.setFieldValue("amount", room.price);
 		setIsRoomDropdownOpen(false);
 		setRoomQuery("");
 	};
@@ -435,7 +435,7 @@ export function InvoiceFormDialog({
 															</span>
 														</div>
 														<span className="text-[11px] font-semibold text-[#4f6958]">
-															{formatRupiah(r.monthlyPrice)}
+															{formatRupiah(r.price)}
 														</span>
 													</button>
 												))
