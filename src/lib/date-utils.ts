@@ -94,7 +94,7 @@ export function getMonthName(month: number): string {
 }
 
 /**
- * Memformat rentang periode sewa berbatas awal dan akhir (contoh: Agustus 2026 – Desember 2026 atau Agustus 2026 – September 2026)
+ * Memformat rentang periode sewa berbatas awal dan akhir (contoh: April 2024 – Oktober 2024 atau Agustus 2026)
  */
 export function formatRentalPeriod(params: {
 	periodMonth?: number | null;
@@ -105,7 +105,44 @@ export function formatRentalPeriod(params: {
 }): string {
 	const { periodMonth, periodYear, startDate, endDate, billingCycle } = params;
 
-	// Jika ada startDate dan endDate kontrak
+	let durationMonths = 1;
+	if (billingCycle === "QUARTERLY" || billingCycle === "Triwulan") {
+		durationMonths = 3;
+	} else if (
+		billingCycle === "SEMI_ANNUAL" ||
+		billingCycle === "SEMIANNUAL" ||
+		billingCycle === "Semesteran"
+	) {
+		durationMonths = 6;
+	} else if (
+		billingCycle === "ANNUALLY" ||
+		billingCycle === "YEARLY" ||
+		billingCycle === "Tahunan"
+	) {
+		durationMonths = 12;
+	}
+
+	// Jika berbasis periodMonth dan periodYear (khusus siklus individual invoice)
+	if (periodMonth && periodYear) {
+		const startM = periodMonth;
+		const startY = periodYear;
+		const startMonthName = MONTH_NAMES[startM - 1] || "Januari";
+
+		if (durationMonths === 1) {
+			return `${startMonthName} ${startY}`;
+		}
+
+		const endD = new Date(startY, startM - 1 + durationMonths, 0);
+		const endMonthName = MONTH_NAMES[endD.getMonth()];
+		const endYear = endD.getFullYear();
+
+		if (startY === endYear) {
+			return `${startMonthName} – ${endMonthName} ${startY}`;
+		}
+		return `${startMonthName} ${startY} – ${endMonthName} ${endYear}`;
+	}
+
+	// Fallback jika ada startDate dan endDate kontrak
 	if (startDate && endDate) {
 		const s = typeof startDate === "string" ? new Date(startDate) : startDate;
 		const e = typeof endDate === "string" ? new Date(endDate) : endDate;
@@ -126,37 +163,5 @@ export function formatRentalPeriod(params: {
 		}
 	}
 
-	// Jika berbasis periodMonth dan periodYear
-	const startM = periodMonth || new Date().getMonth() + 1;
-	const startY = periodYear || new Date().getFullYear();
-	const startMonthName = MONTH_NAMES[startM - 1] || "Agustus";
-
-	let durationMonths = 1;
-	if (billingCycle === "QUARTERLY" || billingCycle === "Triwulan") {
-		durationMonths = 3;
-	} else if (billingCycle === "SEMIANNUAL" || billingCycle === "Semesteran") {
-		durationMonths = 6;
-	} else if (billingCycle === "YEARLY" || billingCycle === "Tahunan") {
-		durationMonths = 12;
-	}
-
-	if (durationMonths === 1) {
-		// Satu bulan sewa: Tampilkan batas awal hingga akhir bulan / bulan berikutnya
-		const nextDate = new Date(startY, startM, 1);
-		const endMonthName = MONTH_NAMES[nextDate.getMonth()];
-		const endYear = nextDate.getFullYear();
-		if (startY === endYear) {
-			return `${startMonthName} – ${endMonthName} ${startY}`;
-		}
-		return `${startMonthName} ${startY} – ${endMonthName} ${endYear}`;
-	}
-
-	const endD = new Date(startY, startM - 1 + durationMonths, 0);
-	const endMonthName = MONTH_NAMES[endD.getMonth()];
-	const endYear = endD.getFullYear();
-
-	if (startY === endYear) {
-		return `${startMonthName} – ${endMonthName} ${startY}`;
-	}
-	return `${startMonthName} ${startY} – ${endMonthName} ${endYear}`;
+	return "Periode Sewa";
 }

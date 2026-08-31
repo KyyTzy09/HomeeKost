@@ -6,7 +6,6 @@ import {
 	Loader2,
 	Plus,
 	Search,
-	UserPlus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";

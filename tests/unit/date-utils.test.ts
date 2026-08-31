@@ -78,5 +78,21 @@ describe("Date Utilities (date-utils.ts)", () => {
 			});
 			expect(formatted).toBe("Januari – Juni 2026");
 		});
+
+		it("harus memformat rentang siklus invoice individual dari periodMonth dan billingCycle", () => {
+			const semesterFormatted = formatRentalPeriod({
+				periodMonth: 4,
+				periodYear: 2024,
+				billingCycle: "SEMI_ANNUAL",
+			});
+			expect(semesterFormatted).toBe("April – September 2024");
+
+			const monthlyFormatted = formatRentalPeriod({
+				periodMonth: 8,
+				periodYear: 2026,
+				billingCycle: "MONTHLY",
+			});
+			expect(monthlyFormatted).toBe("Agustus 2026");
+		});
 	});
 });

@@ -534,6 +534,7 @@ function ReportsPage() {
 							isLoading={isAnnualLoading}
 							onExportExcel={handleExportAnnualExcel}
 							isExportingExcel={isExportingExcel}
+							onExportCsv={handleExportAnnualCsv}
 							isExporting={exportCsvMutation.isPending}
 						/>
 
