@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardCctvRouteImport } from './routes/dashboard/cctv'
 import { Route as DashboardEngagementRouteImport } from './routes/dashboard/engagement'
@@ -48,6 +49,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/reset-password'
     | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCronDailyTasksRoute: typeof ApiCronDailyTasksRoute
   ApiInvoicesInvoiceIdDocumentRoute: typeof ApiInvoicesInvoiceIdDocumentRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -463,6 +483,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCronDailyTasksRoute: ApiCronDailyTasksRoute,
   ApiInvoicesInvoiceIdDocumentRoute: ApiInvoicesInvoiceIdDocumentRoute,

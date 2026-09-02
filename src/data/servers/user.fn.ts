@@ -175,3 +175,26 @@ export const requestForgotPasswordServerFn = createServerFn({
 		return target;
 	});
 
+export const resetPasswordWithTokenServerFn = createServerFn({
+	method: "POST",
+})
+	.validator(
+		(input: { email: string; token: string; newPassword: string }) => {
+			return z
+				.object({
+					email: z.string().email("Format email tidak valid"),
+					token: z.string().min(1, "Token verifikasi wajib diisi"),
+					newPassword: z.string().min(8, "Password baru minimal 8 karakter"),
+				})
+				.parse(input);
+		},
+	)
+	.handler(async ({ data: { email, token, newPassword } }) => {
+		return userManagementService.resetPasswordWithToken(
+			email,
+			token,
+			newPassword,
+		);
+	});
+
+

@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
 import type {
 	AppUserRole,
 	AuditLogItem,
@@ -12,6 +14,7 @@ import type {
 import { prisma } from "../../db.ts";
 import type { PrismaClient, RoleName } from "../../generated/prisma/client.js";
 import { formatRupiah } from "../../lib/currency.ts";
+import { emailService } from "../../lib/email.service.ts";
 import { propertyRepository } from "../repositories/property.repository.ts";
 import { userRepository } from "../repositories/user.repository.ts";
 
@@ -492,13 +495,39 @@ export class UserManagementService {
 
 		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
 		if (roleName === "SUPER_ADMIN") {
+			const token = `${crypto.randomUUID()}-${crypto.randomBytes(16).toString("hex")}`;
+			const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
+
+			// Hapus token lama jika ada
+			await this.db.verification.deleteMany({
+				where: { identifier: user.email },
+			});
+
+			await this.db.verification.create({
+				data: {
+					identifier: user.email,
+					value: token,
+					expiresAt,
+				},
+			});
+
+			const baseUrl = process.env.APP_URL || "http://localhost:3000";
+			const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
+
+			await emailService.sendPasswordResetEmail({
+				to: user.email,
+				name: user.name,
+				resetUrl,
+				expiresInMinutes: 60,
+			});
+
 			return {
 				success: true,
 				role: "SUPER_ADMIN",
 				email: user.email,
 				name: user.name,
 				message:
-					"Instruksi pemulihan kata sandi telah dikirimkan ke alamat email SuperAdmin Anda. Silakan periksa kotak masuk atau spam email Anda.",
+					"Tautan pemulihan kata sandi telah dikirimkan ke alamat email SuperAdmin Anda. Silakan periksa kotak masuk atau spam email Anda.",
 			};
 		}
 
@@ -517,6 +546,66 @@ export class UserManagementService {
 			name: user.name,
 			ownerPhone: "081234567890",
 			message: `Akun Admin Cabang dikelola langsung oleh Pemilik Kos (${owner?.name || "SuperAdmin"}). Silakan hubungi Pemilik Kos untuk mendapatkan pembaruan kata sandi akun Anda.`,
+		};
+	}
+
+	/**
+	 * Reset Kata Sandi Menggunakan Token Verifikasi Email
+	 */
+	async resetPasswordWithToken(
+		email: string,
+		token: string,
+		newPassword: string,
+	): Promise<{ success: boolean; message: string }> {
+		const cleanEmail = email.trim().toLowerCase();
+		const verification = await this.db.verification.findFirst({
+			where: {
+				identifier: cleanEmail,
+				value: token,
+				expiresAt: {
+					gte: new Date(),
+				},
+			},
+		});
+
+		if (!verification) {
+			throw new Error(
+				"Tautan pemulihan kata sandi tidak valid atau telah kedaluwarsa. Silakan ajukan permintaan baru.",
+			);
+		}
+
+		const user = await this.userRepo.findByEmail(cleanEmail);
+		if (!user) {
+			throw new Error("Pengguna tidak ditemukan.");
+		}
+
+		if (newPassword.length < 8) {
+			throw new Error("Kata sandi baru minimal 8 karakter.");
+		}
+
+		const passwordHash = await hashPassword(newPassword);
+
+		// Perbarui password di account Better-Auth
+		const account = await this.db.account.findFirst({
+			where: { userId: user.id },
+		});
+
+		if (account) {
+			await this.db.account.update({
+				where: { id: account.id },
+				data: { password: passwordHash },
+			});
+		}
+
+		// Hapus token verifikasi setelah berhasil digunakan
+		await this.db.verification.delete({
+			where: { id: verification.id },
+		});
+
+		return {
+			success: true,
+			message:
+				"Kata sandi akun SuperAdmin berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.",
 		};
 	}
 }
