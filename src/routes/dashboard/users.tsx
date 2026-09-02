@@ -45,7 +45,7 @@ function UsersPage() {
 	// TanStack Query data fetching & session context
 	const { user: currentUser, userRole } = useDashboardContext();
 	const currentUserId = currentUser?.id;
-	const currentUserRole = (userRole || "STAFF") as AppUserRole;
+	const currentUserRole = (userRole || "ADMIN") as AppUserRole;
 
 	const {
 		data: users = [],

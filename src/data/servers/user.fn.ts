@@ -159,3 +159,19 @@ export const getUserAuditLogsServerFn = createServerFn({
 		},
 	);
 });
+
+export const requestForgotPasswordServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: { email: string }) => {
+		return z
+			.object({
+				email: z.string().email("Format email tidak valid"),
+			})
+			.parse(input);
+	})
+	.handler(async ({ data: { email } }) => {
+		const target = await userManagementService.handleForgotPasswordRequest(email);
+		return target;
+	});
+

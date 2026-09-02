@@ -1,4 +1,4 @@
-export type AppUserRole = "SUPER_ADMIN" | "ADMIN" | "STAFF";
+export type AppUserRole = "SUPER_ADMIN" | "ADMIN";
 export type AppUserStatus = "ACTIVE" | "INACTIVE";
 
 export interface UserItem {

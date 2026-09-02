@@ -35,7 +35,7 @@ export function ReportKpiCards({
 						<ArrowUpRight className="w-3.5 h-3.5" />
 					</div>
 				</div>
-				<div className="text-lg font-bold text-[#252925] mt-1.5 font-mono">
+				<div className="text-lg font-bold text-[#252925] mt-1.5 tabular-nums">
 					{formatRupiah(totalIncome)}
 				</div>
 				<div className="text-[10px] text-[#737873] mt-0.5">{periodLabel}</div>
@@ -51,7 +51,7 @@ export function ReportKpiCards({
 						<ArrowDownRight className="w-3.5 h-3.5" />
 					</div>
 				</div>
-				<div className="text-lg font-bold text-[#252925] mt-1.5 font-mono">
+				<div className="text-lg font-bold text-[#252925] mt-1.5 tabular-nums">
 					{formatRupiah(totalExpense)}
 				</div>
 				<div className="text-[10px] text-[#737873] mt-0.5">{periodLabel}</div>
@@ -68,7 +68,7 @@ export function ReportKpiCards({
 					</div>
 				</div>
 				<div
-					className={`text-lg font-bold mt-1.5 font-mono ${netProfit >= 0 ? "text-[#3e724d]" : "text-[#b66b68]"}`}
+					className={`text-lg font-bold mt-1.5 tabular-nums ${netProfit >= 0 ? "text-[#3e724d]" : "text-[#b66b68]"}`}
 				>
 					{formatRupiah(netProfit)}
 				</div>
@@ -87,7 +87,7 @@ export function ReportKpiCards({
 						<Percent className="w-3.5 h-3.5" />
 					</div>
 				</div>
-				<div className="text-lg font-bold text-[#252925] mt-1.5 font-mono">
+				<div className="text-lg font-bold text-[#252925] mt-1.5 tabular-nums">
 					{occupancyRate}%
 				</div>
 				<div className="text-[10px] text-[#737873] mt-0.5">

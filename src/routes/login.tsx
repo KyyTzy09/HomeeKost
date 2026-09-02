@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { Building2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../common/shadcn/button.tsx";
 import {
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/login")({
 	head: () => ({
 		meta: [
 			{
-				title: "Masuk — HomeeKost Management",
+				title: "Masuk — Sistem Pengelolaan Kos",
 			},
 		],
 	}),
@@ -68,7 +68,7 @@ function LoginPage() {
 				if (res.error) {
 					setAuthError(
 						res.error.message ||
-							"Email atau password yang Anda masukkan salah.",
+						"Email atau password yang Anda masukkan salah.",
 					);
 					setIsLoading(false);
 					return;
@@ -92,16 +92,14 @@ function LoginPage() {
 		<div className="fixed inset-0 min-h-screen bg-[#f5f8f5] z-50 flex items-center justify-center p-6">
 			<Card className="w-full max-w-[430px] bg-white border-[#e2e9e3] rounded-[24px] p-[34px] shadow-[0_20px_60px_rgba(47,69,55,0.10)] ring-0">
 				<CardHeader className="p-0 text-center mb-6">
-					<img
-						className="block w-[180px] max-h-[100px] object-contain mx-auto mb-6"
-						src="/logo.png"
-						alt="HomeeKost Logo"
-					/>
-					<CardTitle className="text-[24px] font-bold text-[#26372c] leading-[1.2]">
-						Masuk ke HomeeKost
+					<div className="w-14 h-14 rounded-2xl bg-[#edf5ee] border border-[#d2e2d5] text-[#4f6958] flex items-center justify-center mx-auto mb-3.5 shadow-[0_4px_16px_rgba(79,105,88,0.10)]">
+						<Building2 className="w-7 h-7" />
+					</div>
+					<CardTitle className="text-[22px] font-bold text-[#26372c] leading-[1.2]">
+						Masuk ke Dashboard Kos
 					</CardTitle>
 					<CardDescription className="text-center text-[#7b897e] text-[13px] mt-1">
-						Kelola seluruh kosan dalam satu dashboard.
+						Kelola seluruh cabang kos dalam satu dashboard.
 					</CardDescription>
 				</CardHeader>
 
@@ -157,11 +155,10 @@ function LoginPage() {
 											type="text"
 											placeholder="Masukkan username / email"
 											autoComplete="username"
-											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${
-												hasError
-													? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
-											}`}
+											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${hasError
+												? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
+												: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
+												}`}
 										/>
 										{hasError && (
 											<div className="text-[#b66b68] text-[10px] mt-1 font-medium">
@@ -190,12 +187,14 @@ function LoginPage() {
 									field.state.meta.errors.length > 0;
 								return (
 									<div className="mb-[15px]">
-										<Label
-											htmlFor="loginPass"
-											className="block text-[11px] font-bold text-[#506257] mb-[7px]"
-										>
-											Password
-										</Label>
+										<div className="flex items-center justify-between mb-[7px]">
+											<Label
+												htmlFor="loginPass"
+												className="block text-[11px] font-bold text-[#506257]"
+											>
+												Password
+											</Label>
+										</div>
 										<Input
 											id="loginPass"
 											name={field.name}
@@ -205,11 +204,10 @@ function LoginPage() {
 											type="password"
 											placeholder="Masukkan password"
 											autoComplete="current-password"
-											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${
-												hasError
-													? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
-											}`}
+											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${hasError
+												? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
+												: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
+												}`}
 										/>
 										{hasError && (
 											<div className="text-[#b66b68] text-[10px] mt-1 font-medium">
@@ -225,7 +223,7 @@ function LoginPage() {
 						<Button
 							type="submit"
 							disabled={isLoading}
-							className="w-full h-[44px] rounded-[11px] bg-[#6f8976] hover:bg-[#4f6958] text-white font-bold text-[13px] mt-[5px] transition-colors duration-150 flex items-center justify-center gap-2"
+							className="w-full h-[44px] rounded-[11px] bg-[#4f6958] hover:bg-[#3d5345] text-white font-bold text-[13px] mt-[5px] transition-colors duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
 						>
 							{isLoading ? (
 								<>
@@ -233,13 +231,19 @@ function LoginPage() {
 									<span>Memproses Masuk...</span>
 								</>
 							) : (
-								<span>Masuk sebagai Admin</span>
+								<span>Masuk ke Dashboard</span>
 							)}
 						</Button>
 					</form>
 
-					<div className="text-center text-[#9aa49c] text-[10px] mt-4">
-						Demo prototype · data masih menggunakan data contoh
+					<div className="text-center text-[#7b897e] text-[11px] mt-4">
+						Lupa password? {" "}
+						<Link
+							to="/forgot-password"
+							className="text-[#4f6958] font-semibold hover:underline"
+						>
+							Klik di sini
+						</Link>
 					</div>
 				</CardContent>
 			</Card>

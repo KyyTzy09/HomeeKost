@@ -124,12 +124,13 @@ export function FinanceProfitLossTable({
 
 					return (
 						<div
-							className={`text-xs text-right whitespace-nowrap ${isProfit
+							className={`text-xs text-right whitespace-nowrap tabular-nums ${
+								isProfit
 									? "text-[#568062] font-bold text-sm"
 									: isTotal
 										? "text-[#252925] font-bold"
-										: "text-[#4c524d]"
-								}`}
+										: "text-[#4c524d] font-medium"
+							}`}
 						>
 							{formatRupiah(info.getValue())}
 						</div>

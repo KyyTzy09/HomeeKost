@@ -32,15 +32,6 @@ async function main() {
     },
   })
 
-  await prisma.role.upsert({
-    where: { name: 'STAFF' },
-    update: {},
-    create: {
-      name: 'STAFF',
-      description: 'Staf Kebersihan & Maintenance',
-    },
-  })
-
   console.log('✅ Roles seeded.')
 
   // 2. Seed Properties (Multi-Kost)

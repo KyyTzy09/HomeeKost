@@ -241,10 +241,10 @@ export function ExecutiveReportDoc({
 										<td className="py-2 px-3 text-[#566057]">
 											{exp.description || "Alokasi pengeluaran operasional kos"}
 										</td>
-										<td className="py-2 px-3 text-right text-[#737873] font-mono">
+										<td className="py-2 px-3 text-right text-[#737873] tabular-nums">
 											{exp.percentage.toFixed(1)}%
 										</td>
-										<td className="py-2 px-3 text-right font-semibold text-[#252925] font-mono">
+										<td className="py-2 px-3 text-right font-semibold text-[#252925] tabular-nums">
 											{formatRupiah(exp.amount)}
 										</td>
 									</tr>
@@ -265,10 +265,10 @@ export function ExecutiveReportDoc({
 								<td colSpan={3} className="py-2.5 px-3 uppercase text-[10px]">
 									Total Beban Pengeluaran
 								</td>
-								<td className="py-2.5 px-3 text-right font-mono text-[10px]">
+								<td className="py-2.5 px-3 text-right tabular-nums text-[10px]">
 									100.0%
 								</td>
-								<td className="py-2.5 px-3 text-right font-mono text-xs text-[#b66b68]">
+								<td className="py-2.5 px-3 text-right tabular-nums text-xs text-[#b66b68]">
 									{formatRupiah(report.totalExpense)}
 								</td>
 							</tr>

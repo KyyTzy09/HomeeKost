@@ -138,7 +138,7 @@ export function ReportAnnualMatrixCard({
 								className="flex flex-col items-center h-full justify-end group relative"
 							>
 								{/* Tooltip on Hover */}
-								<div className="absolute -top-7 hidden group-hover:flex z-10 bg-[#253129] text-white text-[9.5px] font-mono py-0.5 px-1.5 rounded shadow whitespace-nowrap">
+								<div className="absolute -top-7 hidden group-hover:flex z-10 bg-[#253129] text-white text-[10px] font-medium py-0.5 px-1.5 rounded shadow whitespace-nowrap">
 									{MONTH_LABELS[idx]}: {formatRupiah(inc)}
 								</div>
 
@@ -202,12 +202,12 @@ export function ReportAnnualMatrixCard({
 								{prop.monthlyIncome.map((val, i) => (
 									<td
 										key={`${prop.propertyId}-${MONTH_LABELS[i]}`}
-										className="py-2 px-2 text-center text-[#737873] font-mono text-[10.5px]"
+										className="py-2 px-2 text-center text-[#556358] tabular-nums font-medium text-[11px]"
 									>
 										{formatCompactRupiah(val)}
 									</td>
 								))}
-								<td className="py-2 px-3 text-right font-bold text-[#252925] font-mono bg-[#fafcfa]">
+								<td className="py-2 px-3 text-right font-bold text-[#252925] tabular-nums bg-[#fafcfa]">
 									{formatRupiah(prop.totalAnnualIncome)}
 								</td>
 							</tr>
@@ -219,12 +219,12 @@ export function ReportAnnualMatrixCard({
 							{data.monthlyTotalIncome.map((val, i) => (
 								<td
 									key={`tot-inc-${MONTH_LABELS[i]}`}
-									className="py-2 px-2 text-center text-[#3e724d] font-mono"
+									className="py-2 px-2 text-center text-[#3e724d] tabular-nums font-semibold"
 								>
 									{formatCompactRupiah(val)}
 								</td>
 							))}
-							<td className="py-2 px-3 text-right text-[#3e724d] font-mono bg-[#edf5ee]">
+							<td className="py-2 px-3 text-right text-[#3e724d] tabular-nums font-bold bg-[#edf5ee]">
 								{formatRupiah(data.grandTotals.totalIncome)}
 							</td>
 						</tr>
@@ -247,12 +247,12 @@ export function ReportAnnualMatrixCard({
 							{data.monthlyOperationalExpense.map((val, i) => (
 								<td
 									key={`op-exp-${MONTH_LABELS[i]}`}
-									className="py-2 px-2 text-center text-[#737873] font-mono text-[10.5px]"
+									className="py-2 px-2 text-center text-[#556358] tabular-nums font-medium text-[11px]"
 								>
 									{formatCompactRupiah(val)}
 								</td>
 							))}
-							<td className="py-2 px-3 text-right font-semibold text-[#a45149] font-mono bg-[#fafcfa]">
+							<td className="py-2 px-3 text-right font-semibold text-[#a45149] tabular-nums bg-[#fafcfa]">
 								{formatRupiah(data.grandTotals.totalOperationalExpense)}
 							</td>
 						</tr>
@@ -265,12 +265,12 @@ export function ReportAnnualMatrixCard({
 							{data.monthlyInvestmentExpense.map((val, i) => (
 								<td
 									key={`inv-exp-${MONTH_LABELS[i]}`}
-									className="py-2 px-2 text-center text-[#737873] font-mono text-[10.5px]"
+									className="py-2 px-2 text-center text-[#556358] tabular-nums font-medium text-[11px]"
 								>
 									{formatCompactRupiah(val)}
 								</td>
 							))}
-							<td className="py-2 px-3 text-right font-semibold text-[#a45149] font-mono bg-[#fafcfa]">
+							<td className="py-2 px-3 text-right font-semibold text-[#a45149] tabular-nums bg-[#fafcfa]">
 								{formatRupiah(data.grandTotals.totalInvestmentExpense)}
 							</td>
 						</tr>
@@ -281,12 +281,12 @@ export function ReportAnnualMatrixCard({
 							{data.monthlyTotalExpense.map((val, i) => (
 								<td
 									key={`tot-exp-${MONTH_LABELS[i]}`}
-									className="py-2 px-2 text-center text-[#a45149] font-mono"
+									className="py-2 px-2 text-center text-[#a45149] tabular-nums font-semibold"
 								>
 									{formatCompactRupiah(val)}
 								</td>
 							))}
-							<td className="py-2 px-3 text-right text-[#a45149] font-mono bg-[#fbeaea]">
+							<td className="py-2 px-3 text-right text-[#a45149] tabular-nums font-bold bg-[#fbeaea]">
 								{formatRupiah(data.grandTotals.totalExpense)}
 							</td>
 						</tr>
@@ -299,14 +299,14 @@ export function ReportAnnualMatrixCard({
 							{data.monthlyNetProfit.map((val, i) => (
 								<td
 									key={`net-${MONTH_LABELS[i]}`}
-									className={`py-2.5 px-2 text-center font-mono ${
+									className={`py-2.5 px-2 text-center tabular-nums font-bold ${
 										val >= 0 ? "text-[#3e724d]" : "text-[#b66b68]"
 									}`}
 								>
 									{formatCompactRupiah(val)}
 								</td>
 							))}
-							<td className="py-2.5 px-3 text-right font-bold text-[#253129] font-mono bg-[#e2ede3]">
+							<td className="py-2.5 px-3 text-right font-bold text-[#253129] tabular-nums bg-[#e2ede3]">
 								{formatRupiah(data.grandTotals.netProfit)}
 							</td>
 						</tr>

@@ -302,10 +302,13 @@ export class ReportRepository {
 		const monthlyNetProfit = new Array(12).fill(0);
 		const monthlyProfitMargin = new Array(12).fill(0);
 
-		// Map propertyId -> array of 12 monthly income values
-		const propertyIncomeMap = new Map<string, number[]>();
+		// Map propertyId -> array of 12 monthly invoice income values
+		const propertyInvoiceIncomeMap = new Map<string, number[]>();
+		// Map propertyId -> array of 12 monthly tx income values
+		const propertyTxIncomeMap = new Map<string, number[]>();
 		for (const p of properties) {
-			propertyIncomeMap.set(p.id, new Array(12).fill(0));
+			propertyInvoiceIncomeMap.set(p.id, new Array(12).fill(0));
+			propertyTxIncomeMap.set(p.id, new Array(12).fill(0));
 		}
 
 		// 1. Query Invoices for the whole year
@@ -337,11 +340,10 @@ export class ReportRepository {
 			if (m >= 0 && m < 12) {
 				const amt = Number(inv.amount);
 				const pId = inv.contract.room.propertyId;
-				const arr = propertyIncomeMap.get(pId);
+				const arr = propertyInvoiceIncomeMap.get(pId);
 				if (arr) {
 					arr[m] += amt;
 				}
-				monthlyTotalIncome[m] += amt;
 			}
 		}
 
@@ -367,12 +369,10 @@ export class ReportRepository {
 			const amt = Number(tx.amount);
 
 			if (tx.type === "INCOME") {
-				// If not recorded by invoice
 				if (tx.propertyId) {
-					const arr = propertyIncomeMap.get(tx.propertyId);
-					if (arr && arr[m] === 0) {
+					const arr = propertyTxIncomeMap.get(tx.propertyId);
+					if (arr) {
 						arr[m] += amt;
-						monthlyTotalIncome[m] += amt;
 					}
 				}
 			} else if (tx.type === "EXPENSE") {
@@ -383,6 +383,20 @@ export class ReportRepository {
 				}
 				monthlyTotalExpense[m] += amt;
 			}
+		}
+
+		// Consolidate monthly income per property (take Math.max of invoice vs transaction income)
+		const propertyIncomeMap = new Map<string, number[]>();
+		for (const p of properties) {
+			const invArr =
+				propertyInvoiceIncomeMap.get(p.id) || new Array(12).fill(0);
+			const txArr = propertyTxIncomeMap.get(p.id) || new Array(12).fill(0);
+			const finalArr = new Array(12).fill(0);
+			for (let m = 0; m < 12; m++) {
+				finalArr[m] = Math.max(invArr[m], txArr[m]);
+				monthlyTotalIncome[m] += finalArr[m];
+			}
+			propertyIncomeMap.set(p.id, finalArr);
 		}
 
 		// 3. Compute Net Profit & Margin for each month

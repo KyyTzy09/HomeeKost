@@ -12,7 +12,6 @@ import {
 	Edit,
 	Mail,
 	Search,
-	ShieldAlert,
 	ShieldCheck,
 	Trash2,
 	UserCheck,
@@ -32,9 +31,8 @@ interface UserTableProps {
 }
 
 const ROLE_HIERARCHY: Record<AppUserRole, number> = {
-	SUPER_ADMIN: 3,
-	ADMIN: 2,
-	STAFF: 1,
+	SUPER_ADMIN: 2,
+	ADMIN: 1,
 };
 
 const columnHelper = createColumnHelper<UserItem>();
@@ -42,7 +40,7 @@ const columnHelper = createColumnHelper<UserItem>();
 export function UserTable({
 	data,
 	currentUserId,
-	currentUserRole = "STAFF",
+	currentUserRole = "ADMIN",
 	onEditUser,
 	onDeleteUser,
 }: UserTableProps) {
@@ -68,7 +66,6 @@ export function UserTable({
 
 	const superAdminCount = data.filter((u) => u.role === "SUPER_ADMIN").length;
 	const adminCount = data.filter((u) => u.role === "ADMIN").length;
-	const staffCount = data.filter((u) => u.role === "STAFF").length;
 
 	const getRoleBadge = (role: AppUserRole) => {
 		switch (role) {
@@ -83,12 +80,6 @@ export function UserTable({
 					label: "Admin Kos",
 					className: "bg-[#e6f0fa] text-[#2b6cb0] border-[#c2daf2]",
 					icon: UserCheck,
-				};
-			case "STAFF":
-				return {
-					label: "Staff Operasional",
-					className: "bg-[#f4f7f4] text-[#636c64] border-[#e0e8e1]",
-					icon: ShieldAlert,
 				};
 		}
 	};
@@ -323,17 +314,6 @@ export function UserTable({
 						}`}
 					>
 						Admin ({adminCount})
-					</button>
-					<button
-						type="button"
-						onClick={() => setRoleFilter("STAFF")}
-						className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-							roleFilter === "STAFF"
-								? "bg-white text-[#636c64] shadow-sm border border-[#d5dfd6]"
-								: "text-[#737873] hover:text-[#252925]"
-						}`}
-					>
-						Staff ({staffCount})
 					</button>
 				</div>
 			</div>

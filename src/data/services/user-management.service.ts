@@ -16,9 +16,8 @@ import { propertyRepository } from "../repositories/property.repository.ts";
 import { userRepository } from "../repositories/user.repository.ts";
 
 export const ROLE_HIERARCHY: Record<AppUserRole, number> = {
-	STAFF: 1,
-	ADMIN: 2,
-	SUPER_ADMIN: 3,
+	ADMIN: 1,
+	SUPER_ADMIN: 2,
 };
 
 function formatRelativeLogTime(date: Date): string {
@@ -55,16 +54,16 @@ export class UserManagementService {
 	private async getRequesterRole(
 		requesterUserId?: string,
 	): Promise<AppUserRole> {
-		if (!requesterUserId) return "STAFF";
+		if (!requesterUserId) return "ADMIN";
 		const user = await this.userRepo.findById(requesterUserId);
-		return (user?.role?.name || "STAFF") as AppUserRole;
+		return (user?.role?.name || "ADMIN") as AppUserRole;
 	}
 
 	async getUsers(): Promise<UserItem[]> {
 		const rawUsers = await this.userRepo.findAll();
 
 		return rawUsers.map((u) => {
-			const roleName = (u.role?.name || "STAFF") as AppUserRole;
+			const roleName = (u.role?.name || "ADMIN") as AppUserRole;
 			const propertyName = u.assignedProperty?.name || "Semua Kost";
 
 			return {
@@ -133,7 +132,7 @@ export class UserManagementService {
 			id: created.id,
 			name: created.name,
 			email: created.email,
-			role: (created.role?.name || "STAFF") as AppUserRole,
+			role: (created.role?.name || "ADMIN") as AppUserRole,
 			assignedProperty: created.assignedProperty?.name || "Semua Kost",
 			assignedPropertyId: created.assignedProperty?.id || null,
 			status: "ACTIVE",
@@ -160,7 +159,7 @@ export class UserManagementService {
 
 		const requesterRole = await this.getRequesterRole(requesterUserId);
 		const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? 1;
-		const targetExistingRole = (existing.role?.name || "STAFF") as AppUserRole;
+		const targetExistingRole = (existing.role?.name || "ADMIN") as AppUserRole;
 		const targetExistingLevel = ROLE_HIERARCHY[targetExistingRole] ?? 1;
 		const newRoleLevel = ROLE_HIERARCHY[input.role as AppUserRole] ?? 1;
 
@@ -237,7 +236,7 @@ export class UserManagementService {
 			id: updated.id,
 			name: updated.name,
 			email: updated.email,
-			role: (updated.role?.name || "STAFF") as AppUserRole,
+			role: (updated.role?.name || "ADMIN") as AppUserRole,
 			assignedProperty: updated.assignedProperty?.name || "Semua Kost",
 			assignedPropertyId: updated.assignedProperty?.id || null,
 			status: input.status,
@@ -260,7 +259,7 @@ export class UserManagementService {
 
 		const requesterRole = await this.getRequesterRole(requesterUserId);
 		const requesterLevel = ROLE_HIERARCHY[requesterRole] ?? 1;
-		const targetRole = (existing.role?.name || "STAFF") as AppUserRole;
+		const targetRole = (existing.role?.name || "ADMIN") as AppUserRole;
 		const targetLevel = ROLE_HIERARCHY[targetRole] ?? 1;
 
 		// Hierarchy guard: Cannot delete equal or higher role
@@ -327,7 +326,7 @@ export class UserManagementService {
 			name: user.name,
 			email: user.email,
 			phoneNumber: "",
-			role: (user.role?.name || "STAFF") as AppUserRole,
+			role: (user.role?.name || "ADMIN") as AppUserRole,
 			assignedProperty: user.assignedProperty?.name || "Semua Kost",
 			assignedPropertyId: user.assignedProperty?.id || null,
 			accessibleProperties,
@@ -406,7 +405,7 @@ export class UserManagementService {
 			});
 
 			for (const tx of txs) {
-				const roleName = (tx.creator?.role?.name || "STAFF") as AppUserRole;
+				const roleName = (tx.creator?.role?.name || "ADMIN") as AppUserRole;
 				const userName = tx.creator?.name || "Pengelola Kos";
 				const propName = tx.property?.name || "Semua Kost";
 				const amountFormatted = formatRupiah(Number(tx.amount));
@@ -458,7 +457,7 @@ export class UserManagementService {
 					id: `notif-${n.id}`,
 					time: formatRelativeLogTime(n.sentAt),
 					userName: "Sistem Otomasi",
-					userRole: "STAFF",
+					userRole: "ADMIN",
 					activity,
 					detail: `${n.recipientNumber} · Status: ${n.status === "SENT" ? "Terkirim" : "Gagal"} ${n.notes ? `(${n.notes})` : ""}`,
 					rawDate: n.sentAt,
@@ -473,6 +472,52 @@ export class UserManagementService {
 			console.error("Gagal mengambil data audit logs riil:", err);
 			return [];
 		}
+	}
+
+	async handleForgotPasswordRequest(email: string): Promise<{
+		success: boolean;
+		role: AppUserRole;
+		email: string;
+		name: string;
+		message: string;
+		ownerPhone?: string;
+	}> {
+		const cleanEmail = email.trim().toLowerCase();
+		const user = await this.userRepo.findByEmail(cleanEmail);
+		if (!user) {
+			throw new Error(
+				"Email tidak terdaftar dalam sistem akun pengelola kos.",
+			);
+		}
+
+		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
+		if (roleName === "SUPER_ADMIN") {
+			return {
+				success: true,
+				role: "SUPER_ADMIN",
+				email: user.email,
+				name: user.name,
+				message:
+					"Instruksi pemulihan kata sandi telah dikirimkan ke alamat email SuperAdmin Anda. Silakan periksa kotak masuk atau spam email Anda.",
+			};
+		}
+
+		// Admin Cabang
+		const owner = await this.db.user.findFirst({
+			where: {
+				role: { name: "SUPER_ADMIN" },
+			},
+			select: { name: true },
+		});
+
+		return {
+			success: true,
+			role: "ADMIN",
+			email: user.email,
+			name: user.name,
+			ownerPhone: "081234567890",
+			message: `Akun Admin Cabang dikelola langsung oleh Pemilik Kos (${owner?.name || "SuperAdmin"}). Silakan hubungi Pemilik Kos untuk mendapatkan pembaruan kata sandi akun Anda.`,
+		};
 	}
 }
 

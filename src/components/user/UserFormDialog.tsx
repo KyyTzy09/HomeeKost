@@ -42,7 +42,6 @@ interface UserFormDialogProps {
 const ROLE_OPTIONS: { label: string; value: AppUserRole }[] = [
 	{ label: "SuperAdmin (Owner)", value: "SUPER_ADMIN" },
 	{ label: "Admin (Cabang Kos)", value: "ADMIN" },
-	{ label: "Staff (Operasional)", value: "STAFF" },
 ];
 
 const USER_STATUS_OPTIONS: { label: string; value: AppUserStatus }[] = [
@@ -257,13 +256,8 @@ export function UserFormDialog({
 														SuperAdmin (Owner)
 													</SelectItem>
 												)}
-												{currentUserRole === "SUPER_ADMIN" && (
-													<SelectItem value="ADMIN" className="text-xs">
-														Admin (Cabang Kos)
-													</SelectItem>
-												)}
-												<SelectItem value="STAFF" className="text-xs">
-													Staff (Operasional)
+												<SelectItem value="ADMIN" className="text-xs">
+													Admin (Cabang Kos)
 												</SelectItem>
 											</SelectContent>
 										</Select>
