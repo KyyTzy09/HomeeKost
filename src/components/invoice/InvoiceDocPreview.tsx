@@ -91,7 +91,7 @@ export function InvoiceDocPreview({
 			{/* ─── Printable Official Invoice Sheet (A4 Proportion) ───────── */}
 			<Card
 				id="printable-invoice-sheet"
-				className="p-8 md:p-10 bg-white border-[#e4e9e4] shadow-[0_4px_24px_rgba(48,65,53,0.07)] relative overflow-hidden print:border print:shadow-none print:p-6 print:m-0 print:w-full"
+				className="p-6 sm:p-8 md:p-10 bg-white border-[#e4e9e4] shadow-[0_4px_24px_rgba(48,65,53,0.07)] relative overflow-hidden print:border print:shadow-none print:p-6 print:m-0 print:w-full max-w-[760px] mx-auto w-full min-w-0"
 			>
 				{/* Watermark Stamp: LUNAS / OFFICIAL INVOICE */}
 				{isPaid ? (
@@ -257,7 +257,7 @@ export function InvoiceDocPreview({
 								<span className="text-[10px] text-[#737873] block">
 									Transfer Bank BCA:
 								</span>
-								<b className="text-sm font-mono text-[#252925] tracking-wider block mt-0.5">
+								<b className="text-sm tabular-nums font-bold text-[#252925] tracking-wider block mt-0.5">
 									8735081290
 								</b>
 								<span className="text-[11px] text-[#737873] block mt-0.5">

@@ -21,7 +21,6 @@ import {
 	Filter,
 	History,
 	Search,
-	ShieldAlert,
 	ShieldCheck,
 	UserCheck,
 	X,
@@ -115,12 +114,6 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 					label: "Admin",
 					className: "bg-[#e6f0fa] text-[#2b6cb0] border-[#c2daf2]",
 					icon: UserCheck,
-				};
-			case "STAFF":
-				return {
-					label: "Staff / Sistem",
-					className: "bg-[#f4f7f4] text-[#636c64] border-[#e0e8e1]",
-					icon: ShieldAlert,
 				};
 		}
 	};
@@ -340,14 +333,12 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 								{roleFilter === "ALL" && "Semua Role"}
 								{roleFilter === "SUPER_ADMIN" && "SuperAdmin"}
 								{roleFilter === "ADMIN" && "Admin Kos"}
-								{roleFilter === "STAFF" && "Staff / Sistem"}
 							</SelectValue>
 						</SelectTrigger>
 						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
 							<SelectItem value="ALL">Semua Role</SelectItem>
 							<SelectItem value="SUPER_ADMIN">SuperAdmin</SelectItem>
 							<SelectItem value="ADMIN">Admin Kos</SelectItem>
-							<SelectItem value="STAFF">Staff / Sistem</SelectItem>
 						</SelectContent>
 					</Select>
 

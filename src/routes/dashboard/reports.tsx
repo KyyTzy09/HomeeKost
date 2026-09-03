@@ -119,8 +119,8 @@ function ReportsPage() {
 	const [selectedProperty, setSelectedProperty] = useState<
 		SelectOption<string>
 	>({
-		label: activeProperty?.name || "Semua Cabang Kos",
-		value: activeProperty?.id || "ALL",
+		label: "Semua Cabang Kos",
+		value: "ALL",
 	});
 
 	// Automation settings state

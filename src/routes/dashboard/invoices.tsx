@@ -195,10 +195,10 @@ function InvoicesPage() {
 			</div>
 
 			{/* Invoice Preview Split View */}
-			<div className="invoice-split-container grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 items-start">
+			<div className="invoice-split-container grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)] gap-5 items-start min-w-0 w-full">
 				{/* Left Column: List of Invoices & Search Filters */}
 				<Card
-					className={`bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] overflow-hidden print:hidden ${
+					className={`bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] overflow-hidden min-w-0 print:hidden ${
 						mobileTab === "list" ? "block" : "hidden lg:block"
 					}`}
 				>
@@ -331,7 +331,7 @@ function InvoicesPage() {
 
 				{/* Right Column: Live Document Preview */}
 				<div
-					className={`w-full invoice-preview-wrapper print:block ${
+					className={`w-full min-w-0 invoice-preview-wrapper print:block ${
 						mobileTab === "preview" ? "block" : "hidden lg:block"
 					}`}
 				>

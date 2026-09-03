@@ -7,7 +7,7 @@ export const userFormSchema = z.object({
 		.min(1, "Email wajib diisi")
 		.email("Format email tidak valid")
 		.default(""),
-	role: z.enum(["SUPER_ADMIN", "ADMIN", "STAFF"]).default("ADMIN"),
+	role: z.enum(["SUPER_ADMIN", "ADMIN"]).default("ADMIN"),
 	assignedProperty: z
 		.string()
 		.min(1, "Pilih penugasan cabang kos")
