@@ -55,6 +55,7 @@ interface FinanceProfitLossTableProps {
 	isLoading?: boolean;
 	onExportCsv?: () => void;
 	isExporting?: boolean;
+	propertyName?: string;
 }
 
 const columnHelper = createColumnHelper<ProfitLossRow>();
@@ -68,6 +69,7 @@ export function FinanceProfitLossTable({
 	isLoading = false,
 	onExportCsv,
 	isExporting = false,
+	propertyName,
 }: FinanceProfitLossTableProps) {
 	const currentYear = new Date().getFullYear();
 	const yearOptions: DateOption[] = [
@@ -152,9 +154,16 @@ export function FinanceProfitLossTable({
 			{/* ─── Header & Period Selector ─────────────────────────────────── */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e4e9e4]">
 				<div>
-					<h2 className="text-sm font-bold text-[#252925]">
-						Laporan Laba Rugi (P&L Statement)
-					</h2>
+					<div className="flex items-center gap-2">
+						<h2 className="text-sm font-bold text-[#252925]">
+							Laporan Laba Rugi (P&L Statement)
+						</h2>
+						{propertyName && (
+							<span className="text-[10.5px] font-semibold text-[#4f6958] bg-[#eef3ee] px-2 py-0.5 rounded-md border border-[#d6dfd7]">
+								{propertyName}
+							</span>
+						)}
+					</div>
 					<p className="text-[11px] text-[#737873] mt-0.5">
 						Rekapitulasi pendapatan sewa, pengeluaran operasional & investasi,
 						serta laba bersih
