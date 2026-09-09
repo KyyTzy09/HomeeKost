@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	ArrowDownRight,
 	ArrowUpRight,
+	Building2,
 	Coins,
 	Plus,
 	TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MONTH_NAMES_ID } from "#/common/constants/months.const.ts";
 import FinanceDeleteDialog from "#/components/finance/FinanceDeleteDialog.tsx";
 import {
@@ -22,6 +23,13 @@ import {
 } from "#/hooks/use-transactions.ts";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../../common/shadcn/select.tsx";
 import type { TransactionItem } from "../../common/types/index.ts";
 import type { TransactionFormValues } from "../../common/validations/index.ts";
 import {
@@ -48,7 +56,10 @@ export const Route = createFileRoute("/dashboard/finance")({
 		meta: [{ title: "Laporan Keuangan & Arus Kas — HomeeKost Management" }],
 	}),
 	loader: async ({ context }) => {
-		const activePropertyId = context.dashboard?.activeProperty?.id;
+		const isSuperAdmin = context.dashboard?.isSuperAdmin;
+		const activePropertyId = isSuperAdmin
+			? undefined
+			: context.dashboard?.activeProperty?.id;
 		const now = new Date();
 		const month = now.getMonth() + 1;
 		const year = now.getFullYear();
@@ -87,6 +98,29 @@ function FinancePage() {
 	const currentUserId = dashboardContext.user?.id;
 
 	const { data: properties = [] } = useProperties();
+
+	const [selectedProperty, setSelectedProperty] = useState<{
+		label: string;
+		value: string;
+	}>({
+		label: isSuperAdmin
+			? "Semua Cabang Kos (Konsolidasi)"
+			: (dashboardContext.activeProperty?.name || "Cabang Ditugaskan"),
+		value: isSuperAdmin ? "ALL" : (activePropertyId || ""),
+	});
+
+	// Effective Property ID based on RBAC:
+	// If SuperAdmin and selected "ALL" -> undefined (consolidated / all properties)
+	// If SuperAdmin and selected specific property -> selectedProperty.value
+	// If Admin (Branch Manager) -> activePropertyId (only their assigned property)
+	const effectivePropertyId = useMemo(() => {
+		if (!isSuperAdmin) {
+			return activePropertyId;
+		}
+		return selectedProperty.value === "ALL"
+			? undefined
+			: selectedProperty.value;
+	}, [isSuperAdmin, activePropertyId, selectedProperty.value]);
 
 	const now = new Date();
 	const [selectedMonth, setSelectedMonth] = useState<{
@@ -140,7 +174,7 @@ function FinancePage() {
 	// Queries
 	const { data: transactionsData, isLoading: isLoadingTransactions } =
 		useTransactions({
-			propertyId: activePropertyId,
+			propertyId: effectivePropertyId,
 			search: searchQuery,
 			type: typeFilter.value as "ALL" | "INCOME" | "EXPENSE",
 			category: categoryFilter.value,
@@ -152,27 +186,27 @@ function FinancePage() {
 
 	const { data: financialSummary, isLoading: isLoadingSummary } =
 		useFinancialSummary({
-			propertyId: activePropertyId,
+			propertyId: effectivePropertyId,
 			month: selectedMonth.value,
 			year: selectedYear.value,
 		});
 
 	const { data: costComposition = [], isLoading: isLoadingCostComposition } =
 		useCostComposition({
-			propertyId: activePropertyId,
+			propertyId: effectivePropertyId,
 			month: selectedMonth.value,
 			year: selectedYear.value,
 		});
 
 	const { data: monthlyTrends = [], isLoading: isLoadingTrends } =
 		useRecentMonthlyTrends({
-			propertyId: activePropertyId,
+			propertyId: effectivePropertyId,
 			count: 6,
 		});
 
 	const { data: profitLossData = [], isLoading: isLoadingProfitLoss } =
 		useProfitLossStatement({
-			propertyId: activePropertyId,
+			propertyId: effectivePropertyId,
 			month: selectedMonth.value,
 			year: selectedYear.value,
 		});
@@ -228,7 +262,7 @@ function FinancePage() {
 	const handleExportCsv = async () => {
 		try {
 			const result = await exportCsvMutation.mutateAsync({
-				propertyId: activePropertyId,
+				propertyId: effectivePropertyId,
 				year: selectedYear.value,
 			});
 
@@ -276,6 +310,17 @@ function FinancePage() {
 				{/* ─── Page Header ────────────────────────────────────────────── */}
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 					<div>
+						<div className="flex items-center gap-2 mb-1">
+							<span className="text-[11px] font-semibold text-[#4f6958] bg-[#eef3ee] px-2.5 py-0.5 rounded-md flex items-center gap-1.5 border border-[#d6dfd7]">
+								<Building2 className="w-3.5 h-3.5" />
+								{isSuperAdmin
+									? selectedProperty.label
+									: (dashboardContext.activeProperty?.name || "Cabang Ditugaskan")}
+							</span>
+							<span className="text-[11px] text-[#737873]">
+								· {isSuperAdmin ? "SuperAdmin View" : "Admin Cabang"}
+							</span>
+						</div>
 						<h1 className="text-xl sm:text-2xl font-bold text-[#252925] tracking-tight">
 							Laporan Keuangan & Arus Kas
 						</h1>
@@ -285,7 +330,49 @@ function FinancePage() {
 						</p>
 					</div>
 
-					<div className="flex items-center gap-2.5">
+					<div className="flex flex-wrap items-center gap-2.5">
+						{/* Property Filter Dropdown (SuperAdmin Only) */}
+						{isSuperAdmin && properties && properties.length > 0 && (
+							<div className="w-56 sm:w-64">
+								<Select
+									value={selectedProperty.value}
+									onValueChange={(val) => {
+										if (val === "ALL") {
+											setSelectedProperty({
+												label: "Semua Cabang Kos (Konsolidasi)",
+												value: "ALL",
+											});
+										} else {
+											const matched = properties.find((p) => p.id === val);
+											if (matched) {
+												setSelectedProperty({
+													label: matched.name,
+													value: matched.id,
+												});
+											}
+										}
+									}}
+								>
+									<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594] shadow-sm font-medium">
+										<Building2 className="w-3.5 h-3.5 mr-1.5 text-[#4f6958]" />
+										<SelectValue placeholder="Pilih Cabang Kos">
+											{selectedProperty.label}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent className="bg-white border-[#e4e9e4]">
+										<SelectItem value="ALL" className="text-xs font-semibold">
+											Semua Cabang Kos (Konsolidasi)
+										</SelectItem>
+										{properties.map((p) => (
+											<SelectItem key={p.id} value={p.id} className="text-xs">
+												{p.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+
 						<Button
 							type="button"
 							onClick={() => {
@@ -454,6 +541,11 @@ function FinancePage() {
 					isLoading={isLoadingProfitLoss}
 					onExportCsv={handleExportCsv}
 					isExporting={exportCsvMutation.isPending}
+					propertyName={
+						isSuperAdmin && selectedProperty.value === "ALL"
+							? "Semua Cabang Kos (Konsolidasi)"
+							: selectedProperty.label
+					}
 				/>
 
 				{/* ─── Main Transactions Table with Filters & Search ────────────── */}
@@ -509,7 +601,7 @@ function FinancePage() {
 					onOpenChange={setIsFormOpen}
 					editingTransaction={editingTransaction}
 					properties={properties}
-					defaultPropertyId={activePropertyId}
+					defaultPropertyId={effectivePropertyId || properties[0]?.id || activePropertyId}
 					onSubmit={handleFormSubmit}
 					isSubmitting={
 						createTxMutation.isPending || updateTxMutation.isPending
