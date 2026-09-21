@@ -68,6 +68,8 @@ describe("Payment Form Calculation Helpers", () => {
 			expect(computeDueDate("10 Mar", 2026, 9)).toBe("2026-09-10");
 			expect(computeDueDate("5", 2026, 3)).toBe("2026-03-05");
 			expect(computeDueDate("20 Agu", 2026, 12)).toBe("2026-12-20");
+			expect(computeDueDate("10 Oktober 2026", 2026, 10)).toBe("2026-10-10");
+			expect(computeDueDate("01 September 2026", 2026, 9)).toBe("2026-09-01");
 		});
 
 		it("harus menangani fallback ke tanggal 10 saat dueDate string tidak valid", () => {

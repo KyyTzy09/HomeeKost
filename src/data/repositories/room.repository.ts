@@ -16,6 +16,10 @@ export class RoomRepository {
 					where: { status: "ACTIVE" },
 					include: {
 						tenant: true,
+						invoices: {
+							orderBy: { dueDate: "asc" },
+							take: 12,
+						},
 					},
 					orderBy: { createdAt: "desc" },
 					take: 1,
@@ -37,6 +41,10 @@ export class RoomRepository {
 					where: { status: "ACTIVE" },
 					include: {
 						tenant: true,
+						invoices: {
+							orderBy: { dueDate: "asc" },
+							take: 12,
+						},
 					},
 					orderBy: { createdAt: "desc" },
 					take: 1,
@@ -108,7 +116,13 @@ export class RoomRepository {
 					where: { status: "ACTIVE" },
 					include: {
 						tenant: true,
+						invoices: {
+							orderBy: { dueDate: "asc" },
+							take: 12,
+						},
 					},
+					orderBy: { createdAt: "desc" },
+					take: 1,
 				},
 			},
 		});

@@ -7,7 +7,7 @@ import type {
 } from "../../common/types/index.ts";
 import type { TenantFormValues } from "../../common/validations/index.ts";
 import type { BillingCycle } from "../../generated/prisma/client.js";
-import { getMonthName } from "../../lib/date-utils.ts";
+import { formatDate, getMonthName } from "../../lib/date-utils.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import { formatDisplayPhone, sanitizePhone } from "../../lib/phone-utils.ts";
 import { roomRepository } from "../repositories/room.repository.ts";
@@ -87,37 +87,74 @@ export class TenantService {
 		return `${day} ${month} ${year}`;
 	}
 
-	private formatDueDate(
+	private getRealDueDate(
 		dueDateDay: number,
-		invoices?: { dueDate: Date; status: string }[],
-	): string {
+		invoices?: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+	): Date {
 		const now = new Date();
-		const months = [
-			"Jan",
-			"Feb",
-			"Mar",
-			"Apr",
-			"Mei",
-			"Jun",
-			"Jul",
-			"Agu",
-			"Sep",
-			"Okt",
-			"Nov",
-			"Des",
-		];
 
-		if (invoices && invoices.length > 0) {
-			const latest = invoices[0];
-			const d = new Date(latest.dueDate);
-			const day = d.getDate().toString().padStart(2, "0");
-			const month = months[d.getMonth()] || "Agu";
-			return `${day} ${month}`;
+		// 1. Tagihan belum lunas (OVERDUE atau PENDING): ambil tanggal tenggat terawal/mendesak
+		const unpaidInvoices = (invoices || [])
+			.filter((inv) => inv.status === "OVERDUE" || inv.status === "PENDING")
+			.sort(
+				(a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+			);
+
+		if (unpaidInvoices.length > 0) {
+			return new Date(unpaidInvoices[0].dueDate);
 		}
 
-		const day = dueDateDay.toString().padStart(2, "0");
-		const month = months[now.getMonth()] || "Agu";
-		return `${day} ${month}`;
+		// 2. Jika seluruh tagihan sudah LUNAS (PAID): tenggat berikutnya adalah 1 bulan setelah invoice lunas terakhir
+		const paidInvoices = (invoices || [])
+			.filter((inv) => inv.status === "PAID")
+			.sort(
+				(a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+			);
+
+		if (paidInvoices.length > 0) {
+			const latestPaid = paidInvoices[0];
+			const latestDue = new Date(latestPaid.dueDate);
+			return new Date(
+				latestDue.getFullYear(),
+				latestDue.getMonth() + 1,
+				dueDateDay,
+			);
+		}
+
+		// 3. Fallback: jika belum ada invoice, hitung dari startDate atau bulan berjalan
+		if (startDate) {
+			const start = new Date(startDate);
+			if (start > now) {
+				return new Date(start.getFullYear(), start.getMonth(), dueDateDay);
+			}
+		}
+
+		const targetYear = now.getFullYear();
+		let targetMonth = now.getMonth();
+		if (now.getDate() > dueDateDay) {
+			targetMonth += 1;
+		}
+		return new Date(targetYear, targetMonth, dueDateDay);
+	}
+
+	private formatDueDate(
+		dueDateDay: number,
+		invoices?: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+	): string {
+		const targetDate = this.getRealDueDate(dueDateDay, invoices, startDate);
+		return formatDate(targetDate);
 	}
 
 	private calculateUnpaidPeriod(
@@ -246,7 +283,11 @@ export class TenantService {
 				startDate: activeContract?.startDate
 					? this.formatDate(activeContract.startDate)
 					: "—",
-				dueDate: this.formatDueDate(dueDateDay, activeContract?.invoices),
+				dueDate: this.formatDueDate(
+					dueDateDay,
+					activeContract?.invoices,
+					activeContract?.startDate,
+				),
 				unpaidPeriod,
 				vehicle: t.vehicle || null,
 				deposit: formatRupiah(depositAmount),
@@ -326,7 +367,11 @@ export class TenantService {
 			startDate: activeContract?.startDate
 				? this.formatDate(activeContract.startDate)
 				: "—",
-			dueDate: this.formatDueDate(dueDateDay, activeContract?.invoices),
+			dueDate: this.formatDueDate(
+				dueDateDay,
+				activeContract?.invoices,
+				activeContract?.startDate,
+			),
 			unpaidPeriod,
 			vehicle: t.vehicle || null,
 			deposit: formatRupiah(depositAmount),
@@ -475,7 +520,7 @@ export class TenantService {
 					}
 				}
 			}
-		} else if (initialPayment >= totalCycleRent) {
+		} else if (input.markPastPeriodsPaid || initialPayment >= totalCycleRent) {
 			// Skenario 2: Bayar Lunas Penuh di Awal untuk 1 Siklus Pertama
 			calculatedEndDate = new Date(
 				startDate.getFullYear(),
@@ -621,7 +666,7 @@ export class TenantService {
 			rent: formatRupiah(totalCycleRent),
 			duration: input.duration,
 			startDate: this.formatDate(contract.startDate),
-			dueDate: this.formatDueDate(dueDateDay),
+			dueDate: this.formatDueDate(dueDateDay, invoicesToCreate, contract.startDate),
 			vehicle: input.vehicle || null,
 			deposit: formatRupiah(depositAmount),
 			emergencyName: input.emergencyName || null,

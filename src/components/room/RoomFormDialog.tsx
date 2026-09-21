@@ -60,9 +60,9 @@ export function RoomFormDialog({
 		defaultValues: {
 			roomNo: editingRoom?.roomNo ?? "",
 			type: (editingRoom?.type ?? "Standard") as RoomType,
-			price: editingRoom?.price ?? "Rp850.000",
+			price: editingRoom?.price ?? "",
 			status: (editingRoom?.status ?? "Kosong") as RoomStatus,
-			facilities: editingRoom?.facilities ?? "Kamar mandi dalam · Wi-Fi",
+			facilities: editingRoom?.facilities ?? "",
 		},
 		onSubmit: async ({ value }) => {
 			const result = roomSchema.safeParse(value);

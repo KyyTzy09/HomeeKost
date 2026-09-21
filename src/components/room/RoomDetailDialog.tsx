@@ -103,7 +103,7 @@ export function RoomDetailDialog({
 									{room.dueDate ? ` · jatuh tempo ${room.dueDate}` : ""}
 								</>
 							) : room.status === "Maintenance" ? (
-								"Lampu kamar perlu diganti"
+								"Dalam pemeliharaan fasilitas"
 							) : (
 								"Siap disewakan"
 							)}
@@ -117,7 +117,7 @@ export function RoomDetailDialog({
 						Fasilitas Kamar
 					</span>
 					<p className="text-[11.5px] text-[#4f5c53] font-medium m-0">
-						{room.facilities || "Kamar mandi dalam · Wi-Fi · AC"}
+						{room.facilities || "Fasilitas standar kamar"}
 					</p>
 				</div>
 

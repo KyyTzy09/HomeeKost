@@ -2,6 +2,7 @@ import { compareRoomNumbers } from "../../common/helpers/index.ts";
 import type { RoomItem, RoomStatusType } from "../../common/types/index.ts";
 import type { RoomFormValues } from "../../common/validations/index.ts";
 import type { RoomStatus } from "../../generated/prisma/client.js";
+import { formatDate } from "../../lib/date-utils.ts";
 import { roomRepository } from "../repositories/room.repository.ts";
 
 export class RoomService {
@@ -29,24 +30,61 @@ export class RoomService {
 		}
 	}
 
-	private formatDueDay(day?: number | null): string | null {
-		if (!day) return null;
-		const months = [
-			"Jan",
-			"Feb",
-			"Mar",
-			"Apr",
-			"Mei",
-			"Jun",
-			"Jul",
-			"Agu",
-			"Sep",
-			"Okt",
-			"Nov",
-			"Des",
-		];
-		const currentMonth = months[new Date().getMonth()];
-		return `${String(day).padStart(2, "0")} ${currentMonth}`;
+	private formatContractDueDate(
+		dueDateDay?: number | null,
+		invoices?: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+	): string | null {
+		if (!dueDateDay) return null;
+		const now = new Date();
+
+		// 1. Tagihan belum lunas (OVERDUE atau PENDING): ambil tanggal tenggat terawal
+		const unpaidInvoices = (invoices || [])
+			.filter((inv) => inv.status === "OVERDUE" || inv.status === "PENDING")
+			.sort(
+				(a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+			);
+
+		if (unpaidInvoices.length > 0) {
+			return formatDate(new Date(unpaidInvoices[0].dueDate));
+		}
+
+		// 2. Jika seluruh tagihan sudah LUNAS (PAID): tenggat berikutnya adalah 1 bulan setelah invoice lunas terakhir
+		const paidInvoices = (invoices || [])
+			.filter((inv) => inv.status === "PAID")
+			.sort(
+				(a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+			);
+
+		if (paidInvoices.length > 0) {
+			const latestPaid = paidInvoices[0];
+			const latestDue = new Date(latestPaid.dueDate);
+			return formatDate(
+				new Date(latestDue.getFullYear(), latestDue.getMonth() + 1, dueDateDay),
+			);
+		}
+
+		// 3. Fallback jika belum ada invoice: hitung dari startDate atau bulan berjalan
+		if (startDate) {
+			const start = new Date(startDate);
+			if (start > now) {
+				return formatDate(
+					new Date(start.getFullYear(), start.getMonth(), dueDateDay),
+				);
+			}
+		}
+
+		const targetYear = now.getFullYear();
+		let targetMonth = now.getMonth();
+		if (now.getDate() > dueDateDay) {
+			targetMonth += 1;
+		}
+		return formatDate(new Date(targetYear, targetMonth, dueDateDay));
 	}
 
 	async getRoomsByProperty(propertyId: string): Promise<RoomItem[]> {
@@ -57,7 +95,11 @@ export class RoomService {
 				const activeContract = r.rentalContracts[0];
 				const tenantName = activeContract?.tenant?.name || null;
 				const dueDate = activeContract?.dueDateDay
-					? this.formatDueDay(activeContract.dueDateDay)
+					? this.formatContractDueDate(
+							activeContract.dueDateDay,
+							activeContract.invoices,
+							activeContract.startDate,
+						)
 					: null;
 
 				const priceNum = Number(r.price) || 0;
@@ -85,7 +127,11 @@ export class RoomService {
 		const activeContract = r.rentalContracts[0];
 		const tenantName = activeContract?.tenant?.name || null;
 		const dueDate = activeContract?.dueDateDay
-			? this.formatDueDay(activeContract.dueDateDay)
+			? this.formatContractDueDate(
+					activeContract.dueDateDay,
+					activeContract.invoices,
+					activeContract.startDate,
+				)
 			: null;
 
 		const priceNum = Number(r.price) || 0;
@@ -176,7 +222,11 @@ export class RoomService {
 		const activeContract = updated.rentalContracts[0];
 		const tenantName = activeContract?.tenant?.name || null;
 		const dueDate = activeContract?.dueDateDay
-			? this.formatDueDay(activeContract.dueDateDay)
+			? this.formatContractDueDate(
+					activeContract.dueDateDay,
+					activeContract.invoices,
+					activeContract.startDate,
+				)
 			: null;
 
 		return {
