@@ -1,3 +1,4 @@
+import { compareRoomNumbers } from "../../common/helpers/index.ts";
 import type { RoomItem, RoomStatusType } from "../../common/types/index.ts";
 import type { RoomFormValues } from "../../common/validations/index.ts";
 import type { RoomStatus } from "../../generated/prisma/client.js";
@@ -51,28 +52,30 @@ export class RoomService {
 	async getRoomsByProperty(propertyId: string): Promise<RoomItem[]> {
 		const rooms = await this.roomRepo.findByPropertyId(propertyId);
 
-		return rooms.map((r) => {
-			const activeContract = r.rentalContracts[0];
-			const tenantName = activeContract?.tenant?.name || null;
-			const dueDate = activeContract?.dueDateDay
-				? this.formatDueDay(activeContract.dueDateDay)
-				: null;
+		return rooms
+			.map((r) => {
+				const activeContract = r.rentalContracts[0];
+				const tenantName = activeContract?.tenant?.name || null;
+				const dueDate = activeContract?.dueDateDay
+					? this.formatDueDay(activeContract.dueDateDay)
+					: null;
 
-			const priceNum = Number(r.price) || 0;
-			const formattedPrice = `Rp${priceNum.toLocaleString("id-ID")}`;
+				const priceNum = Number(r.price) || 0;
+				const formattedPrice = `Rp${priceNum.toLocaleString("id-ID")}`;
 
-			return {
-				id: r.id,
-				propertyId: r.propertyId,
-				roomNo: r.roomNumber,
-				type: (r.type || "Standard") as "Standard" | "Deluxe" | "Suite",
-				price: formattedPrice,
-				status: this.mapStatusToUI(r.status),
-				tenantName,
-				dueDate,
-				facilities: r.facilities || "",
-			};
-		});
+				return {
+					id: r.id,
+					propertyId: r.propertyId,
+					roomNo: r.roomNumber,
+					type: (r.type || "Standard") as "Standard" | "Deluxe" | "Suite",
+					price: formattedPrice,
+					status: this.mapStatusToUI(r.status),
+					tenantName,
+					dueDate,
+					facilities: r.facilities || "",
+				};
+			})
+			.sort((a, b) => compareRoomNumbers(a.roomNo, b.roomNo));
 	}
 
 	async getRoomById(id: string): Promise<RoomItem | null> {

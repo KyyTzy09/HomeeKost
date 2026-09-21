@@ -10,8 +10,10 @@ import {
 	Plus,
 	Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { compareRoomNumbers } from "../../common/helpers/index.ts";
 import { Button } from "../../common/shadcn/button.tsx";
+
 import type { RoomItem } from "../../common/types/index.ts";
 import type {
 	PropertyFormValues,
@@ -265,7 +267,11 @@ function PropertyDetailPage() {
 		);
 	}
 
-	const occupiedCount = rooms.filter((r) => r.status === "Terisi").length;
+	const sortedRooms = useMemo(() => {
+		return [...rooms].sort((a, b) => compareRoomNumbers(a.roomNo, b.roomNo));
+	}, [rooms]);
+
+	const occupiedCount = sortedRooms.filter((r) => r.status === "Terisi").length;
 
 	return (
 		<div className="space-y-6">
@@ -430,7 +436,7 @@ function PropertyDetailPage() {
 				</div>
 			) : (
 				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-					{rooms.map((room) => (
+					{sortedRooms.map((room) => (
 						<RoomCard
 							key={room.id}
 							room={room}
