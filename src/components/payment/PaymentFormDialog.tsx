@@ -1,5 +1,12 @@
-import { DollarSign, MessageSquare, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+	Check,
+	ChevronsUpDown,
+	DollarSign,
+	MessageSquare,
+	Save,
+	Search,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
 import {
@@ -53,10 +60,39 @@ export function PaymentFormDialog({
 	const [sendWhatsApp, setSendWhatsApp] = useState<boolean>(false);
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
+	const [tenantQuery, setTenantQuery] = useState<string>("");
+	const [isTenantDropdownOpen, setIsTenantDropdownOpen] =
+		useState<boolean>(false);
+	const tenantComboboxRef = useRef<HTMLDivElement>(null);
+
 	// Filter hanya penghuni yang memiliki kamar aktif
 	const activeTenantsWithRoom = useMemo(() => {
 		return tenants.filter((t) => t.roomNo && t.roomNo !== "—");
 	}, [tenants]);
+
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (
+				tenantComboboxRef.current &&
+				!tenantComboboxRef.current.contains(event.target as Node)
+			) {
+				setIsTenantDropdownOpen(false);
+			}
+		}
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	const filteredTenants = useMemo(() => {
+		const q = tenantQuery.trim().toLowerCase();
+		if (!q) return activeTenantsWithRoom;
+		return activeTenantsWithRoom.filter(
+			(t) =>
+				t.name.toLowerCase().includes(q) ||
+				t.roomNo.toLowerCase().includes(q) ||
+				(t.phone?.includes(q) ?? false),
+		);
+	}, [tenantQuery, activeTenantsWithRoom]);
 
 	useEffect(() => {
 		if (open) {
@@ -74,6 +110,11 @@ export function PaymentFormDialog({
 			setNotes("");
 			setSendWhatsApp(false);
 			setErrors({});
+			setTenantQuery("");
+			setIsTenantDropdownOpen(false);
+		} else {
+			setTenantQuery("");
+			setIsTenantDropdownOpen(false);
 		}
 	}, [open, activeTenantsWithRoom, currentYear, todayStr]);
 
@@ -145,38 +186,85 @@ export function PaymentFormDialog({
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4 py-2">
-					{/* Tenant & Room Selector */}
-					<div>
+					{/* Searchable Combobox Penghuni & Kamar */}
+					<div className="space-y-1.5 relative" ref={tenantComboboxRef}>
 						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
 							Pilih Penghuni & Kamar *
 						</Label>
-						<Select
-							value={contractId}
-							onValueChange={(val) => {
-								if (val) {
-									setContractId(val);
-									const matched = activeTenantsWithRoom.find(
-										(t) => (t.contractId || t.id) === val,
-									);
-									if (matched) {
-										setAmount(parseRupiah(matched.rent) || 850000);
-									}
-								}
-							}}
+						<button
+							type="button"
+							onClick={() => setIsTenantDropdownOpen((prev) => !prev)}
+							className="w-full h-10 px-3 border border-[#e4e9e4] rounded-lg bg-[#fbfcfb] text-left text-xs flex items-center justify-between hover:border-[#8fa594] transition-colors focus:outline-none focus:ring-2 focus:ring-[#8fa594]/20"
 						>
-							<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-								<SelectValue placeholder="Pilih Penghuni & Kamar">
-									{selectedTenantLabel}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-								{activeTenantsWithRoom.map((t) => (
-									<SelectItem key={t.id} value={t.contractId || t.id}>
-										{t.name} — Kamar {t.roomNo} ({t.rent}/bln)
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+							<span
+								className={
+									selectedTenantLabel
+										? "text-[#252925] font-medium truncate"
+										: "text-[#737873]"
+								}
+							>
+								{selectedTenantLabel || "Pilih / Cari Penghuni & Kamar..."}
+							</span>
+							<ChevronsUpDown className="w-4 h-4 text-[#737873] shrink-0 ml-2" />
+						</button>
+
+						{isTenantDropdownOpen && (
+							<div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e4e9e4] rounded-xl shadow-xl z-50 p-2 space-y-1">
+								<div className="relative mb-1">
+									<Search className="w-3.5 h-3.5 absolute left-2.5 top-3 text-[#737873]" />
+									<input
+										type="text"
+										placeholder="Ketik nama atau nomor kamar..."
+										value={tenantQuery}
+										onChange={(e) => setTenantQuery(e.target.value)}
+										className="w-full pl-8 pr-3 py-1.5 text-xs border border-[#e4e9e4] rounded-lg outline-none focus:border-[#4f6958] bg-[#fbfcfb]"
+										autoFocus
+									/>
+								</div>
+
+								<div className="max-h-56 overflow-y-auto space-y-0.5">
+									{filteredTenants.length === 0 ? (
+										<div className="py-3 text-center text-xs text-[#737873]">
+											Penghuni tidak ditemukan
+										</div>
+									) : (
+										filteredTenants.map((t) => {
+											const isSelected = (t.contractId || t.id) === contractId;
+											return (
+												<button
+													key={t.id}
+													type="button"
+													onClick={() => {
+														setContractId(t.contractId || t.id);
+														setAmount(parseRupiah(t.rent) || 850000);
+														setIsTenantDropdownOpen(false);
+														setTenantQuery("");
+													}}
+													className={`w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center justify-between hover:bg-[#f3f7f3] transition-colors ${
+														isSelected
+															? "bg-[#f3f7f3] font-semibold text-[#4f6958]"
+															: "text-[#252925]"
+													}`}
+												>
+													<div className="truncate pr-2">
+														<div className="font-medium text-[#252925] truncate">
+															{t.name}
+														</div>
+														<div className="text-[11px] text-[#737873]">
+															Kamar {t.roomNo} · {t.rent}/bln
+														</div>
+													</div>
+													{isSelected && (
+														<Check className="w-3.5 h-3.5 text-[#4f6958] shrink-0" />
+													)}
+												</button>
+											);
+										})
+									)}
+								</div>
+							</div>
+						)}
+
 						{errors.contractId && (
 							<p className="text-[11px] text-[#a65f5b] mt-1">
 								{errors.contractId}

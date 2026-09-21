@@ -15,6 +15,7 @@
     "lint": "biome lint",
     "check": "biome check",
     "test": "vitest run",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "post-cta-init": "bunx --bun create-db@latest --user-agent tanstack/tsrouter",
     "db:generate": "dotenv -e .env -- prisma generate",
