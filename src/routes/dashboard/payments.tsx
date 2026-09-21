@@ -71,21 +71,24 @@ function PaymentsPage() {
 	const { data: tenants = [] } = useTenants(activePropertyId);
 
 	const now = new Date();
-	const [periodFilter, setPeriodFilter] = useState<string>("ALL");
+	const currentPeriodVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+	const [periodFilter, setPeriodFilter] = useState<string>(currentPeriodVal);
 
 	const periodOptions = useMemo(() => {
-		const options = [{ label: "Semua Periode", value: "ALL" }];
 		const curY = now.getFullYear();
 		const curM = now.getMonth() + 1;
+		const currentVal = `${curY}-${String(curM).padStart(2, "0")}`;
+		const options = [
+			{ label: `Bulan Ini (${getMonthName(curM)} ${curY})`, value: currentVal },
+			{ label: "Semua Periode", value: "ALL" },
+		];
 		for (let offset = -6; offset <= 6; offset++) {
+			if (offset === 0) continue;
 			const d = new Date(curY, curM - 1 + offset, 1);
 			const y = d.getFullYear();
 			const m = d.getMonth() + 1;
 			const val = `${y}-${String(m).padStart(2, "0")}`;
-			const isCurrent = offset === 0;
-			const label = isCurrent
-				? `Bulan Ini (${getMonthName(m)} ${y})`
-				: `${getMonthName(m)} ${y}`;
+			const label = `${getMonthName(m)} ${y}`;
 			options.push({ label, value: val });
 		}
 		return options;
@@ -102,10 +105,14 @@ function PaymentsPage() {
 		const [yStr, mStr] = periodFilter.split("-");
 		const m = Number(mStr);
 		const y = Number(yStr);
+		const isCurrent =
+			m === now.getMonth() + 1 && y === now.getFullYear();
 		return {
 			selectedMonth: m,
 			selectedYear: y,
-			periodLabel: `${getMonthName(m)} ${y}`,
+			periodLabel: isCurrent
+				? `Bulan Ini (${getMonthName(m)} ${y})`
+				: `${getMonthName(m)} ${y}`,
 		};
 	}, [periodFilter]);
 

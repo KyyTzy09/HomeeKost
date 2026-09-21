@@ -94,7 +94,7 @@ export function PaymentTable({
 	onSearchChange,
 	statusFilter,
 	onStatusFilterChange,
-	periodFilter = "ALL",
+	periodFilter,
 	onPeriodFilterChange,
 	periodOptions = [],
 	sortBy,
