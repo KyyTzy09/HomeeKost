@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { PaymentItem } from "../../common/types/index.ts";
 import type {
 	ConfirmPaymentInput,
@@ -33,6 +33,7 @@ import {
 	useSendWhatsAppInvoice,
 	useTenants,
 } from "../../hooks/index.ts";
+import { getMonthName } from "../../lib/date-utils.ts";
 
 export const Route = createFileRoute("/dashboard/payments")({
 	head: () => ({
@@ -70,8 +71,43 @@ function PaymentsPage() {
 	const { data: tenants = [] } = useTenants(activePropertyId);
 
 	const now = new Date();
-	const [selectedMonth] = useState<number>(now.getMonth() + 1);
-	const [selectedYear] = useState<number>(now.getFullYear());
+	const [periodFilter, setPeriodFilter] = useState<string>("ALL");
+
+	const periodOptions = useMemo(() => {
+		const options = [{ label: "Semua Periode", value: "ALL" }];
+		const curY = now.getFullYear();
+		const curM = now.getMonth() + 1;
+		for (let offset = -6; offset <= 6; offset++) {
+			const d = new Date(curY, curM - 1 + offset, 1);
+			const y = d.getFullYear();
+			const m = d.getMonth() + 1;
+			const val = `${y}-${String(m).padStart(2, "0")}`;
+			const isCurrent = offset === 0;
+			const label = isCurrent
+				? `Bulan Ini (${getMonthName(m)} ${y})`
+				: `${getMonthName(m)} ${y}`;
+			options.push({ label, value: val });
+		}
+		return options;
+	}, []);
+
+	const { selectedMonth, selectedYear, periodLabel } = useMemo(() => {
+		if (periodFilter === "ALL") {
+			return {
+				selectedMonth: undefined,
+				selectedYear: undefined,
+				periodLabel: "Semua Periode",
+			};
+		}
+		const [yStr, mStr] = periodFilter.split("-");
+		const m = Number(mStr);
+		const y = Number(yStr);
+		return {
+			selectedMonth: m,
+			selectedYear: y,
+			periodLabel: `${getMonthName(m)} ${y}`,
+		};
+	}, [periodFilter]);
 
 	// Filter and Sort states
 	const [searchQuery, setSearchQuery] = useState<string>("");
@@ -254,7 +290,7 @@ function PaymentsPage() {
 			<PaymentMetrics
 				stats={paymentStats}
 				isLoading={isLoadingStats}
-				periodLabel="Bulan Ini"
+				periodLabel={periodLabel}
 			/>
 
 			{/* ─── TanStack Table View with Filters & Real-time Search ───────── */}
@@ -274,6 +310,12 @@ function PaymentsPage() {
 					setStatusFilter(status);
 					setCurrentPage(1);
 				}}
+				periodFilter={periodFilter}
+				onPeriodFilterChange={(p) => {
+					setPeriodFilter(p);
+					setCurrentPage(1);
+				}}
+				periodOptions={periodOptions}
 				sortBy={sortBy}
 				sortOrder={sortOrder}
 				onSortToggle={handleSortToggle}

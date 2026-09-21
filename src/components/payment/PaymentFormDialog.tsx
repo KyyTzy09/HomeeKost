@@ -238,11 +238,18 @@ export function PaymentFormDialog({
 		});
 	};
 
-	const yearOptions = [
-		{ label: String(currentYear - 1), value: currentYear - 1 },
-		{ label: String(currentYear), value: currentYear },
-		{ label: String(currentYear + 1), value: currentYear + 1 },
-	];
+	const yearOptions = useMemo(() => {
+		const baseYears = new Set([
+			currentYear - 1,
+			currentYear,
+			currentYear + 1,
+			currentYear + 2,
+			periodYear,
+		]);
+		return Array.from(baseYears)
+			.sort((a, b) => a - b)
+			.map((y) => ({ label: String(y), value: y }));
+	}, [currentYear, periodYear]);
 
 	const selectedTenantLabel = selectedTenant
 		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${formatRupiah(rentCalculation.monthlyRent)}/bln)`

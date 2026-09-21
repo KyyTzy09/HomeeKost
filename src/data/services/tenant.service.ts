@@ -96,6 +96,8 @@ export class TenantService {
 			status: string;
 		}>,
 		startDate?: Date | null,
+		endDate?: Date | null,
+		cycleMonths: number = 1,
 	): Date {
 		const now = new Date();
 
@@ -110,7 +112,8 @@ export class TenantService {
 			return new Date(unpaidInvoices[0].dueDate);
 		}
 
-		// 2. Jika seluruh tagihan sudah LUNAS (PAID): tenggat berikutnya adalah 1 bulan setelah invoice lunas terakhir
+		// 2. Jika seluruh tagihan sudah LUNAS (PAID):
+		// Tenggat berikutnya adalah endDate kontrak atau latestDue + cycleMonths
 		const paidInvoices = (invoices || [])
 			.filter((inv) => inv.status === "PAID")
 			.sort(
@@ -118,11 +121,14 @@ export class TenantService {
 			);
 
 		if (paidInvoices.length > 0) {
+			if (endDate && new Date(endDate) > new Date(paidInvoices[0].dueDate)) {
+				return new Date(endDate);
+			}
 			const latestPaid = paidInvoices[0];
 			const latestDue = new Date(latestPaid.dueDate);
 			return new Date(
 				latestDue.getFullYear(),
-				latestDue.getMonth() + 1,
+				latestDue.getMonth() + cycleMonths,
 				dueDateDay,
 			);
 		}
@@ -152,8 +158,16 @@ export class TenantService {
 			status: string;
 		}>,
 		startDate?: Date | null,
+		endDate?: Date | null,
+		cycleMonths: number = 1,
 	): string {
-		const targetDate = this.getRealDueDate(dueDateDay, invoices, startDate);
+		const targetDate = this.getRealDueDate(
+			dueDateDay,
+			invoices,
+			startDate,
+			endDate,
+			cycleMonths,
+		);
 		return formatDate(targetDate);
 	}
 
@@ -165,6 +179,7 @@ export class TenantService {
 			status: string;
 		}>,
 		startDate?: Date | null,
+		cycleMonths: number = 1,
 	): { month: number; year: number } {
 		const pendingOrOverdue = invoices
 			.filter(
@@ -203,9 +218,10 @@ export class TenantService {
 		if (paidInvoices.length > 0) {
 			const latest = paidInvoices[0];
 			if (latest.periodMonth != null && latest.periodYear != null) {
-				const nextMonth = (latest.periodMonth % 12) + 1;
-				const nextYear =
-					latest.periodMonth === 12 ? latest.periodYear + 1 : latest.periodYear;
+				const totalMonths =
+					latest.periodYear * 12 + (latest.periodMonth - 1) + cycleMonths;
+				const nextYear = Math.floor(totalMonths / 12);
+				const nextMonth = (totalMonths % 12) + 1;
 				return { month: nextMonth, year: nextYear };
 			}
 		}
@@ -258,6 +274,7 @@ export class TenantService {
 			const unpaidPeriod = this.calculateUnpaidPeriod(
 				activeContract?.invoices || [],
 				activeContract?.startDate,
+				cycleMonths,
 			);
 
 			return {
@@ -287,6 +304,8 @@ export class TenantService {
 					dueDateDay,
 					activeContract?.invoices,
 					activeContract?.startDate,
+					activeContract?.endDate,
+					cycleMonths,
 				),
 				unpaidPeriod,
 				vehicle: t.vehicle || null,
@@ -342,6 +361,7 @@ export class TenantService {
 		const unpaidPeriod = this.calculateUnpaidPeriod(
 			activeContract?.invoices || [],
 			activeContract?.startDate,
+			cycleMonths,
 		);
 
 		return {
@@ -371,6 +391,8 @@ export class TenantService {
 				dueDateDay,
 				activeContract?.invoices,
 				activeContract?.startDate,
+				activeContract?.endDate,
+				cycleMonths,
 			),
 			unpaidPeriod,
 			vehicle: t.vehicle || null,
@@ -648,6 +670,12 @@ export class TenantService {
 			},
 		);
 
+		const unpaidPeriod = this.calculateUnpaidPeriod(
+			invoicesToCreate,
+			contract.startDate,
+			cycleMonths,
+		);
+
 		return {
 			id: tenant.id,
 			propertyId,
@@ -664,9 +692,18 @@ export class TenantService {
 			institution: input.institution || input.occupationStatus,
 			roomNo: room.roomNumber,
 			rent: formatRupiah(totalCycleRent),
+			monthlyRent,
+			totalRent: totalCycleRent,
 			duration: input.duration,
 			startDate: this.formatDate(contract.startDate),
-			dueDate: this.formatDueDate(dueDateDay, invoicesToCreate, contract.startDate),
+			dueDate: this.formatDueDate(
+				dueDateDay,
+				invoicesToCreate,
+				contract.startDate,
+				contract.endDate,
+				cycleMonths,
+			),
+			unpaidPeriod,
 			vehicle: input.vehicle || null,
 			deposit: formatRupiah(depositAmount),
 			emergencyName: input.emergencyName || null,
@@ -676,6 +713,8 @@ export class TenantService {
 			notes: input.notes || null,
 			ktpUrl: tenant.ktpUrl || null,
 			paymentStatus: "Lancar",
+			contractId: contract.id,
+			roomId: room.id,
 		};
 	}
 
@@ -708,7 +747,7 @@ export class TenantService {
 			? sanitizePhone(input.emergencyPhone)
 			: null;
 
-		const updatedTenant = await this.tenantRepo.updateTenantWithContract(id, {
+		await this.tenantRepo.updateTenantWithContract(id, {
 			name: input.name,
 			nik: input.nik,
 			phone: canonicalPhone,
@@ -731,24 +770,27 @@ export class TenantService {
 			dueDateDay,
 		});
 
+		const fullTenant = await this.getTenantById(id);
+		if (fullTenant) return fullTenant;
+
 		const rentAmount = parseRupiah(input.rent);
 
 		return {
-			id: updatedTenant.id,
+			id,
 			propertyId,
-			name: updatedTenant.name,
-			birthDate: updatedTenant.birthDate
-				? updatedTenant.birthDate.toISOString().slice(0, 10)
-				: null,
-			nik: updatedTenant.NIK,
+			name: input.name,
+			birthDate: birthDate ? birthDate.toISOString().slice(0, 10) : null,
+			nik: input.nik,
 			phone: canonicalPhone,
 			displayPhone: formatDisplayPhone(canonicalPhone),
-			originAddress: updatedTenant.originAddress || "",
-			email: updatedTenant.email || "",
+			originAddress: input.originAddress || "",
+			email: input.email || "",
 			occupationStatus: input.occupationStatus,
 			institution: input.institution || input.occupationStatus,
 			roomNo: input.roomNo,
 			rent: formatRupiah(rentAmount),
+			monthlyRent: rentAmount,
+			totalRent: rentAmount,
 			duration: input.duration,
 			startDate: input.startDate || "—",
 			dueDate: input.dueDate || "—",
@@ -757,7 +799,7 @@ export class TenantService {
 			emergencyName: input.emergencyName || null,
 			emergencyRelation: input.emergencyRelation || null,
 			emergencyPhone: input.emergencyPhone || null,
-			registrationDate: updatedTenant.createdAt.toISOString().slice(0, 10),
+			registrationDate: new Date().toISOString().slice(0, 10),
 			notes: input.notes || null,
 			paymentStatus: "Lancar",
 		};

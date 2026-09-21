@@ -24,6 +24,7 @@ import {
 	useTenants,
 } from "../../hooks/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
+import { formatDate } from "../../lib/date-utils.ts";
 
 export const Route = createFileRoute("/dashboard/invoices")({
 	head: () => ({
@@ -299,6 +300,11 @@ function InvoicesPage() {
 											</div>
 											<small className="block text-[#737873] text-[10px] mt-0.5">
 												Kamar <b>{inv.roomNumber}</b> · {inv.period}
+											</small>
+											<small className="block text-[#568062] text-[9.5px] mt-0.5 font-medium">
+												{isPaid
+													? `Lunas: ${formatDate(inv.paidAt || inv.dueDate)}`
+													: `Jatuh Tempo: ${formatDate(inv.dueDate)}`}
 											</small>
 										</div>
 

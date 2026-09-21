@@ -45,6 +45,11 @@ export interface PaymentFilterOption {
 	value: string;
 }
 
+export interface PeriodFilterOption {
+	label: string;
+	value: string;
+}
+
 export const PAYMENT_STATUS_OPTIONS: PaymentFilterOption[] = [
 	{ label: "Semua Status", value: "ALL" },
 	{ label: "Menunggu Bayar", value: "PENDING" },
@@ -62,6 +67,9 @@ interface PaymentTableProps {
 	onSearchChange: (q: string) => void;
 	statusFilter: PaymentFilterOption;
 	onStatusFilterChange: (status: PaymentFilterOption) => void;
+	periodFilter?: string;
+	onPeriodFilterChange?: (period: string) => void;
+	periodOptions?: PeriodFilterOption[];
 	sortBy: "dueDate" | "amount" | "createdAt";
 	sortOrder: "asc" | "desc";
 	onSortToggle: (sortBy: "dueDate" | "amount" | "createdAt") => void;
@@ -86,6 +94,9 @@ export function PaymentTable({
 	onSearchChange,
 	statusFilter,
 	onStatusFilterChange,
+	periodFilter = "ALL",
+	onPeriodFilterChange,
+	periodOptions = [],
 	sortBy,
 	sortOrder,
 	onSortToggle,
@@ -151,11 +162,21 @@ export function PaymentTable({
 			columnHelper.accessor("period", {
 				id: "period",
 				header: () => "Periode",
-				cell: (info) => (
-					<span className="text-xs text-[#252925] font-medium whitespace-nowrap">
-						{info.getValue()}
-					</span>
-				),
+				cell: (info) => {
+					const item = info.row.original;
+					return (
+						<div>
+							<span className="text-xs text-[#252925] font-medium block whitespace-nowrap">
+								{info.getValue()}
+							</span>
+							<span className="text-[10.5px] text-[#737873] block mt-0.5 whitespace-nowrap">
+								{item.status === "PAID"
+									? `Lunas: ${item.paidAt || item.dueDate}`
+									: `Tenggat: ${item.dueDate}`}
+							</span>
+						</div>
+					);
+				},
 			}),
 			columnHelper.accessor("dueDate", {
 				id: "dueDate",
@@ -391,12 +412,12 @@ export function PaymentTable({
 			{/* ─── Filters & Search Toolbar ─────────────────────────────────── */}
 			<div className="grid grid-cols-1 sm:grid-cols-12 gap-3 py-4">
 				{/* Search Bar */}
-				<div className="sm:col-span-8 relative">
+				<div className="sm:col-span-6 relative">
 					<Search className="w-3.5 h-3.5 text-[#737873] absolute left-3 top-1/2 -translate-y-1/2" />
 					<Input
 						value={searchQuery}
 						onChange={(e) => onSearchChange(e.target.value)}
-						placeholder="Cari nama penghuni, no. kamar, no. invoice, atau no. telepon..."
+						placeholder="Cari nama penghuni, no. kamar, no. invoice..."
 						className="pl-8.5 pr-8 h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 					/>
 					{searchQuery && (
@@ -410,8 +431,32 @@ export function PaymentTable({
 					)}
 				</div>
 
+				{/* Period Filter */}
+				<div className="sm:col-span-3">
+					<Select
+						value={periodFilter}
+						onValueChange={(val) => {
+							if (val) onPeriodFilterChange?.(val);
+						}}
+					>
+						<SelectTrigger className="w-full h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
+							<SelectValue placeholder="Semua Periode">
+								{periodOptions.find((opt) => opt.value === periodFilter)
+									?.label || "Semua Periode"}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent className="bg-white border-[#e4e9e4] text-xs max-h-56">
+							{periodOptions.map((opt) => (
+								<SelectItem key={opt.value} value={opt.value}>
+									{opt.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+
 				{/* Status Filter */}
-				<div className="sm:col-span-4">
+				<div className="sm:col-span-3">
 					<Select
 						value={statusFilter.value}
 						onValueChange={(val) => {
@@ -422,7 +467,7 @@ export function PaymentTable({
 						}}
 					>
 						<SelectTrigger className="w-full h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-							<SelectValue placeholder="Pilih Status Tagihan">
+							<SelectValue placeholder="Semua Status">
 								{statusFilter.label}
 							</SelectValue>
 						</SelectTrigger>

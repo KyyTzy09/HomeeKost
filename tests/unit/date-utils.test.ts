@@ -93,6 +93,13 @@ describe("Date Utilities (date-utils.ts)", () => {
 				billingCycle: "MONTHLY",
 			});
 			expect(monthlyFormatted).toBe("Agustus 2026");
+
+			const tahunanFormatted = formatRentalPeriod({
+				periodMonth: 9,
+				periodYear: 2026,
+				billingCycle: "ANNUALLY",
+			});
+			expect(tahunanFormatted).toBe("September 2026 – Agustus 2027");
 		});
 	});
 });

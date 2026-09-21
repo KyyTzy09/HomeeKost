@@ -30,6 +30,21 @@ export class RoomService {
 		}
 	}
 
+	private getCycleMonths(cycle?: RoomStatus | string | null): number {
+		switch (cycle) {
+			case "MONTHLY":
+				return 1;
+			case "QUARTERLY":
+				return 3;
+			case "SEMI_ANNUAL":
+				return 6;
+			case "ANNUALLY":
+				return 12;
+			default:
+				return 1;
+		}
+	}
+
 	private formatContractDueDate(
 		dueDateDay?: number | null,
 		invoices?: Array<{
@@ -39,6 +54,8 @@ export class RoomService {
 			status: string;
 		}>,
 		startDate?: Date | null,
+		endDate?: Date | null,
+		cycleMonths: number = 1,
 	): string | null {
 		if (!dueDateDay) return null;
 		const now = new Date();
@@ -54,7 +71,7 @@ export class RoomService {
 			return formatDate(new Date(unpaidInvoices[0].dueDate));
 		}
 
-		// 2. Jika seluruh tagihan sudah LUNAS (PAID): tenggat berikutnya adalah 1 bulan setelah invoice lunas terakhir
+		// 2. Jika seluruh tagihan sudah LUNAS (PAID): tenggat berikutnya adalah endDate kontrak atau latestDue + cycleMonths
 		const paidInvoices = (invoices || [])
 			.filter((inv) => inv.status === "PAID")
 			.sort(
@@ -62,10 +79,17 @@ export class RoomService {
 			);
 
 		if (paidInvoices.length > 0) {
+			if (endDate && new Date(endDate) > new Date(paidInvoices[0].dueDate)) {
+				return formatDate(new Date(endDate));
+			}
 			const latestPaid = paidInvoices[0];
 			const latestDue = new Date(latestPaid.dueDate);
 			return formatDate(
-				new Date(latestDue.getFullYear(), latestDue.getMonth() + 1, dueDateDay),
+				new Date(
+					latestDue.getFullYear(),
+					latestDue.getMonth() + cycleMonths,
+					dueDateDay,
+				),
 			);
 		}
 
@@ -94,11 +118,14 @@ export class RoomService {
 			.map((r) => {
 				const activeContract = r.rentalContracts[0];
 				const tenantName = activeContract?.tenant?.name || null;
+				const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
 				const dueDate = activeContract?.dueDateDay
 					? this.formatContractDueDate(
 							activeContract.dueDateDay,
 							activeContract.invoices,
 							activeContract.startDate,
+							activeContract.endDate,
+							cycleMonths,
 						)
 					: null;
 
@@ -126,11 +153,14 @@ export class RoomService {
 
 		const activeContract = r.rentalContracts[0];
 		const tenantName = activeContract?.tenant?.name || null;
+		const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
 		const dueDate = activeContract?.dueDateDay
 			? this.formatContractDueDate(
 					activeContract.dueDateDay,
 					activeContract.invoices,
 					activeContract.startDate,
+					activeContract.endDate,
+					cycleMonths,
 				)
 			: null;
 
