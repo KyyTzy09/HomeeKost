@@ -22,6 +22,11 @@ export const auth = betterAuth({
 	account: {
 		storeStateStrategy: "cookie",
 	},
+	trustedOrigins: [
+		"https://homee-kost.vercel.app",
+		"http://localhost:3000",
+		"http://localhost:5173",
+	],
 	plugins: [
 		tanstackStartCookies(), // Harus plugin terakhir
 	],

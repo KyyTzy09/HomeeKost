@@ -12,6 +12,6 @@ declare global {
 
 export const prisma = globalThis.__prisma || new PrismaClient({ adapter });
 
-if (process.env.NODE_ENV !== "production") {
-	globalThis.__prisma = prisma;
-}
+// Selalu cache prisma di globalThis agar container serverless yang masih hidup (warm lambdas)
+// tidak membuat pool koneksi database berulang-ulang
+globalThis.__prisma = prisma;
