@@ -22,8 +22,10 @@
     "db:migrate": "dotenv -e .env -- prisma migrate dev",
     "db:studio": "dotenv -e .env -- prisma studio",
     "db:seed": "dotenv -e .env -- prisma db seed",
-    "db:seed:prod": "dotenv -e .env -- tsx prisma/seeders/production.seed.ts"
+    "db:seed:prod": "dotenv -e .env -- tsx prisma/seeders/production.seed.ts",
+    "db:reset-data": "dotenv -e .env -- tsx prisma/seeders/reset-data.ts"
   },
+
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@better-auth/prisma-adapter": "^1.6.29",
