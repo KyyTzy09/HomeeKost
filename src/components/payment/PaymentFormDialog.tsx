@@ -1,6 +1,7 @@
 import {
 	Check,
 	ChevronsUpDown,
+	Clock,
 	DollarSign,
 	MessageSquare,
 	Save,
@@ -28,9 +29,39 @@ import {
 } from "../../common/shadcn/select.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
 import type { CreateManualInvoiceInput } from "../../common/validations/index.ts";
-import { parseRupiah } from "../../lib/currency.ts";
-import { getTodayDateString } from "../../lib/date-utils.ts";
+import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import { MONTH_OPTIONS } from "./PaymentGenerateDialog.tsx";
+
+export function getCycleMultiplier(duration?: string): {
+	months: number;
+	label: string;
+} {
+	switch (duration) {
+		case "Tahunan":
+			return { months: 12, label: "Tahunan (12 Bulan)" };
+		case "Semesteran":
+			return { months: 6, label: "Semesteran (6 Bulan)" };
+		case "Triwulan":
+			return { months: 3, label: "Triwulan (3 Bulan)" };
+		default:
+			return { months: 1, label: "Bulanan (1 Bulan)" };
+	}
+}
+
+export function extractDueDay(dueDateStr?: string | null): number {
+	const match = dueDateStr?.match(/\d+/);
+	const rawDay = match ? Number.parseInt(match[0], 10) : 10;
+	return Math.min(Math.max(rawDay, 1), 28);
+}
+
+export function computeDueDate(
+	dueDateStr: string | undefined | null,
+	year: number,
+	month: number,
+): string {
+	const day = extractDueDay(dueDateStr);
+	return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 interface PaymentFormDialogProps {
 	open: boolean;
@@ -48,14 +79,13 @@ export function PaymentFormDialog({
 	isSubmitting = false,
 }: PaymentFormDialogProps) {
 	const now = new Date();
-	const todayStr = useMemo(() => getTodayDateString(), []);
 	const currentYear = now.getFullYear();
 
 	const [contractId, setContractId] = useState<string>("");
 	const [periodMonth, setPeriodMonth] = useState<number>(now.getMonth() + 1);
 	const [periodYear, setPeriodYear] = useState<number>(currentYear);
 	const [amount, setAmount] = useState<number>(0);
-	const [dueDate, setDueDate] = useState<string>(todayStr);
+	const [dueDate, setDueDate] = useState<string>("");
 	const [notes, setNotes] = useState<string>("");
 	const [sendWhatsApp, setSendWhatsApp] = useState<boolean>(false);
 	const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,6 +99,15 @@ export function PaymentFormDialog({
 	const activeTenantsWithRoom = useMemo(() => {
 		return tenants.filter((t) => t.roomNo && t.roomNo !== "—");
 	}, [tenants]);
+
+	const selectedTenant = activeTenantsWithRoom.find(
+		(t) => (t.contractId || t.id) === contractId,
+	);
+	const cycleInfo = getCycleMultiplier(selectedTenant?.duration);
+	const monthlyRent = selectedTenant
+		? parseRupiah(selectedTenant.rent) || 850000
+		: 850000;
+	const dueDay = extractDueDay(selectedTenant?.dueDate);
 
 	useEffect(() => {
 		function handleClickOutside(event: MouseEvent) {
@@ -96,17 +135,23 @@ export function PaymentFormDialog({
 
 	useEffect(() => {
 		if (open) {
+			const initMonth = now.getMonth() + 1;
+			const initYear = currentYear;
+			setPeriodMonth(initMonth);
+			setPeriodYear(initYear);
+
 			if (activeTenantsWithRoom.length > 0) {
 				const firstTenant = activeTenantsWithRoom[0];
 				setContractId(firstTenant.contractId || firstTenant.id);
-				setAmount(parseRupiah(firstTenant.rent) || 850000);
+				const cycle = getCycleMultiplier(firstTenant.duration);
+				const monthly = parseRupiah(firstTenant.rent) || 850000;
+				setAmount(monthly * cycle.months);
+				setDueDate(computeDueDate(firstTenant.dueDate, initYear, initMonth));
 			} else {
 				setContractId("");
 				setAmount(0);
+				setDueDate(computeDueDate(undefined, initYear, initMonth));
 			}
-			setPeriodMonth(now.getMonth() + 1);
-			setPeriodYear(currentYear);
-			setDueDate(todayStr);
 			setNotes("");
 			setSendWhatsApp(false);
 			setErrors({});
@@ -116,7 +161,14 @@ export function PaymentFormDialog({
 			setTenantQuery("");
 			setIsTenantDropdownOpen(false);
 		}
-	}, [open, activeTenantsWithRoom, currentYear, todayStr]);
+	}, [open, activeTenantsWithRoom, currentYear]);
+
+	// Keep dueDate updated when periodMonth, periodYear, or selectedTenant changes
+	useEffect(() => {
+		if (open) {
+			setDueDate(computeDueDate(selectedTenant?.dueDate, periodYear, periodMonth));
+		}
+	}, [open, periodMonth, periodYear, selectedTenant?.dueDate]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -154,9 +206,6 @@ export function PaymentFormDialog({
 		{ label: String(currentYear + 1), value: currentYear + 1 },
 	];
 
-	const selectedTenant = activeTenantsWithRoom.find(
-		(t) => (t.contractId || t.id) === contractId,
-	);
 	const selectedTenantLabel = selectedTenant
 		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${selectedTenant.rent}/bln)`
 		: undefined;
@@ -222,8 +271,8 @@ export function PaymentFormDialog({
 								role="listbox"
 								className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e4e9e4] rounded-xl shadow-xl z-50 p-2 space-y-1"
 							>
-								<div className="relative mb-1">
-									<Search className="w-3.5 h-3.5 absolute left-2.5 top-3 text-[#737873]" />
+								<div className="flex mb-1 relative">
+									<Search className="w-3.5 h-3.5 text-[#737873] absolute left-2.5 top-2" />
 									<input
 										type="text"
 										placeholder="Ketik nama atau nomor kamar..."
@@ -256,7 +305,16 @@ export function PaymentFormDialog({
 													aria-selected={isSelected}
 													onClick={() => {
 														setContractId(t.contractId || t.id);
-														setAmount(parseRupiah(t.rent) || 850000);
+														const cycle = getCycleMultiplier(t.duration);
+														const monthly = parseRupiah(t.rent) || 850000;
+														setAmount(monthly * cycle.months);
+														setDueDate(
+															computeDueDate(
+																t.dueDate,
+																periodYear,
+																periodMonth,
+															),
+														);
 														setIsTenantDropdownOpen(false);
 														setTenantQuery("");
 													}}
@@ -301,7 +359,13 @@ export function PaymentFormDialog({
 							<Select
 								value={String(periodMonth)}
 								onValueChange={(val) => {
-									if (val) setPeriodMonth(Number(val));
+									if (val) {
+										const m = Number(val);
+										setPeriodMonth(m);
+										setDueDate(
+											computeDueDate(selectedTenant?.dueDate, periodYear, m),
+										);
+									}
 								}}
 							>
 								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
@@ -326,7 +390,13 @@ export function PaymentFormDialog({
 							<Select
 								value={String(periodYear)}
 								onValueChange={(val) => {
-									if (val) setPeriodYear(Number(val));
+									if (val) {
+										const y = Number(val);
+										setPeriodYear(y);
+										setDueDate(
+											computeDueDate(selectedTenant?.dueDate, y, periodMonth),
+										);
+									}
 								}}
 							>
 								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
@@ -345,44 +415,68 @@ export function PaymentFormDialog({
 						</div>
 					</div>
 
-					{/* Amount & Due Date */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div>
-							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-								Nominal Tagihan (Rp) *
-							</Label>
-							<Input
-								type="number"
-								min="1000"
-								step="1000"
-								value={amount || ""}
-								onChange={(e) => setAmount(Number(e.target.value) || 0)}
-								placeholder="Contoh: 1200000"
-								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
-							/>
-							{errors.amount && (
-								<p className="text-[11px] text-[#a65f5b] mt-1">
-									{errors.amount}
-								</p>
-							)}
+					{/* Lease Information & Calculation Card */}
+					{selectedTenant && (
+						<div className="p-3 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4] space-y-2">
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-[#737873] flex items-center gap-1.5 font-medium">
+									<Clock className="w-3.5 h-3.5 text-[#4f6958]" />
+									Siklus Sewa:
+								</span>
+								<span className="font-semibold text-[#4f6958] bg-white px-2 py-0.5 rounded-md border border-[#e4e9e4]">
+									{cycleInfo.label}
+								</span>
+							</div>
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-[#737873] font-medium">Tarif Kamar:</span>
+								<span className="font-semibold text-[#252925]">
+									{selectedTenant.rent} / bln
+								</span>
+							</div>
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-[#737873] font-medium">Jatuh Tempo:</span>
+								<span className="font-semibold text-[#252925]">
+									{selectedTenant.dueDate && selectedTenant.dueDate !== "—"
+										? selectedTenant.dueDate
+										: `Tanggal ${dueDay} tiap bulan`}
+								</span>
+							</div>
+							<div className="pt-2 border-t border-[#e4e9e4]/80 flex items-center justify-between text-xs">
+								<span className="text-[#737873] font-medium">
+									Kalkulasi Otomatis:
+								</span>
+								<span className="font-bold text-[#4f6958]">
+									{cycleInfo.months} bln × {selectedTenant.rent} ={" "}
+									{formatRupiah(cycleInfo.months * monthlyRent)}
+								</span>
+							</div>
 						</div>
+					)}
+					{errors.dueDate && (
+						<p className="text-[11px] text-[#a65f5b] mt-1">{errors.dueDate}</p>
+					)}
 
-						<div>
-							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-								Jatuh Tempo Pembayaran *
-							</Label>
-							<Input
-								type="date"
-								value={dueDate}
-								onChange={(e) => setDueDate(e.target.value)}
-								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
-							/>
-							{errors.dueDate && (
-								<p className="text-[11px] text-[#a65f5b] mt-1">
-									{errors.dueDate}
-								</p>
-							)}
-						</div>
+					{/* Nominal Tagihan */}
+					<div>
+						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+							Nominal Tagihan (Rp) *
+						</Label>
+						<Input
+							type="number"
+							min="1000"
+							step="1000"
+							value={amount || ""}
+							onChange={(e) => setAmount(Number(e.target.value) || 0)}
+							placeholder="Contoh: 1200000"
+							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+						/>
+						<p className="text-[11px] text-[#737873] mt-1">
+							Nominal otomatis terhitung sesuai siklus sewa (dapat disesuaikan
+							jika ada biaya tambahan)
+						</p>
+						{errors.amount && (
+							<p className="text-[11px] text-[#a65f5b] mt-1">{errors.amount}</p>
+						)}
 					</div>
 
 					{/* Notes */}
