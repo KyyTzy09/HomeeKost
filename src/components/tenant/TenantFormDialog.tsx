@@ -178,12 +178,12 @@ export function TenantFormDialog({
 				editingTenant?.rent ??
 				(defaultInitialRoom
 					? formatRupiah(defaultInitialRoom.price)
-					: "Rp850.000"),
+					: ""),
 			duration: initialDuration,
 			startDate: initialStartDate,
 			dueDate: initialDueDate,
 			vehicle: editingTenant?.vehicle ?? "",
-			deposit: editingTenant?.deposit ?? "Rp500.000",
+			deposit: editingTenant?.deposit ?? "",
 			emergencyName: editingTenant?.emergencyName ?? "",
 			emergencyRelation: editingTenant?.emergencyRelation ?? "",
 			emergencyPhone: editingTenant?.emergencyPhone ?? "",
@@ -253,20 +253,20 @@ export function TenantFormDialog({
 				form.setFieldValue("institution", editingTenant.institution || "");
 				form.setFieldValue(
 					"roomNo",
-					editingTenant.roomNo || (roomOptions[0]?.roomNo ?? "A-01"),
+					editingTenant.roomNo || (roomOptions[0]?.roomNo ?? ""),
 				);
 				form.setFieldValue(
 					"rent",
 					editingTenant.rent ||
 					(roomOptions[0]
 						? formatRupiah(roomOptions[0].price)
-						: "Rp850.000"),
+						: ""),
 				);
 				form.setFieldValue("duration", duration);
 				form.setFieldValue("startDate", startDate);
 				form.setFieldValue("dueDate", dueDate);
 				form.setFieldValue("vehicle", editingTenant.vehicle || "");
-				form.setFieldValue("deposit", editingTenant.deposit || "Rp500.000");
+				form.setFieldValue("deposit", editingTenant.deposit || "");
 				form.setFieldValue("emergencyName", editingTenant.emergencyName || "");
 				form.setFieldValue(
 					"emergencyRelation",
@@ -310,7 +310,7 @@ export function TenantFormDialog({
 				form.setFieldValue("startDate", todayStr);
 				form.setFieldValue("dueDate", defaultDue);
 				form.setFieldValue("vehicle", "");
-				form.setFieldValue("deposit", "Rp500.000");
+				form.setFieldValue("deposit", "");
 				form.setFieldValue("emergencyName", "");
 				form.setFieldValue("emergencyRelation", "");
 				form.setFieldValue("emergencyPhone", "");
@@ -1155,29 +1155,32 @@ export function TenantFormDialog({
 									}}
 								</form.Field>
 
-								{/* Smart Multi-Period Historical Settlement Banner */}
+								{/* Multi-Period or Initial Period Settlement Option */}
 								<form.Subscribe selector={(state) => state.values.startDate}>
 									{(startDateValue) => {
 										const isPast = Boolean(
 											startDateValue &&
 											new Date(startDateValue) < new Date(todayStr),
 										);
-										if (!isPast) return null;
 
 										return (
 											<div className="col-span-1 sm:col-span-2 bg-[#f4f8f4] border border-[#cfdfd1] rounded-[12px] p-3 text-[11.5px] space-y-2 mt-1">
 												<div className="flex items-center gap-2 text-[#314a38] font-bold">
-													<History className="w-4 h-4 text-[#4f6958]" />
+													{isPast ? (
+														<History className="w-4 h-4 text-[#4f6958]" />
+													) : (
+														<CheckCircle2 className="w-4 h-4 text-[#4f6958]" />
+													)}
 													<span>
-														Deteksi Migrasi Data Lampau (Mulai: {startDateValue}
-														)
+														{isPast
+															? `Deteksi Migrasi Data Lampau (Mulai: ${startDateValue})`
+															: "Status Pembayaran Sewa Periode Pertama"}
 													</span>
 												</div>
 												<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
-													Tanggal mulai sewa berada di masa lalu. Sistem dapat
-													otomatis mencatat seluruh periode sewa lampau yang
-													telah berjalan sejak tanggal tersebut sebagai{" "}
-													<strong>LUNAS (PAID)</strong> dalam 1 kali simpan.
+													{isPast
+														? "Tanggal mulai sewa berada di masa lalu. Sistem dapat otomatis mencatat seluruh periode sewa lampau yang telah berjalan sejak tanggal tersebut sebagai LUNAS (PAID) dalam 1 kali simpan."
+														: "Centang opsi ini jika penghuni langsung melunasi tagihan sewa periode awal saat pendaftaran kamar (otomatis berstatus LUNAS & tercatat di kas)."}
 												</p>
 												<form.Field name="markPastPeriodsPaid">
 													{(pastField) => (
@@ -1188,10 +1191,12 @@ export function TenantFormDialog({
 																onChange={(e) =>
 																	pastField.handleChange(e.target.checked)
 																}
-																className="w-4 h-4 accent-[#4f6958] rounded"
+																className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer"
 															/>
 															<span>
-																Tandai semua periode sewa sebagai LUNAS
+																{isPast
+																	? "Tandai semua periode sewa lampau sebagai LUNAS"
+																	: "Tandai tagihan sewa pertama sebagai LUNAS (Sudah Bayar)"}
 															</span>
 														</label>
 													)}
@@ -1270,7 +1275,7 @@ export function TenantFormDialog({
 														digits ? formatRupiah(Number(digits)) : "",
 													);
 												}}
-												placeholder="Rp500.000"
+												placeholder="Contoh: Rp500.000 (opsional)"
 												className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
 											/>
 										</div>

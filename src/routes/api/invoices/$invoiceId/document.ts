@@ -54,6 +54,7 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 					startDate: invoice.contract.startDate,
 					endDate: invoice.contract.endDate,
 					billingCycle: invoice.contract.billingCycle,
+					dueDate: invoice.dueDate,
 				});
 
 				const html = `<!DOCTYPE html>

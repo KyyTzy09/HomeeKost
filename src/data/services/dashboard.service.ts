@@ -266,7 +266,7 @@ export class DashboardService {
 					badgeClass = "green";
 				}
 
-				const formattedDueDate = `${due.getDate()} ${MONTH_NAMES_SHORT[due.getMonth()]}`;
+				const formattedDueDate = `${due.getDate()} ${MONTH_NAMES_SHORT[due.getMonth()]} ${due.getFullYear()}`;
 
 				return {
 					id: inv.id,

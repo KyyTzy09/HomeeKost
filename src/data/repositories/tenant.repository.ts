@@ -80,10 +80,12 @@ export class TenantRepository {
 					include: {
 						room: true,
 						invoices: {
-							orderBy: { dueDate: "desc" },
-							take: 3,
+							orderBy: { dueDate: "asc" },
+							take: 12,
 						},
 					},
+					orderBy: { createdAt: "desc" },
+					take: 1,
 				},
 			},
 			orderBy: { name: "asc" },
@@ -102,10 +104,12 @@ export class TenantRepository {
 							},
 						},
 						invoices: {
-							orderBy: { dueDate: "desc" },
-							take: 3,
+							orderBy: { dueDate: "asc" },
+							take: 12,
 						},
 					},
+					orderBy: { createdAt: "desc" },
+					take: 1,
 				},
 			},
 			orderBy: { name: "asc" },
@@ -187,6 +191,15 @@ export class TenantRepository {
 					where: { id: params.contractPayload.roomId },
 					data: { status: "OCCUPIED" },
 					include: { property: true },
+				});
+
+				// Pastikan tidak ada kontrak aktif lama yang menggantung pada kamar ini
+				await tx.rentalContract.updateMany({
+					where: {
+						roomId: params.contractPayload.roomId,
+						status: "ACTIVE",
+					},
+					data: { status: "TERMINATED" },
 				});
 
 				// 3. Create active rental contract
@@ -376,8 +389,12 @@ export class TenantRepository {
 						data: { status: "VACANT" },
 					});
 
-					await tx.rentalContract.update({
-						where: { id: contract.id },
+					// Pastikan seluruh kontrak aktif pada kamar ini benar-benar TERMINATED agar kamar kembali kosong
+					await tx.rentalContract.updateMany({
+						where: {
+							roomId: contract.roomId,
+							status: "ACTIVE",
+						},
 						data: { status: "TERMINATED" },
 					});
 				}

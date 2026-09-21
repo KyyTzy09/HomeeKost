@@ -105,6 +105,7 @@ export class PaymentService {
 				startDate: inv.contract.startDate,
 				endDate: inv.contract.endDate,
 				billingCycle: inv.contract.billingCycle,
+				dueDate: inv.dueDate,
 			});
 
 			const isPaid = inv.status === "PAID";
@@ -263,6 +264,7 @@ export class PaymentService {
 			startDate: result.invoice.contract.startDate,
 			endDate: result.invoice.contract.endDate,
 			billingCycle: result.invoice.contract.billingCycle,
+			dueDate: result.invoice.dueDate,
 		});
 
 		const appUrl = process.env.APP_URL || "http://localhost:3000";
@@ -346,6 +348,7 @@ export class PaymentService {
 				startDate: invoice.contract.startDate,
 				endDate: invoice.contract.endDate,
 				billingCycle: invoice.contract.billingCycle,
+				dueDate: invoice.dueDate,
 			});
 			const appUrl = process.env.APP_URL || "http://localhost:3000";
 			const documentUrl =
@@ -439,6 +442,7 @@ export class PaymentService {
 			startDate: invoice.contract.startDate,
 			endDate: invoice.contract.endDate,
 			billingCycle: invoice.contract.billingCycle,
+			dueDate: invoice.dueDate,
 		});
 		const tenantName = invoice.contract.tenant.name;
 		const propertyName = invoice.contract.room.property.name;

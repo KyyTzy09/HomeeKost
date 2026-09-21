@@ -8,9 +8,11 @@ import {
 	Plus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { compareRoomNumbers } from "../../common/helpers/index.ts";
 import { Button } from "../../common/shadcn/button.tsx";
 import type { RoomItem, RoomStatusType } from "../../common/types/index.ts";
 import type { RoomFormValues } from "../../common/validations/index.ts";
+
 import {
 	RoomCard,
 	RoomDeleteDialog,
@@ -89,10 +91,14 @@ function RoomsPage() {
 	};
 
 	// ─── Filter & Pagination ───────────────────────────────────────────────────
+	const sortedRooms = useMemo(() => {
+		return [...rooms].sort((a, b) => compareRoomNumbers(a.roomNo, b.roomNo));
+	}, [rooms]);
+
 	const filteredRooms = useMemo(() => {
-		if (activeFilter === "all") return rooms;
-		return rooms.filter((r) => r.status === activeFilter);
-	}, [rooms, activeFilter]);
+		if (activeFilter === "all") return sortedRooms;
+		return sortedRooms.filter((r) => r.status === activeFilter);
+	}, [sortedRooms, activeFilter]);
 
 	const totalPages = Math.max(
 		1,

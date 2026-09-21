@@ -5,6 +5,7 @@ import {
 	CheckCircle2,
 	Loader2,
 	LogOut,
+	Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
@@ -16,6 +17,7 @@ import {
 	ProfileInfoForm,
 	ProfileManagedPropertiesCard,
 	ProfileOverviewCard,
+	ResetDataDialog,
 	SecuritySettingsDialog,
 } from "../../components/profile/index.ts";
 import {
@@ -23,9 +25,11 @@ import {
 	useChangeMyPassword,
 	useDashboardContext,
 	useMyProfile,
+	useResetData,
 	useSetActiveProperty,
 	useUpdateMyProfile,
 } from "../../hooks/index.ts";
+
 import { authClient } from "../../lib/auth-client.ts";
 
 export const Route = createFileRoute("/dashboard/profile")({
@@ -43,8 +47,10 @@ function ProfilePage() {
 	const updateProfileMutation = useUpdateMyProfile();
 	const changePasswordMutation = useChangeMyPassword();
 	const setActivePropertyMutation = useSetActiveProperty();
+	const resetDataMutation = useResetData();
 
 	const [isSecurityDialogOpen, setIsSecurityDialogOpen] = useState(false);
+	const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 	const [toastMessage, setToastMessage] = useState<{
 		text: string;
 		type: "success" | "error";
@@ -99,6 +105,23 @@ function ProfilePage() {
 		} catch (err) {
 			showToast(
 				err instanceof Error ? err.message : "Gagal mengalihkan cabang kos.",
+				"error",
+			);
+		}
+	};
+
+	const handleConfirmResetData = async () => {
+		try {
+			const res = await resetDataMutation.mutateAsync({
+				confirmation: "RESET",
+			});
+			setIsResetDialogOpen(false);
+			showToast(
+				res.message || "Data operasional berhasil direset ke kondisi awal!",
+			);
+		} catch (err) {
+			showToast(
+				err instanceof Error ? err.message : "Gagal mereset data.",
 				"error",
 			);
 		}
@@ -207,6 +230,38 @@ function ProfilePage() {
 						onSelectProperty={handleSelectProperty}
 						isSwitchingProperty={setActivePropertyMutation.isPending}
 					/>
+
+					{/* Zona Pengaturan Data (Khusus SuperAdmin) */}
+					{isSuperAdmin && (
+						<div className="bg-white border border-[#efd4d0] rounded-[20px] p-6 shadow-[0_2px_12px_rgba(182,107,104,0.06)] mt-5">
+							<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+								<div className="space-y-1">
+									<div className="flex items-center gap-2">
+										<div className="w-8 h-8 rounded-lg bg-[#fdf3f2] text-[#b66b68] flex items-center justify-center border border-[#f5cfcc]">
+											<Trash2 className="w-4 h-4" />
+										</div>
+										<h3 className="text-[15px] font-bold text-[#252925] m-0">
+											Manajemen & Pembersihan Data
+										</h3>
+									</div>
+									<p className="text-[12px] text-[#737873] leading-relaxed max-w-[650px] m-0 mt-1">
+										Gunakan fitur ini jika Anda ingin mengosongkan seluruh
+										riwayat transaksi arus kas, tagihan sewa, dan data penyewa
+										untuk memulai pembukuan dari kondisi bersih.
+									</p>
+								</div>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setIsResetDialogOpen(true)}
+									className="h-[40px] px-4 rounded-[10px] border-[#efd4d0] bg-[#fff7f6] hover:bg-[#faeae8] text-[#a45149] text-xs font-bold shadow-xs transition-colors flex items-center gap-2 shrink-0 cursor-pointer"
+								>
+									<Trash2 className="w-3.5 h-3.5" />
+									Reset Data
+								</Button>
+							</div>
+						</div>
+					)}
 				</>
 			)}
 
@@ -216,6 +271,14 @@ function ProfilePage() {
 				onOpenChange={setIsSecurityDialogOpen}
 				onSubmit={handleChangePassword}
 				isSubmitting={changePasswordMutation.isPending}
+			/>
+
+			{/* Modal Dialog Reset Data */}
+			<ResetDataDialog
+				open={isResetDialogOpen}
+				onOpenChange={setIsResetDialogOpen}
+				onConfirm={handleConfirmResetData}
+				isSubmitting={resetDataMutation.isPending}
 			/>
 		</div>
 	);

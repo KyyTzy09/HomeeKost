@@ -1,7 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Building2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../common/shadcn/button.tsx";
 import {
 	Card,
@@ -36,6 +36,28 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
 	const [authError, setAuthError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
+	const [isSlowLoad, setIsSlowLoad] = useState(false);
+
+	// Silent pre-warm: bangunkan container Vercel serverless & pool koneksi Supabase di background
+	// saat user pertama kali membuka halaman login dan sedang mengetik kredensial
+	useEffect(() => {
+		authClient.getSession().catch(() => {});
+	}, []);
+
+	// Jika proses loading memakan waktu > 2.5 detik (indikasi serverless cold start),
+	// tampilkan pesan informatif yang menenangkan user
+	useEffect(() => {
+		if (!isLoading) {
+			setIsSlowLoad(false);
+			return;
+		}
+
+		const timer = setTimeout(() => {
+			setIsSlowLoad(true);
+		}, 2500);
+
+		return () => clearTimeout(timer);
+	}, [isLoading]);
 
 	const form = useForm({
 		defaultValues: {
@@ -68,7 +90,7 @@ function LoginPage() {
 				if (res.error) {
 					setAuthError(
 						res.error.message ||
-						"Email atau password yang Anda masukkan salah.",
+							"Email atau password yang Anda masukkan salah.",
 					);
 					setIsLoading(false);
 					return;
@@ -155,10 +177,11 @@ function LoginPage() {
 											type="text"
 											placeholder="Masukkan username / email"
 											autoComplete="username"
-											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${hasError
-												? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
-												: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
-												}`}
+											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${
+												hasError
+													? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
+											}`}
 										/>
 										{hasError && (
 											<div className="text-[#b66b68] text-[10px] mt-1 font-medium">
@@ -204,10 +227,11 @@ function LoginPage() {
 											type="password"
 											placeholder="Masukkan password"
 											autoComplete="current-password"
-											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${hasError
-												? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
-												: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
-												}`}
+											className={`h-[43px] border rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] transition-all duration-150 ${
+												hasError
+													? "border-[#b66b68] shadow-[0_0_0_3px_rgba(182,107,104,0.12)]"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
+											}`}
 										/>
 										{hasError && (
 											<div className="text-[#b66b68] text-[10px] mt-1 font-medium">
@@ -228,16 +252,27 @@ function LoginPage() {
 							{isLoading ? (
 								<>
 									<Loader2 className="animate-spin h-4 w-4 text-white" />
-									<span>Memproses Masuk...</span>
+									<span>
+										{isSlowLoad
+											? "Menghubungkan ke server cloud..."
+											: "Memproses Masuk..."}
+									</span>
 								</>
 							) : (
 								<span>Masuk ke Dashboard</span>
 							)}
 						</Button>
+
+						{isLoading && isSlowLoad && (
+							<p className="text-center text-[#7b897e] text-[11px] mt-2.5 animate-pulse font-medium">
+								Server cloud sedang bangun dari mode hemat daya, mohon tunggu
+								sebentar...
+							</p>
+						)}
 					</form>
 
 					<div className="text-center text-[#7b897e] text-[11px] mt-4">
-						Lupa password? {" "}
+						Lupa password?{" "}
 						<Link
 							to="/forgot-password"
 							className="text-[#4f6958] font-semibold hover:underline"

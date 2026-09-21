@@ -1,5 +1,13 @@
-import { DollarSign, MessageSquare, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+	Check,
+	ChevronsUpDown,
+	Clock,
+	DollarSign,
+	MessageSquare,
+	Save,
+	Search,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
 import {
@@ -21,9 +29,74 @@ import {
 } from "../../common/shadcn/select.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
 import type { CreateManualInvoiceInput } from "../../common/validations/index.ts";
-import { parseRupiah } from "../../lib/currency.ts";
-import { getTodayDateString } from "../../lib/date-utils.ts";
+import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import { MONTH_OPTIONS } from "./PaymentGenerateDialog.tsx";
+
+export function getCycleMultiplier(duration?: string): {
+	months: number;
+	label: string;
+} {
+	switch (duration) {
+		case "Tahunan":
+			return { months: 12, label: "Tahunan (12 Bulan)" };
+		case "Semesteran":
+			return { months: 6, label: "Semesteran (6 Bulan)" };
+		case "Triwulan":
+			return { months: 3, label: "Triwulan (3 Bulan)" };
+		default:
+			return { months: 1, label: "Bulanan (1 Bulan)" };
+	}
+}
+
+export function extractDueDay(dueDateStr?: string | null): number {
+	const match = dueDateStr?.match(/\d+/);
+	const rawDay = match ? Number.parseInt(match[0], 10) : 10;
+	return Math.min(Math.max(rawDay, 1), 28);
+}
+
+export function calculateTenantRent(tenant?: {
+	rent?: string;
+	monthlyRent?: number;
+	totalRent?: number;
+	duration?: string;
+}): {
+	monthlyRent: number;
+	totalRent: number;
+	cycleMonths: number;
+	cycleLabel: string;
+} {
+	const cycle = getCycleMultiplier(tenant?.duration);
+	let monthly = 850000;
+	let total = 850000;
+
+	if (tenant?.monthlyRent && tenant.monthlyRent > 0) {
+		monthly = tenant.monthlyRent;
+		total = tenant.totalRent || monthly * cycle.months;
+	} else if (tenant?.totalRent && tenant.totalRent > 0) {
+		total = tenant.totalRent;
+		monthly = Math.round(total / cycle.months);
+	} else if (tenant?.rent) {
+		const parsed = parseRupiah(tenant.rent) || 850000;
+		total = parsed;
+		monthly = Math.round(total / cycle.months);
+	}
+
+	return {
+		monthlyRent: monthly,
+		totalRent: total,
+		cycleMonths: cycle.months,
+		cycleLabel: cycle.label,
+	};
+}
+
+export function computeDueDate(
+	dueDateStr: string | undefined | null,
+	year: number,
+	month: number,
+): string {
+	const day = extractDueDay(dueDateStr);
+	return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 interface PaymentFormDialogProps {
 	open: boolean;
@@ -41,41 +114,99 @@ export function PaymentFormDialog({
 	isSubmitting = false,
 }: PaymentFormDialogProps) {
 	const now = new Date();
-	const todayStr = useMemo(() => getTodayDateString(), []);
 	const currentYear = now.getFullYear();
 
 	const [contractId, setContractId] = useState<string>("");
 	const [periodMonth, setPeriodMonth] = useState<number>(now.getMonth() + 1);
 	const [periodYear, setPeriodYear] = useState<number>(currentYear);
 	const [amount, setAmount] = useState<number>(0);
-	const [dueDate, setDueDate] = useState<string>(todayStr);
+	const [dueDate, setDueDate] = useState<string>("");
 	const [notes, setNotes] = useState<string>("");
 	const [sendWhatsApp, setSendWhatsApp] = useState<boolean>(false);
 	const [errors, setErrors] = useState<Record<string, string>>({});
+
+	const [tenantQuery, setTenantQuery] = useState<string>("");
+	const [isTenantDropdownOpen, setIsTenantDropdownOpen] =
+		useState<boolean>(false);
+	const tenantComboboxRef = useRef<HTMLDivElement>(null);
 
 	// Filter hanya penghuni yang memiliki kamar aktif
 	const activeTenantsWithRoom = useMemo(() => {
 		return tenants.filter((t) => t.roomNo && t.roomNo !== "—");
 	}, [tenants]);
 
+	const selectedTenant = activeTenantsWithRoom.find(
+		(t) => (t.contractId || t.id) === contractId,
+	);
+	const rentCalculation = useMemo(
+		() => calculateTenantRent(selectedTenant),
+		[selectedTenant],
+	);
+	const dueDay = extractDueDay(selectedTenant?.dueDate);
+
+	useEffect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (
+				tenantComboboxRef.current &&
+				!tenantComboboxRef.current.contains(event.target as Node)
+			) {
+				setIsTenantDropdownOpen(false);
+			}
+		}
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	const filteredTenants = useMemo(() => {
+		const q = tenantQuery.trim().toLowerCase();
+		if (!q) return activeTenantsWithRoom;
+		return activeTenantsWithRoom.filter(
+			(t) =>
+				t.name.toLowerCase().includes(q) ||
+				t.roomNo.toLowerCase().includes(q) ||
+				(t.phone?.includes(q) ?? false),
+		);
+	}, [tenantQuery, activeTenantsWithRoom]);
+
 	useEffect(() => {
 		if (open) {
 			if (activeTenantsWithRoom.length > 0) {
 				const firstTenant = activeTenantsWithRoom[0];
 				setContractId(firstTenant.contractId || firstTenant.id);
-				setAmount(parseRupiah(firstTenant.rent) || 850000);
+				const rentCalc = calculateTenantRent(firstTenant);
+				setAmount(rentCalc.totalRent);
+
+				const initMonth = firstTenant.unpaidPeriod?.month || now.getMonth() + 1;
+				const initYear = firstTenant.unpaidPeriod?.year || currentYear;
+				setPeriodMonth(initMonth);
+				setPeriodYear(initYear);
+				setDueDate(computeDueDate(firstTenant.dueDate, initYear, initMonth));
 			} else {
+				const initMonth = now.getMonth() + 1;
+				const initYear = currentYear;
 				setContractId("");
 				setAmount(0);
+				setPeriodMonth(initMonth);
+				setPeriodYear(initYear);
+				setDueDate(computeDueDate(undefined, initYear, initMonth));
 			}
-			setPeriodMonth(now.getMonth() + 1);
-			setPeriodYear(currentYear);
-			setDueDate(todayStr);
 			setNotes("");
 			setSendWhatsApp(false);
 			setErrors({});
+			setTenantQuery("");
+			setIsTenantDropdownOpen(false);
+		} else {
+			setTenantQuery("");
+			setIsTenantDropdownOpen(false);
 		}
-	}, [open, activeTenantsWithRoom, currentYear, todayStr]);
+	}, [open, activeTenantsWithRoom, currentYear]);
+
+	// Keep dueDate updated when periodMonth, periodYear, or selectedTenant changes
+	useEffect(() => {
+		if (open) {
+			setDueDate(computeDueDate(selectedTenant?.dueDate, periodYear, periodMonth));
+		}
+	}, [open, periodMonth, periodYear, selectedTenant?.dueDate]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -107,17 +238,21 @@ export function PaymentFormDialog({
 		});
 	};
 
-	const yearOptions = [
-		{ label: String(currentYear - 1), value: currentYear - 1 },
-		{ label: String(currentYear), value: currentYear },
-		{ label: String(currentYear + 1), value: currentYear + 1 },
-	];
+	const yearOptions = useMemo(() => {
+		const baseYears = new Set([
+			currentYear - 1,
+			currentYear,
+			currentYear + 1,
+			currentYear + 2,
+			periodYear,
+		]);
+		return Array.from(baseYears)
+			.sort((a, b) => a - b)
+			.map((y) => ({ label: String(y), value: y }));
+	}, [currentYear, periodYear]);
 
-	const selectedTenant = activeTenantsWithRoom.find(
-		(t) => (t.contractId || t.id) === contractId,
-	);
 	const selectedTenantLabel = selectedTenant
-		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${selectedTenant.rent}/bln)`
+		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${formatRupiah(rentCalculation.monthlyRent)}/bln)`
 		: undefined;
 
 	const selectedMonthOption = MONTH_OPTIONS.find(
@@ -128,10 +263,10 @@ export function PaymentFormDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="max-w-[500px] p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				className="max-w-[480px] max-h-[85vh] overflow-y-auto p-5 sm:p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
 				aria-describedby="create-invoice-desc"
 			>
-				<DialogHeader className="pb-3 border-b border-[#e4e9e4]">
+				<DialogHeader className="pb-2.5 border-b border-[#e4e9e4]">
 					<DialogTitle className="text-base font-bold text-[#252925] flex items-center gap-2">
 						<DollarSign className="w-5 h-5 text-[#4f6958]" />
 						Buat Tagihan Sewa Manual
@@ -144,39 +279,118 @@ export function PaymentFormDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				<form onSubmit={handleSubmit} className="space-y-4 py-2">
-					{/* Tenant & Room Selector */}
-					<div>
+				<form onSubmit={handleSubmit} className="space-y-3 py-1">
+					{/* Searchable Combobox Penghuni & Kamar */}
+					<div className="space-y-1.5 relative" ref={tenantComboboxRef}>
 						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
 							Pilih Penghuni & Kamar *
 						</Label>
-						<Select
-							value={contractId}
-							onValueChange={(val) => {
-								if (val) {
-									setContractId(val);
-									const matched = activeTenantsWithRoom.find(
-										(t) => (t.contractId || t.id) === val,
-									);
-									if (matched) {
-										setAmount(parseRupiah(matched.rent) || 850000);
-									}
+						<button
+							type="button"
+							role="combobox"
+							aria-expanded={isTenantDropdownOpen}
+							aria-haspopup="listbox"
+							onClick={() => setIsTenantDropdownOpen((prev) => !prev)}
+							onKeyDown={(e) => {
+								if (e.key === "Escape" && isTenantDropdownOpen) {
+									e.stopPropagation();
+									setIsTenantDropdownOpen(false);
 								}
 							}}
+							className="w-full h-10 px-3 border border-[#e4e9e4] rounded-lg bg-[#fbfcfb] text-left text-xs flex items-center justify-between hover:border-[#8fa594] transition-colors focus:outline-none focus:ring-2 focus:ring-[#8fa594]/20"
 						>
-							<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
-								<SelectValue placeholder="Pilih Penghuni & Kamar">
-									{selectedTenantLabel}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-								{activeTenantsWithRoom.map((t) => (
-									<SelectItem key={t.id} value={t.contractId || t.id}>
-										{t.name} — Kamar {t.roomNo} ({t.rent}/bln)
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+							<span
+								className={
+									selectedTenantLabel
+										? "text-[#252925] font-medium truncate"
+										: "text-[#737873]"
+								}
+							>
+								{selectedTenantLabel || "Pilih / Cari Penghuni & Kamar..."}
+							</span>
+							<ChevronsUpDown className="w-4 h-4 text-[#737873] shrink-0 ml-2" />
+						</button>
+
+						{isTenantDropdownOpen && (
+							<div
+								role="listbox"
+								className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e4e9e4] rounded-xl shadow-xl z-50 p-2 space-y-1"
+							>
+								<div className="flex mb-1 relative">
+									<Search className="w-3.5 h-3.5 text-[#737873] absolute left-2.5 top-2" />
+									<input
+										type="text"
+										placeholder="Ketik nama atau nomor kamar..."
+										value={tenantQuery}
+										onChange={(e) => setTenantQuery(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === "Escape") {
+												e.stopPropagation();
+												setIsTenantDropdownOpen(false);
+											}
+										}}
+										className="w-full pl-8 pr-3 py-1.5 text-xs border border-[#e4e9e4] rounded-lg outline-none focus:border-[#4f6958] bg-[#fbfcfb]"
+										autoFocus
+									/>
+								</div>
+
+								<div className="max-h-44 overflow-y-auto space-y-0.5">
+									{filteredTenants.length === 0 ? (
+										<div className="py-3 text-center text-xs text-[#737873]">
+											Penghuni tidak ditemukan
+										</div>
+									) : (
+										filteredTenants.map((t) => {
+											const isSelected = (t.contractId || t.id) === contractId;
+											const tRent = calculateTenantRent(t);
+											return (
+												<button
+													key={t.id}
+													type="button"
+													role="option"
+													aria-selected={isSelected}
+													onClick={() => {
+														setContractId(t.contractId || t.id);
+														setAmount(tRent.totalRent);
+														const targetMonth = t.unpaidPeriod?.month || periodMonth;
+														const targetYear = t.unpaidPeriod?.year || periodYear;
+														setPeriodMonth(targetMonth);
+														setPeriodYear(targetYear);
+														setDueDate(
+															computeDueDate(
+																t.dueDate,
+																targetYear,
+																targetMonth,
+															),
+														);
+														setIsTenantDropdownOpen(false);
+														setTenantQuery("");
+													}}
+													className={`w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center justify-between hover:bg-[#f3f7f3] transition-colors ${
+														isSelected
+															? "bg-[#f3f7f3] font-semibold text-[#4f6958]"
+															: "text-[#252925]"
+													}`}
+												>
+													<div className="truncate pr-2">
+														<div className="font-medium text-[#252925] truncate">
+															{t.name}
+														</div>
+														<div className="text-[11px] text-[#737873]">
+															Kamar {t.roomNo} · {formatRupiah(tRent.monthlyRent)}/bln
+														</div>
+													</div>
+													{isSelected && (
+														<Check className="w-3.5 h-3.5 text-[#4f6958] shrink-0" />
+													)}
+												</button>
+											);
+										})
+									)}
+								</div>
+							</div>
+						)}
+
 						{errors.contractId && (
 							<p className="text-[11px] text-[#a65f5b] mt-1">
 								{errors.contractId}
@@ -237,44 +451,69 @@ export function PaymentFormDialog({
 						</div>
 					</div>
 
-					{/* Amount & Due Date */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div>
-							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-								Nominal Tagihan (Rp) *
-							</Label>
-							<Input
-								type="number"
-								min="1000"
-								step="1000"
-								value={amount || ""}
-								onChange={(e) => setAmount(Number(e.target.value) || 0)}
-								placeholder="Contoh: 1200000"
-								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
-							/>
-							{errors.amount && (
-								<p className="text-[11px] text-[#a65f5b] mt-1">
-									{errors.amount}
-								</p>
-							)}
+					{/* Lease Information & Calculation Card */}
+					{selectedTenant && (
+						<div className="p-2.5 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4] space-y-1.5">
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-[#737873] flex items-center gap-1.5 font-medium">
+									<Clock className="w-3.5 h-3.5 text-[#4f6958]" />
+									Siklus Sewa:
+								</span>
+								<span className="font-semibold text-[#4f6958] bg-white px-2 py-0.5 rounded-md border border-[#e4e9e4]">
+									{rentCalculation.cycleLabel}
+								</span>
+							</div>
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-[#737873] font-medium">Tarif Kamar:</span>
+								<span className="font-semibold text-[#252925]">
+									{formatRupiah(rentCalculation.monthlyRent)} / bln
+								</span>
+							</div>
+							<div className="flex items-center justify-between text-xs">
+								<span className="text-[#737873] font-medium">Jatuh Tempo:</span>
+								<span className="font-semibold text-[#252925]">
+									{selectedTenant.dueDate && selectedTenant.dueDate !== "—"
+										? selectedTenant.dueDate
+										: `Tanggal ${dueDay} tiap bulan`}
+								</span>
+							</div>
+							<div className="pt-1.5 border-t border-[#e4e9e4]/80 flex items-center justify-between text-xs">
+								<span className="text-[#737873] font-medium">
+									Kalkulasi Otomatis:
+								</span>
+								<span className="font-bold text-[#4f6958]">
+									{rentCalculation.cycleMonths > 1
+										? `${rentCalculation.cycleMonths} bln × ${formatRupiah(rentCalculation.monthlyRent)} = ${formatRupiah(rentCalculation.totalRent)}`
+										: formatRupiah(rentCalculation.totalRent)}
+								</span>
+							</div>
 						</div>
+					)}
+					{errors.dueDate && (
+						<p className="text-[11px] text-[#a65f5b] mt-1">{errors.dueDate}</p>
+					)}
 
-						<div>
-							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-								Jatuh Tempo Pembayaran *
-							</Label>
-							<Input
-								type="date"
-								value={dueDate}
-								onChange={(e) => setDueDate(e.target.value)}
-								className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
-							/>
-							{errors.dueDate && (
-								<p className="text-[11px] text-[#a65f5b] mt-1">
-									{errors.dueDate}
-								</p>
-							)}
-						</div>
+					{/* Nominal Tagihan */}
+					<div>
+						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+							Nominal Tagihan (Rp) *
+						</Label>
+						<Input
+							type="number"
+							min="1000"
+							step="1000"
+							value={amount || ""}
+							onChange={(e) => setAmount(Number(e.target.value) || 0)}
+							placeholder="Contoh: 1200000"
+							className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+						/>
+						<p className="text-[11px] text-[#737873] mt-1">
+							Nominal otomatis terhitung sesuai siklus sewa (dapat disesuaikan
+							jika ada biaya tambahan)
+						</p>
+						{errors.amount && (
+							<p className="text-[11px] text-[#a65f5b] mt-1">{errors.amount}</p>
+						)}
 					</div>
 
 					{/* Notes */}
@@ -286,12 +525,12 @@ export function PaymentFormDialog({
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							placeholder="Contoh: Termasuk biaya tambahan listrik AC"
-							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+							className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 					</div>
 
 					{/* Checkbox Send WhatsApp */}
-					<div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4]">
+					<div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4]">
 						<Checkbox
 							id="sendWhatsApp"
 							checked={sendWhatsApp}
@@ -313,7 +552,7 @@ export function PaymentFormDialog({
 						</label>
 					</div>
 
-					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-end gap-2">
+					<DialogFooter className="pt-2.5 border-t border-[#e4e9e4] flex items-center justify-end gap-2">
 						<Button
 							type="button"
 							variant="outline"

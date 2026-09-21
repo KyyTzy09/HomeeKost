@@ -7,7 +7,7 @@ import type {
 } from "../../common/types/index.ts";
 import type { TenantFormValues } from "../../common/validations/index.ts";
 import type { BillingCycle } from "../../generated/prisma/client.js";
-import { getMonthName } from "../../lib/date-utils.ts";
+import { formatDate, getMonthName } from "../../lib/date-utils.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import { formatDisplayPhone, sanitizePhone } from "../../lib/phone-utils.ts";
 import { roomRepository } from "../repositories/room.repository.ts";
@@ -87,37 +87,152 @@ export class TenantService {
 		return `${day} ${month} ${year}`;
 	}
 
-	private formatDueDate(
+	private getRealDueDate(
 		dueDateDay: number,
-		invoices?: { dueDate: Date; status: string }[],
-	): string {
+		invoices?: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+		endDate?: Date | null,
+		cycleMonths: number = 1,
+	): Date {
 		const now = new Date();
-		const months = [
-			"Jan",
-			"Feb",
-			"Mar",
-			"Apr",
-			"Mei",
-			"Jun",
-			"Jul",
-			"Agu",
-			"Sep",
-			"Okt",
-			"Nov",
-			"Des",
-		];
 
-		if (invoices && invoices.length > 0) {
-			const latest = invoices[0];
-			const d = new Date(latest.dueDate);
-			const day = d.getDate().toString().padStart(2, "0");
-			const month = months[d.getMonth()] || "Agu";
-			return `${day} ${month}`;
+		// 1. Tagihan belum lunas (OVERDUE atau PENDING): ambil tanggal tenggat terawal/mendesak
+		const unpaidInvoices = (invoices || [])
+			.filter((inv) => inv.status === "OVERDUE" || inv.status === "PENDING")
+			.sort(
+				(a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+			);
+
+		if (unpaidInvoices.length > 0) {
+			return new Date(unpaidInvoices[0].dueDate);
 		}
 
-		const day = dueDateDay.toString().padStart(2, "0");
-		const month = months[now.getMonth()] || "Agu";
-		return `${day} ${month}`;
+		// 2. Jika seluruh tagihan sudah LUNAS (PAID):
+		// Tenggat berikutnya adalah endDate kontrak atau latestDue + cycleMonths
+		const paidInvoices = (invoices || [])
+			.filter((inv) => inv.status === "PAID")
+			.sort(
+				(a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+			);
+
+		if (paidInvoices.length > 0) {
+			if (endDate && new Date(endDate) > new Date(paidInvoices[0].dueDate)) {
+				return new Date(endDate);
+			}
+			const latestPaid = paidInvoices[0];
+			const latestDue = new Date(latestPaid.dueDate);
+			return new Date(
+				latestDue.getFullYear(),
+				latestDue.getMonth() + cycleMonths,
+				dueDateDay,
+			);
+		}
+
+		// 3. Fallback: jika belum ada invoice, hitung dari startDate atau bulan berjalan
+		if (startDate) {
+			const start = new Date(startDate);
+			if (start > now) {
+				return new Date(start.getFullYear(), start.getMonth(), dueDateDay);
+			}
+		}
+
+		const targetYear = now.getFullYear();
+		let targetMonth = now.getMonth();
+		if (now.getDate() > dueDateDay) {
+			targetMonth += 1;
+		}
+		return new Date(targetYear, targetMonth, dueDateDay);
+	}
+
+	private formatDueDate(
+		dueDateDay: number,
+		invoices?: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+		endDate?: Date | null,
+		cycleMonths: number = 1,
+	): string {
+		const targetDate = this.getRealDueDate(
+			dueDateDay,
+			invoices,
+			startDate,
+			endDate,
+			cycleMonths,
+		);
+		return formatDate(targetDate);
+	}
+
+	private calculateUnpaidPeriod(
+		invoices: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+		cycleMonths: number = 1,
+	): { month: number; year: number } {
+		const pendingOrOverdue = invoices
+			.filter(
+				(inv) =>
+					(inv.status === "PENDING" || inv.status === "OVERDUE") &&
+					inv.periodMonth &&
+					inv.periodYear,
+			)
+			.sort(
+				(a, b) =>
+					new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+			);
+
+		if (pendingOrOverdue.length > 0) {
+			const first = pendingOrOverdue[0];
+			if (first.periodMonth != null && first.periodYear != null) {
+				return {
+					month: first.periodMonth,
+					year: first.periodYear,
+				};
+			}
+		}
+
+		const paidInvoices = invoices
+			.filter(
+				(inv) =>
+					inv.status === "PAID" &&
+					inv.periodMonth != null &&
+					inv.periodYear != null,
+			)
+			.sort(
+				(a, b) =>
+					new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+			);
+
+		if (paidInvoices.length > 0) {
+			const latest = paidInvoices[0];
+			if (latest.periodMonth != null && latest.periodYear != null) {
+				const totalMonths =
+					latest.periodYear * 12 + (latest.periodMonth - 1) + cycleMonths;
+				const nextYear = Math.floor(totalMonths / 12);
+				const nextMonth = (totalMonths % 12) + 1;
+				return { month: nextMonth, year: nextYear };
+			}
+		}
+
+		if (startDate) {
+			const start = new Date(startDate);
+			return { month: start.getMonth() + 1, year: start.getFullYear() };
+		}
+
+		const now = new Date();
+		return { month: now.getMonth() + 1, year: now.getFullYear() };
 	}
 
 	async getTenants(propertyId?: string): Promise<TenantItem[]> {
@@ -144,20 +259,23 @@ export class TenantService {
 
 			const phoneCanonical = sanitizePhone(t.phoneNumber);
 			const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
-			let actualRent = 0;
+			const baseMonthlyRent =
+				room && Number(room.price) > 0 ? Number(room.price) : 850000;
+			let totalCycleRent = baseMonthlyRent * cycleMonths;
 			if (
 				activeContract?.invoices?.[0]?.amount &&
 				Number(activeContract.invoices[0].amount) > 0
 			) {
-				actualRent = Number(activeContract.invoices[0].amount);
-			} else if (room && Number(room.price) > 0) {
-				actualRent = Number(room.price) * cycleMonths;
-			} else {
-				actualRent = 850000 * cycleMonths;
+				totalCycleRent = Number(activeContract.invoices[0].amount);
 			}
 
 			const dueDateDay = activeContract?.dueDateDay || 10;
 			const depositAmount = t.deposit ? Number(t.deposit) : 0;
+			const unpaidPeriod = this.calculateUnpaidPeriod(
+				activeContract?.invoices || [],
+				activeContract?.startDate,
+				cycleMonths,
+			);
 
 			return {
 				id: t.id,
@@ -175,12 +293,21 @@ export class TenantService {
 					: "Lainnya") as OccupationStatus,
 				institution: t.institution || t.occupation || "—",
 				roomNo: room?.roomNumber || "—",
-				rent: formatRupiah(actualRent),
+				rent: formatRupiah(totalCycleRent),
+				monthlyRent: baseMonthlyRent,
+				totalRent: totalCycleRent,
 				duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 				startDate: activeContract?.startDate
 					? this.formatDate(activeContract.startDate)
 					: "—",
-				dueDate: this.formatDueDate(dueDateDay, activeContract?.invoices),
+				dueDate: this.formatDueDate(
+					dueDateDay,
+					activeContract?.invoices,
+					activeContract?.startDate,
+					activeContract?.endDate,
+					cycleMonths,
+				),
+				unpaidPeriod,
 				vehicle: t.vehicle || null,
 				deposit: formatRupiah(depositAmount),
 				emergencyName: t.emergencyName || null,
@@ -219,20 +346,23 @@ export class TenantService {
 
 		const phoneCanonical = sanitizePhone(t.phoneNumber);
 		const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
-		let actualRent = 0;
+		const baseMonthlyRent =
+			room && Number(room.price) > 0 ? Number(room.price) : 850000;
+		let totalCycleRent = baseMonthlyRent * cycleMonths;
 		if (
 			activeContract?.invoices?.[0]?.amount &&
 			Number(activeContract.invoices[0].amount) > 0
 		) {
-			actualRent = Number(activeContract.invoices[0].amount);
-		} else if (room && Number(room.price) > 0) {
-			actualRent = Number(room.price) * cycleMonths;
-		} else {
-			actualRent = 850000 * cycleMonths;
+			totalCycleRent = Number(activeContract.invoices[0].amount);
 		}
 
 		const dueDateDay = activeContract?.dueDateDay || 10;
 		const depositAmount = t.deposit ? Number(t.deposit) : 0;
+		const unpaidPeriod = this.calculateUnpaidPeriod(
+			activeContract?.invoices || [],
+			activeContract?.startDate,
+			cycleMonths,
+		);
 
 		return {
 			id: t.id,
@@ -250,12 +380,21 @@ export class TenantService {
 				: "Lainnya") as OccupationStatus,
 			institution: t.institution || t.occupation || "—",
 			roomNo: room?.roomNumber || "—",
-			rent: formatRupiah(actualRent),
+			rent: formatRupiah(totalCycleRent),
+			monthlyRent: baseMonthlyRent,
+			totalRent: totalCycleRent,
 			duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 			startDate: activeContract?.startDate
 				? this.formatDate(activeContract.startDate)
 				: "—",
-			dueDate: this.formatDueDate(dueDateDay, activeContract?.invoices),
+			dueDate: this.formatDueDate(
+				dueDateDay,
+				activeContract?.invoices,
+				activeContract?.startDate,
+				activeContract?.endDate,
+				cycleMonths,
+			),
+			unpaidPeriod,
 			vehicle: t.vehicle || null,
 			deposit: formatRupiah(depositAmount),
 			emergencyName: t.emergencyName || null,
@@ -403,7 +542,7 @@ export class TenantService {
 					}
 				}
 			}
-		} else if (initialPayment >= totalCycleRent) {
+		} else if (input.markPastPeriodsPaid || initialPayment >= totalCycleRent) {
 			// Skenario 2: Bayar Lunas Penuh di Awal untuk 1 Siklus Pertama
 			calculatedEndDate = new Date(
 				startDate.getFullYear(),
@@ -531,6 +670,12 @@ export class TenantService {
 			},
 		);
 
+		const unpaidPeriod = this.calculateUnpaidPeriod(
+			invoicesToCreate,
+			contract.startDate,
+			cycleMonths,
+		);
+
 		return {
 			id: tenant.id,
 			propertyId,
@@ -547,9 +692,18 @@ export class TenantService {
 			institution: input.institution || input.occupationStatus,
 			roomNo: room.roomNumber,
 			rent: formatRupiah(totalCycleRent),
+			monthlyRent,
+			totalRent: totalCycleRent,
 			duration: input.duration,
 			startDate: this.formatDate(contract.startDate),
-			dueDate: this.formatDueDate(dueDateDay),
+			dueDate: this.formatDueDate(
+				dueDateDay,
+				invoicesToCreate,
+				contract.startDate,
+				contract.endDate,
+				cycleMonths,
+			),
+			unpaidPeriod,
 			vehicle: input.vehicle || null,
 			deposit: formatRupiah(depositAmount),
 			emergencyName: input.emergencyName || null,
@@ -559,6 +713,8 @@ export class TenantService {
 			notes: input.notes || null,
 			ktpUrl: tenant.ktpUrl || null,
 			paymentStatus: "Lancar",
+			contractId: contract.id,
+			roomId: room.id,
 		};
 	}
 
@@ -591,7 +747,7 @@ export class TenantService {
 			? sanitizePhone(input.emergencyPhone)
 			: null;
 
-		const updatedTenant = await this.tenantRepo.updateTenantWithContract(id, {
+		await this.tenantRepo.updateTenantWithContract(id, {
 			name: input.name,
 			nik: input.nik,
 			phone: canonicalPhone,
@@ -614,24 +770,27 @@ export class TenantService {
 			dueDateDay,
 		});
 
+		const fullTenant = await this.getTenantById(id);
+		if (fullTenant) return fullTenant;
+
 		const rentAmount = parseRupiah(input.rent);
 
 		return {
-			id: updatedTenant.id,
+			id,
 			propertyId,
-			name: updatedTenant.name,
-			birthDate: updatedTenant.birthDate
-				? updatedTenant.birthDate.toISOString().slice(0, 10)
-				: null,
-			nik: updatedTenant.NIK,
+			name: input.name,
+			birthDate: birthDate ? birthDate.toISOString().slice(0, 10) : null,
+			nik: input.nik,
 			phone: canonicalPhone,
 			displayPhone: formatDisplayPhone(canonicalPhone),
-			originAddress: updatedTenant.originAddress || "",
-			email: updatedTenant.email || "",
+			originAddress: input.originAddress || "",
+			email: input.email || "",
 			occupationStatus: input.occupationStatus,
 			institution: input.institution || input.occupationStatus,
 			roomNo: input.roomNo,
 			rent: formatRupiah(rentAmount),
+			monthlyRent: rentAmount,
+			totalRent: rentAmount,
 			duration: input.duration,
 			startDate: input.startDate || "—",
 			dueDate: input.dueDate || "—",
@@ -640,7 +799,7 @@ export class TenantService {
 			emergencyName: input.emergencyName || null,
 			emergencyRelation: input.emergencyRelation || null,
 			emergencyPhone: input.emergencyPhone || null,
-			registrationDate: updatedTenant.createdAt.toISOString().slice(0, 10),
+			registrationDate: new Date().toISOString().slice(0, 10),
 			notes: input.notes || null,
 			paymentStatus: "Lancar",
 		};

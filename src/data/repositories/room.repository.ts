@@ -1,3 +1,4 @@
+import { compareRoomNumbers } from "../../common/helpers/room.helper.ts";
 import { prisma } from "../../db.ts";
 import type {
 	PrismaClient,
@@ -8,13 +9,17 @@ export class RoomRepository {
 	constructor(private readonly db: PrismaClient = prisma) {}
 
 	async findByPropertyId(propertyId: string) {
-		return this.db.room.findMany({
+		const rooms = await this.db.room.findMany({
 			where: { propertyId },
 			include: {
 				rentalContracts: {
 					where: { status: "ACTIVE" },
 					include: {
 						tenant: true,
+						invoices: {
+							orderBy: { dueDate: "asc" },
+							take: 12,
+						},
 					},
 					orderBy: { createdAt: "desc" },
 					take: 1,
@@ -22,6 +27,9 @@ export class RoomRepository {
 			},
 			orderBy: { roomNumber: "asc" },
 		});
+
+		// Natural numeric sorting: Kamar 1, 2, 3 ... 9, 10, 11 (bukan 1, 10, 11, 2)
+		return rooms.sort((a, b) => compareRoomNumbers(a.roomNumber, b.roomNumber));
 	}
 
 	async findById(id: string) {
@@ -33,6 +41,10 @@ export class RoomRepository {
 					where: { status: "ACTIVE" },
 					include: {
 						tenant: true,
+						invoices: {
+							orderBy: { dueDate: "asc" },
+							take: 12,
+						},
 					},
 					orderBy: { createdAt: "desc" },
 					take: 1,
@@ -104,7 +116,13 @@ export class RoomRepository {
 					where: { status: "ACTIVE" },
 					include: {
 						tenant: true,
+						invoices: {
+							orderBy: { dueDate: "asc" },
+							take: 12,
+						},
 					},
+					orderBy: { createdAt: "desc" },
+					take: 1,
 				},
 			},
 		});

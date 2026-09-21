@@ -9,3 +9,4 @@ export * from "./storage.fn.ts";
 export * from "./tenant.fn.ts";
 export * from "./transaction.fn.ts";
 export * from "./user.fn.ts";
+export * from "./system.fn.ts";

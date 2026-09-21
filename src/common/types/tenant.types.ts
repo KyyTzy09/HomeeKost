@@ -30,4 +30,7 @@ export interface TenantItem {
 	paymentStatus: TenantPaymentStatus;
 	contractId?: string;
 	roomId?: string;
+	monthlyRent?: number;
+	totalRent?: number;
+	unpaidPeriod?: { month: number; year: number } | null;
 }
