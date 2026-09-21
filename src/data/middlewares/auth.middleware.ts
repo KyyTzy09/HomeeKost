@@ -1,5 +1,6 @@
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { auth } from "#/lib/auth";
+import { auth } from "../../lib/auth.ts";
+import { userRepository } from "../repositories/user.repository.ts";
 
 export async function requireAuthSession() {
 	const headers = getRequestHeaders();
@@ -9,5 +10,17 @@ export async function requireAuthSession() {
 		throw new Error("Sesi tidak valid. Silakan login kembali.");
 	}
 
-	return session;
+	const dbUser = await userRepository.findUserWithRoleAndAccess(session.user.id);
+	if (!dbUser) {
+		throw new Error("Pengguna tidak ditemukan.");
+	}
+
+	return {
+		...session,
+		user: {
+			...session.user,
+			...dbUser,
+			role: dbUser.role,
+		},
+	};
 }
