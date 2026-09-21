@@ -193,7 +193,16 @@ export function PaymentFormDialog({
 						</Label>
 						<button
 							type="button"
+							role="combobox"
+							aria-expanded={isTenantDropdownOpen}
+							aria-haspopup="listbox"
 							onClick={() => setIsTenantDropdownOpen((prev) => !prev)}
+							onKeyDown={(e) => {
+								if (e.key === "Escape" && isTenantDropdownOpen) {
+									e.stopPropagation();
+									setIsTenantDropdownOpen(false);
+								}
+							}}
 							className="w-full h-10 px-3 border border-[#e4e9e4] rounded-lg bg-[#fbfcfb] text-left text-xs flex items-center justify-between hover:border-[#8fa594] transition-colors focus:outline-none focus:ring-2 focus:ring-[#8fa594]/20"
 						>
 							<span
@@ -209,7 +218,10 @@ export function PaymentFormDialog({
 						</button>
 
 						{isTenantDropdownOpen && (
-							<div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e4e9e4] rounded-xl shadow-xl z-50 p-2 space-y-1">
+							<div
+								role="listbox"
+								className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e4e9e4] rounded-xl shadow-xl z-50 p-2 space-y-1"
+							>
 								<div className="relative mb-1">
 									<Search className="w-3.5 h-3.5 absolute left-2.5 top-3 text-[#737873]" />
 									<input
@@ -217,6 +229,12 @@ export function PaymentFormDialog({
 										placeholder="Ketik nama atau nomor kamar..."
 										value={tenantQuery}
 										onChange={(e) => setTenantQuery(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === "Escape") {
+												e.stopPropagation();
+												setIsTenantDropdownOpen(false);
+											}
+										}}
 										className="w-full pl-8 pr-3 py-1.5 text-xs border border-[#e4e9e4] rounded-lg outline-none focus:border-[#4f6958] bg-[#fbfcfb]"
 										autoFocus
 									/>
@@ -234,6 +252,8 @@ export function PaymentFormDialog({
 												<button
 													key={t.id}
 													type="button"
+													role="option"
+													aria-selected={isSelected}
 													onClick={() => {
 														setContractId(t.contractId || t.id);
 														setAmount(parseRupiah(t.rent) || 850000);
