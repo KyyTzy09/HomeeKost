@@ -120,6 +120,68 @@ export class TenantService {
 		return `${day} ${month}`;
 	}
 
+	private calculateUnpaidPeriod(
+		invoices: Array<{
+			dueDate: Date;
+			periodMonth?: number | null;
+			periodYear?: number | null;
+			status: string;
+		}>,
+		startDate?: Date | null,
+	): { month: number; year: number } {
+		const pendingOrOverdue = invoices
+			.filter(
+				(inv) =>
+					(inv.status === "PENDING" || inv.status === "OVERDUE") &&
+					inv.periodMonth &&
+					inv.periodYear,
+			)
+			.sort(
+				(a, b) =>
+					new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+			);
+
+		if (pendingOrOverdue.length > 0) {
+			const first = pendingOrOverdue[0];
+			if (first.periodMonth != null && first.periodYear != null) {
+				return {
+					month: first.periodMonth,
+					year: first.periodYear,
+				};
+			}
+		}
+
+		const paidInvoices = invoices
+			.filter(
+				(inv) =>
+					inv.status === "PAID" &&
+					inv.periodMonth != null &&
+					inv.periodYear != null,
+			)
+			.sort(
+				(a, b) =>
+					new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+			);
+
+		if (paidInvoices.length > 0) {
+			const latest = paidInvoices[0];
+			if (latest.periodMonth != null && latest.periodYear != null) {
+				const nextMonth = (latest.periodMonth % 12) + 1;
+				const nextYear =
+					latest.periodMonth === 12 ? latest.periodYear + 1 : latest.periodYear;
+				return { month: nextMonth, year: nextYear };
+			}
+		}
+
+		if (startDate) {
+			const start = new Date(startDate);
+			return { month: start.getMonth() + 1, year: start.getFullYear() };
+		}
+
+		const now = new Date();
+		return { month: now.getMonth() + 1, year: now.getFullYear() };
+	}
+
 	async getTenants(propertyId?: string): Promise<TenantItem[]> {
 		const rawTenants = propertyId
 			? await this.tenantRepo.findByPropertyId(propertyId)
@@ -144,20 +206,22 @@ export class TenantService {
 
 			const phoneCanonical = sanitizePhone(t.phoneNumber);
 			const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
-			let actualRent = 0;
+			const baseMonthlyRent =
+				room && Number(room.price) > 0 ? Number(room.price) : 850000;
+			let totalCycleRent = baseMonthlyRent * cycleMonths;
 			if (
 				activeContract?.invoices?.[0]?.amount &&
 				Number(activeContract.invoices[0].amount) > 0
 			) {
-				actualRent = Number(activeContract.invoices[0].amount);
-			} else if (room && Number(room.price) > 0) {
-				actualRent = Number(room.price) * cycleMonths;
-			} else {
-				actualRent = 850000 * cycleMonths;
+				totalCycleRent = Number(activeContract.invoices[0].amount);
 			}
 
 			const dueDateDay = activeContract?.dueDateDay || 10;
 			const depositAmount = t.deposit ? Number(t.deposit) : 0;
+			const unpaidPeriod = this.calculateUnpaidPeriod(
+				activeContract?.invoices || [],
+				activeContract?.startDate,
+			);
 
 			return {
 				id: t.id,
@@ -175,12 +239,15 @@ export class TenantService {
 					: "Lainnya") as OccupationStatus,
 				institution: t.institution || t.occupation || "—",
 				roomNo: room?.roomNumber || "—",
-				rent: formatRupiah(actualRent),
+				rent: formatRupiah(totalCycleRent),
+				monthlyRent: baseMonthlyRent,
+				totalRent: totalCycleRent,
 				duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 				startDate: activeContract?.startDate
 					? this.formatDate(activeContract.startDate)
 					: "—",
 				dueDate: this.formatDueDate(dueDateDay, activeContract?.invoices),
+				unpaidPeriod,
 				vehicle: t.vehicle || null,
 				deposit: formatRupiah(depositAmount),
 				emergencyName: t.emergencyName || null,
@@ -219,20 +286,22 @@ export class TenantService {
 
 		const phoneCanonical = sanitizePhone(t.phoneNumber);
 		const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
-		let actualRent = 0;
+		const baseMonthlyRent =
+			room && Number(room.price) > 0 ? Number(room.price) : 850000;
+		let totalCycleRent = baseMonthlyRent * cycleMonths;
 		if (
 			activeContract?.invoices?.[0]?.amount &&
 			Number(activeContract.invoices[0].amount) > 0
 		) {
-			actualRent = Number(activeContract.invoices[0].amount);
-		} else if (room && Number(room.price) > 0) {
-			actualRent = Number(room.price) * cycleMonths;
-		} else {
-			actualRent = 850000 * cycleMonths;
+			totalCycleRent = Number(activeContract.invoices[0].amount);
 		}
 
 		const dueDateDay = activeContract?.dueDateDay || 10;
 		const depositAmount = t.deposit ? Number(t.deposit) : 0;
+		const unpaidPeriod = this.calculateUnpaidPeriod(
+			activeContract?.invoices || [],
+			activeContract?.startDate,
+		);
 
 		return {
 			id: t.id,
@@ -250,12 +319,15 @@ export class TenantService {
 				: "Lainnya") as OccupationStatus,
 			institution: t.institution || t.occupation || "—",
 			roomNo: room?.roomNumber || "—",
-			rent: formatRupiah(actualRent),
+			rent: formatRupiah(totalCycleRent),
+			monthlyRent: baseMonthlyRent,
+			totalRent: totalCycleRent,
 			duration: this.mapBillingCycleToDuration(activeContract?.billingCycle),
 			startDate: activeContract?.startDate
 				? this.formatDate(activeContract.startDate)
 				: "—",
 			dueDate: this.formatDueDate(dueDateDay, activeContract?.invoices),
+			unpaidPeriod,
 			vehicle: t.vehicle || null,
 			deposit: formatRupiah(depositAmount),
 			emergencyName: t.emergencyName || null,

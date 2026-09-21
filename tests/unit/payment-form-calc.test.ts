@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	calculateTenantRent,
 	computeDueDate,
 	extractDueDay,
 	getCycleMultiplier,
@@ -76,6 +77,68 @@ describe("Payment Form Calculation Helpers", () => {
 
 		it("harus clamp tanggal lebih dari 28 ke 28", () => {
 			expect(computeDueDate("31", 2026, 2)).toBe("2026-02-28");
+		});
+	});
+
+	describe("calculateTenantRent", () => {
+		it("harus menghitung nominal sewa semesteran (6 bulan) tanpa perkalian ganda", () => {
+			// Kasus kamar 1.300.000/bln durasi Semesteran: total harus 7.800.000, BUKAN 46.800.000
+			const res = calculateTenantRent({
+				monthlyRent: 1300000,
+				duration: "Semesteran",
+			});
+			expect(res.monthlyRent).toBe(1300000);
+			expect(res.totalRent).toBe(7800000);
+			expect(res.cycleMonths).toBe(6);
+			expect(res.cycleLabel).toBe("Semesteran (6 Bulan)");
+		});
+
+		it("harus mengekstrak monthlyRent dengan benar jika hanya ada formatted total rent di t.rent", () => {
+			const res = calculateTenantRent({
+				rent: "Rp 7.800.000",
+				duration: "Semesteran",
+			});
+			expect(res.totalRent).toBe(7800000);
+			expect(res.monthlyRent).toBe(1300000);
+			expect(res.cycleMonths).toBe(6);
+		});
+
+		it("harus menghitung sewa bulanan dengan benar", () => {
+			const res = calculateTenantRent({
+				monthlyRent: 1500000,
+				totalRent: 1500000,
+				duration: "Bulanan",
+			});
+			expect(res.monthlyRent).toBe(1500000);
+			expect(res.totalRent).toBe(1500000);
+			expect(res.cycleMonths).toBe(1);
+		});
+
+		it("harus menghitung sewa triwulan (3 bulan) dengan benar", () => {
+			const res = calculateTenantRent({
+				monthlyRent: 1200000,
+				duration: "Triwulan",
+			});
+			expect(res.monthlyRent).toBe(1200000);
+			expect(res.totalRent).toBe(3600000);
+			expect(res.cycleMonths).toBe(3);
+		});
+
+		it("harus menghitung sewa tahunan (12 bulan) dengan benar", () => {
+			const res = calculateTenantRent({
+				monthlyRent: 1000000,
+				duration: "Tahunan",
+			});
+			expect(res.monthlyRent).toBe(1000000);
+			expect(res.totalRent).toBe(12000000);
+			expect(res.cycleMonths).toBe(12);
+		});
+
+		it("harus menggunakan fallback aman jika tenant undefined", () => {
+			const res = calculateTenantRent(undefined);
+			expect(res.monthlyRent).toBe(850000);
+			expect(res.totalRent).toBe(850000);
+			expect(res.cycleMonths).toBe(1);
 		});
 	});
 });

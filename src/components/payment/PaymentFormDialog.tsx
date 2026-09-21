@@ -54,6 +54,41 @@ export function extractDueDay(dueDateStr?: string | null): number {
 	return Math.min(Math.max(rawDay, 1), 28);
 }
 
+export function calculateTenantRent(tenant?: {
+	rent?: string;
+	monthlyRent?: number;
+	totalRent?: number;
+	duration?: string;
+}): {
+	monthlyRent: number;
+	totalRent: number;
+	cycleMonths: number;
+	cycleLabel: string;
+} {
+	const cycle = getCycleMultiplier(tenant?.duration);
+	let monthly = 850000;
+	let total = 850000;
+
+	if (tenant?.monthlyRent && tenant.monthlyRent > 0) {
+		monthly = tenant.monthlyRent;
+		total = tenant.totalRent || monthly * cycle.months;
+	} else if (tenant?.totalRent && tenant.totalRent > 0) {
+		total = tenant.totalRent;
+		monthly = Math.round(total / cycle.months);
+	} else if (tenant?.rent) {
+		const parsed = parseRupiah(tenant.rent) || 850000;
+		total = parsed;
+		monthly = Math.round(total / cycle.months);
+	}
+
+	return {
+		monthlyRent: monthly,
+		totalRent: total,
+		cycleMonths: cycle.months,
+		cycleLabel: cycle.label,
+	};
+}
+
 export function computeDueDate(
 	dueDateStr: string | undefined | null,
 	year: number,
@@ -103,10 +138,10 @@ export function PaymentFormDialog({
 	const selectedTenant = activeTenantsWithRoom.find(
 		(t) => (t.contractId || t.id) === contractId,
 	);
-	const cycleInfo = getCycleMultiplier(selectedTenant?.duration);
-	const monthlyRent = selectedTenant
-		? parseRupiah(selectedTenant.rent) || 850000
-		: 850000;
+	const rentCalculation = useMemo(
+		() => calculateTenantRent(selectedTenant),
+		[selectedTenant],
+	);
 	const dueDay = extractDueDay(selectedTenant?.dueDate);
 
 	useEffect(() => {
@@ -135,21 +170,24 @@ export function PaymentFormDialog({
 
 	useEffect(() => {
 		if (open) {
-			const initMonth = now.getMonth() + 1;
-			const initYear = currentYear;
-			setPeriodMonth(initMonth);
-			setPeriodYear(initYear);
-
 			if (activeTenantsWithRoom.length > 0) {
 				const firstTenant = activeTenantsWithRoom[0];
 				setContractId(firstTenant.contractId || firstTenant.id);
-				const cycle = getCycleMultiplier(firstTenant.duration);
-				const monthly = parseRupiah(firstTenant.rent) || 850000;
-				setAmount(monthly * cycle.months);
+				const rentCalc = calculateTenantRent(firstTenant);
+				setAmount(rentCalc.totalRent);
+
+				const initMonth = firstTenant.unpaidPeriod?.month || now.getMonth() + 1;
+				const initYear = firstTenant.unpaidPeriod?.year || currentYear;
+				setPeriodMonth(initMonth);
+				setPeriodYear(initYear);
 				setDueDate(computeDueDate(firstTenant.dueDate, initYear, initMonth));
 			} else {
+				const initMonth = now.getMonth() + 1;
+				const initYear = currentYear;
 				setContractId("");
 				setAmount(0);
+				setPeriodMonth(initMonth);
+				setPeriodYear(initYear);
 				setDueDate(computeDueDate(undefined, initYear, initMonth));
 			}
 			setNotes("");
@@ -207,7 +245,7 @@ export function PaymentFormDialog({
 	];
 
 	const selectedTenantLabel = selectedTenant
-		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${selectedTenant.rent}/bln)`
+		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${formatRupiah(rentCalculation.monthlyRent)}/bln)`
 		: undefined;
 
 	const selectedMonthOption = MONTH_OPTIONS.find(
@@ -297,6 +335,7 @@ export function PaymentFormDialog({
 									) : (
 										filteredTenants.map((t) => {
 											const isSelected = (t.contractId || t.id) === contractId;
+											const tRent = calculateTenantRent(t);
 											return (
 												<button
 													key={t.id}
@@ -305,14 +344,16 @@ export function PaymentFormDialog({
 													aria-selected={isSelected}
 													onClick={() => {
 														setContractId(t.contractId || t.id);
-														const cycle = getCycleMultiplier(t.duration);
-														const monthly = parseRupiah(t.rent) || 850000;
-														setAmount(monthly * cycle.months);
+														setAmount(tRent.totalRent);
+														const targetMonth = t.unpaidPeriod?.month || periodMonth;
+														const targetYear = t.unpaidPeriod?.year || periodYear;
+														setPeriodMonth(targetMonth);
+														setPeriodYear(targetYear);
 														setDueDate(
 															computeDueDate(
 																t.dueDate,
-																periodYear,
-																periodMonth,
+																targetYear,
+																targetMonth,
 															),
 														);
 														setIsTenantDropdownOpen(false);
@@ -329,7 +370,7 @@ export function PaymentFormDialog({
 															{t.name}
 														</div>
 														<div className="text-[11px] text-[#737873]">
-															Kamar {t.roomNo} · {t.rent}/bln
+															Kamar {t.roomNo} · {formatRupiah(tRent.monthlyRent)}/bln
 														</div>
 													</div>
 													{isSelected && (
@@ -412,13 +453,13 @@ export function PaymentFormDialog({
 									Siklus Sewa:
 								</span>
 								<span className="font-semibold text-[#4f6958] bg-white px-2 py-0.5 rounded-md border border-[#e4e9e4]">
-									{cycleInfo.label}
+									{rentCalculation.cycleLabel}
 								</span>
 							</div>
 							<div className="flex items-center justify-between text-xs">
 								<span className="text-[#737873] font-medium">Tarif Kamar:</span>
 								<span className="font-semibold text-[#252925]">
-									{selectedTenant.rent} / bln
+									{formatRupiah(rentCalculation.monthlyRent)} / bln
 								</span>
 							</div>
 							<div className="flex items-center justify-between text-xs">
@@ -434,8 +475,9 @@ export function PaymentFormDialog({
 									Kalkulasi Otomatis:
 								</span>
 								<span className="font-bold text-[#4f6958]">
-									{cycleInfo.months} bln × {selectedTenant.rent} ={" "}
-									{formatRupiah(cycleInfo.months * monthlyRent)}
+									{rentCalculation.cycleMonths > 1
+										? `${rentCalculation.cycleMonths} bln × ${formatRupiah(rentCalculation.monthlyRent)} = ${formatRupiah(rentCalculation.totalRent)}`
+										: formatRupiah(rentCalculation.totalRent)}
 								</span>
 							</div>
 						</div>

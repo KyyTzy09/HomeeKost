@@ -81,7 +81,7 @@ export class TenantRepository {
 						room: true,
 						invoices: {
 							orderBy: { dueDate: "desc" },
-							take: 3,
+							take: 12,
 						},
 					},
 				},
@@ -103,7 +103,7 @@ export class TenantRepository {
 						},
 						invoices: {
 							orderBy: { dueDate: "desc" },
-							take: 3,
+							take: 12,
 						},
 					},
 				},
