@@ -359,13 +359,7 @@ export function PaymentFormDialog({
 							<Select
 								value={String(periodMonth)}
 								onValueChange={(val) => {
-									if (val) {
-										const m = Number(val);
-										setPeriodMonth(m);
-										setDueDate(
-											computeDueDate(selectedTenant?.dueDate, periodYear, m),
-										);
-									}
+									if (val) setPeriodMonth(Number(val));
 								}}
 							>
 								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
@@ -390,13 +384,7 @@ export function PaymentFormDialog({
 							<Select
 								value={String(periodYear)}
 								onValueChange={(val) => {
-									if (val) {
-										const y = Number(val);
-										setPeriodYear(y);
-										setDueDate(
-											computeDueDate(selectedTenant?.dueDate, y, periodMonth),
-										);
-									}
+									if (val) setPeriodYear(Number(val));
 								}}
 							>
 								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
