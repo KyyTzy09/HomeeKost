@@ -218,10 +218,10 @@ export function PaymentFormDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="max-w-[500px] p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				className="max-w-[480px] max-h-[85vh] overflow-y-auto p-5 sm:p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
 				aria-describedby="create-invoice-desc"
 			>
-				<DialogHeader className="pb-3 border-b border-[#e4e9e4]">
+				<DialogHeader className="pb-2.5 border-b border-[#e4e9e4]">
 					<DialogTitle className="text-base font-bold text-[#252925] flex items-center gap-2">
 						<DollarSign className="w-5 h-5 text-[#4f6958]" />
 						Buat Tagihan Sewa Manual
@@ -234,7 +234,7 @@ export function PaymentFormDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				<form onSubmit={handleSubmit} className="space-y-4 py-2">
+				<form onSubmit={handleSubmit} className="space-y-3 py-1">
 					{/* Searchable Combobox Penghuni & Kamar */}
 					<div className="space-y-1.5 relative" ref={tenantComboboxRef}>
 						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
@@ -289,7 +289,7 @@ export function PaymentFormDialog({
 									/>
 								</div>
 
-								<div className="max-h-56 overflow-y-auto space-y-0.5">
+								<div className="max-h-44 overflow-y-auto space-y-0.5">
 									{filteredTenants.length === 0 ? (
 										<div className="py-3 text-center text-xs text-[#737873]">
 											Penghuni tidak ditemukan
@@ -405,7 +405,7 @@ export function PaymentFormDialog({
 
 					{/* Lease Information & Calculation Card */}
 					{selectedTenant && (
-						<div className="p-3 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4] space-y-2">
+						<div className="p-2.5 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4] space-y-1.5">
 							<div className="flex items-center justify-between text-xs">
 								<span className="text-[#737873] flex items-center gap-1.5 font-medium">
 									<Clock className="w-3.5 h-3.5 text-[#4f6958]" />
@@ -429,7 +429,7 @@ export function PaymentFormDialog({
 										: `Tanggal ${dueDay} tiap bulan`}
 								</span>
 							</div>
-							<div className="pt-2 border-t border-[#e4e9e4]/80 flex items-center justify-between text-xs">
+							<div className="pt-1.5 border-t border-[#e4e9e4]/80 flex items-center justify-between text-xs">
 								<span className="text-[#737873] font-medium">
 									Kalkulasi Otomatis:
 								</span>
@@ -456,7 +456,7 @@ export function PaymentFormDialog({
 							value={amount || ""}
 							onChange={(e) => setAmount(Number(e.target.value) || 0)}
 							placeholder="Contoh: 1200000"
-							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+							className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 						<p className="text-[11px] text-[#737873] mt-1">
 							Nominal otomatis terhitung sesuai siklus sewa (dapat disesuaikan
@@ -476,12 +476,12 @@ export function PaymentFormDialog({
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							placeholder="Contoh: Termasuk biaya tambahan listrik AC"
-							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+							className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 					</div>
 
 					{/* Checkbox Send WhatsApp */}
-					<div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4]">
+					<div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#f3f7f3] border border-[#e4e9e4]">
 						<Checkbox
 							id="sendWhatsApp"
 							checked={sendWhatsApp}
@@ -503,7 +503,7 @@ export function PaymentFormDialog({
 						</label>
 					</div>
 
-					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-end gap-2">
+					<DialogFooter className="pt-2.5 border-t border-[#e4e9e4] flex items-center justify-end gap-2">
 						<Button
 							type="button"
 							variant="outline"

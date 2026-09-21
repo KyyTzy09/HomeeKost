@@ -90,7 +90,7 @@ export function PaymentGenerateDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="max-w-[460px] p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				className="max-w-[460px] max-h-[85vh] overflow-y-auto p-5 sm:p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
 				aria-describedby="generate-invoices-desc"
 			>
 				<DialogHeader className="pb-3 border-b border-[#e4e9e4]">
