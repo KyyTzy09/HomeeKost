@@ -94,7 +94,7 @@ export function getMonthName(month: number): string {
 }
 
 /**
- * Memformat rentang periode sewa berbatas awal dan akhir (contoh: April 2024 – Oktober 2024 atau Agustus 2026)
+ * Memformat rentang periode sewa berbatas awal dan akhir lengkap dengan tanggal, bulan, dan tahun (contoh: 21 September 2026 – 21 September 2027)
  */
 export function formatRentalPeriod(params: {
 	periodMonth?: number | null;
@@ -102,8 +102,10 @@ export function formatRentalPeriod(params: {
 	startDate?: Date | string | null;
 	endDate?: Date | string | null;
 	billingCycle?: string | null;
+	dueDate?: Date | string | null;
 }): string {
-	const { periodMonth, periodYear, startDate, endDate, billingCycle } = params;
+	const { periodMonth, periodYear, startDate, endDate, billingCycle, dueDate } =
+		params;
 
 	let durationMonths = 1;
 	if (billingCycle === "QUARTERLY" || billingCycle === "Triwulan") {
@@ -122,45 +124,65 @@ export function formatRentalPeriod(params: {
 		durationMonths = 12;
 	}
 
-	// Jika berbasis periodMonth dan periodYear (khusus siklus individual invoice)
+	const clampDate = (year: number, monthIndex: number, d: number): Date => {
+		const daysInTargetMonth = new Date(year, monthIndex + 1, 0).getDate();
+		const safeDay = Math.min(d, daysInTargetMonth);
+		return new Date(year, monthIndex, safeDay);
+	};
+
+	// Ekstrak hari (day) dari startDate atau dueDate
+	let day = 1;
+	if (startDate) {
+		const s = typeof startDate === "string" ? new Date(startDate) : startDate;
+		if (!Number.isNaN(s.getTime())) {
+			day = s.getDate();
+		}
+	} else if (dueDate) {
+		const d = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+		if (!Number.isNaN(d.getTime())) {
+			day = d.getDate();
+		}
+	}
+
+	// 1. Jika berbasis periodMonth dan periodYear (khusus siklus individual invoice)
 	if (periodMonth && periodYear) {
 		const startM = periodMonth;
 		const startY = periodYear;
-		const startMonthName = MONTH_NAMES[startM - 1] || "Januari";
 
-		if (durationMonths === 1) {
-			return `${startMonthName} ${startY}`;
+		let invoiceStart: Date;
+		let invoiceEnd: Date;
+
+		if (day === 1) {
+			invoiceStart = new Date(startY, startM - 1, 1);
+			invoiceEnd = new Date(startY, startM - 1 + durationMonths, 0);
+		} else {
+			invoiceStart = clampDate(startY, startM - 1, day);
+			invoiceEnd = clampDate(startY, startM - 1 + durationMonths, day);
 		}
 
-		const endD = new Date(startY, startM - 1 + durationMonths, 0);
-		const endMonthName = MONTH_NAMES[endD.getMonth()];
-		const endYear = endD.getFullYear();
-
-		if (startY === endYear) {
-			return `${startMonthName} – ${endMonthName} ${startY}`;
+		// Jika ada endDate kontrak eksplisit dan durasinya mencakup sampai akhir kontrak
+		if (endDate && durationMonths >= 12) {
+			const e = typeof endDate === "string" ? new Date(endDate) : endDate;
+			if (!Number.isNaN(e.getTime())) {
+				invoiceEnd = e;
+			}
 		}
-		return `${startMonthName} ${startY} – ${endMonthName} ${endYear}`;
+
+		return `${formatDate(invoiceStart)} – ${formatDate(invoiceEnd)}`;
 	}
 
-	// Fallback jika ada startDate dan endDate kontrak
+	// 2. Fallback jika hanya ada startDate dan endDate kontrak
 	if (startDate && endDate) {
 		const s = typeof startDate === "string" ? new Date(startDate) : startDate;
 		const e = typeof endDate === "string" ? new Date(endDate) : endDate;
 
 		if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime())) {
-			const startMonth = MONTH_NAMES[s.getMonth()];
-			const startYear = s.getFullYear();
-			const endMonth = MONTH_NAMES[e.getMonth()];
-			const endYear = e.getFullYear();
-
-			if (startYear === endYear) {
-				if (startMonth === endMonth) {
-					return `${startMonth} ${startYear}`;
-				}
-				return `${startMonth} – ${endMonth} ${startYear}`;
-			}
-			return `${startMonth} ${startYear} – ${endMonth} ${endYear}`;
+			return `${formatDate(s)} – ${formatDate(e)}`;
 		}
+	}
+
+	if (startDate) {
+		return formatDate(startDate);
 	}
 
 	return "Periode Sewa";

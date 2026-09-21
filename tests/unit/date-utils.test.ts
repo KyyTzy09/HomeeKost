@@ -71,35 +71,45 @@ describe("Date Utilities (date-utils.ts)", () => {
 	});
 
 	describe("formatRentalPeriod", () => {
-		it("harus memformat rentang tanggal kontrak jika startDate dan endDate diberikan", () => {
+		it("harus memformat rentang tanggal kontrak lengkap jika startDate dan endDate diberikan", () => {
 			const formatted = formatRentalPeriod({
 				startDate: new Date("2026-01-01"),
 				endDate: new Date("2026-06-30"),
 			});
-			expect(formatted).toBe("Januari – Juni 2026");
+			expect(formatted).toBe("01 Januari 2026 – 30 Juni 2026");
 		});
 
-		it("harus memformat rentang siklus invoice individual dari periodMonth dan billingCycle", () => {
+		it("harus memformat rentang siklus invoice individual lengkap dengan tanggal, bulan, dan tahun", () => {
 			const semesterFormatted = formatRentalPeriod({
 				periodMonth: 4,
 				periodYear: 2024,
 				billingCycle: "SEMI_ANNUAL",
 			});
-			expect(semesterFormatted).toBe("April – September 2024");
+			expect(semesterFormatted).toBe("01 April 2024 – 30 September 2024");
 
 			const monthlyFormatted = formatRentalPeriod({
 				periodMonth: 8,
 				periodYear: 2026,
 				billingCycle: "MONTHLY",
 			});
-			expect(monthlyFormatted).toBe("Agustus 2026");
+			expect(monthlyFormatted).toBe("01 Agustus 2026 – 31 Agustus 2026");
 
 			const tahunanFormatted = formatRentalPeriod({
 				periodMonth: 9,
 				periodYear: 2026,
+				startDate: "2026-09-21",
+				endDate: "2027-09-21",
 				billingCycle: "ANNUALLY",
 			});
-			expect(tahunanFormatted).toBe("September 2026 – Agustus 2027");
+			expect(tahunanFormatted).toBe("21 September 2026 – 21 September 2027");
+
+			const bulananCustomDate = formatRentalPeriod({
+				periodMonth: 10,
+				periodYear: 2026,
+				startDate: "2026-09-21",
+				billingCycle: "MONTHLY",
+			});
+			expect(bulananCustomDate).toBe("21 Oktober 2026 – 21 November 2026");
 		});
 	});
 });

@@ -329,6 +329,7 @@ export class EngagementService {
 					startDate: inv.contract.startDate,
 					endDate: inv.contract.endDate,
 					billingCycle: inv.contract.billingCycle,
+					dueDate: inv.dueDate,
 				});
 
 				const documentUrl =
