@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
+import { userRepository } from "../repositories/user.repository.ts";
 import {
 	type ResetDataStats,
 	systemService,
@@ -32,9 +33,17 @@ export const resetDataServerFn = createServerFn({
 				data,
 				async (session) => {
 					// Guard RBAC Ketat: Hanya SUPER_ADMIN yang berhak mereset data
-					const userRole = (
-						session.user as unknown as { role?: { name: string } }
-					)?.role?.name;
+					let userRole =
+						typeof (session.user as any)?.role === "string"
+							? (session.user as any).role
+							: (session.user as any)?.role?.name;
+
+					if (!userRole && session?.user?.id) {
+						const dbUser = await userRepository.findUserWithRoleAndAccess(
+							session.user.id,
+						);
+						userRole = dbUser?.role?.name;
+					}
 
 					if (userRole !== "SUPER_ADMIN") {
 						throw new Error(
