@@ -26,7 +26,7 @@ export function ResetDataDialog({
 	isSubmitting,
 }: ResetDataDialogProps) {
 	const [confirmationText, setConfirmationText] = useState("");
-	const isConfirmed = confirmationText.trim() === "RESET";
+	const isConfirmed = confirmationText.trim().toUpperCase() === "RESET";
 
 	useEffect(() => {
 		if (open) {
@@ -85,7 +85,9 @@ export function ResetDataDialog({
 						<Input
 							id="resetConfirmInput"
 							value={confirmationText}
-							onChange={(e) => setConfirmationText(e.target.value)}
+							onChange={(e) =>
+								setConfirmationText(e.target.value.toUpperCase())
+							}
 							placeholder="RESET"
 							autoComplete="off"
 							disabled={isSubmitting}
