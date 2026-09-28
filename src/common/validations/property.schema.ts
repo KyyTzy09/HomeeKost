@@ -15,7 +15,7 @@ export const propertySchema = z.object({
 	totalRooms: z
 		.number({ message: "Jumlah kamar harus berupa angka" })
 		.int("Jumlah kamar harus berupa bilangan bulat")
-		.min(1, "Jumlah kamar minimal 1 kamar")
+		.min(0, "Jumlah kamar minimal 0 kamar")
 		.max(200, "Jumlah kamar maksimal 200 kamar")
 		.optional()
 		.default(10),

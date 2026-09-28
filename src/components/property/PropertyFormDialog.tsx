@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Building2, Loader2, Upload } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Dialog,
@@ -51,11 +51,17 @@ export function PropertyFormDialog({
 			description: editingProperty?.description ?? "",
 			bankAccountInfo: editingProperty?.bankAccountInfo ?? "",
 			imageUrl: editingProperty?.imageUrl ?? "",
-			totalRooms: editingProperty?.rooms ?? 10,
+			totalRooms: editingProperty?.rooms ?? 0,
 		},
 		onSubmit: async ({ value }) => {
 			const result = propertySchema.safeParse(value);
-			if (!result.success) return;
+			if (!result.success) {
+				const errorMessages = result.error.issues
+					.map((i) => i.message)
+					.join(", ");
+				setUploadError(`Validasi gagal: ${errorMessages}`);
+				return;
+			}
 
 			let finalImageUrl = editingProperty?.imageUrl || null;
 
@@ -98,6 +104,28 @@ export function PropertyFormDialog({
 			onOpenChange(false);
 		},
 	});
+
+	useEffect(() => {
+		if (open) {
+			if (editingProperty) {
+				form.setFieldValue("name", editingProperty.name || "");
+				form.setFieldValue("address", editingProperty.address || "");
+				form.setFieldValue("description", editingProperty.description || "");
+				form.setFieldValue(
+					"bankAccountInfo",
+					editingProperty.bankAccountInfo || "",
+				);
+				form.setFieldValue("imageUrl", editingProperty.imageUrl || "");
+				form.setFieldValue("totalRooms", editingProperty.rooms ?? 0);
+				setImagePreviewUrl(editingProperty.imageUrl || null);
+			} else {
+				form.reset();
+				setImagePreviewUrl(null);
+			}
+			setSelectedFileDataUrl(null);
+			setUploadError(null);
+		}
+	}, [open, editingProperty]);
 
 	const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];

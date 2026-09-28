@@ -449,6 +449,7 @@ function PropertyDetailPage() {
 
 			{/* Dialog Modals */}
 			<PropertyFormDialog
+				key={property ? property.id : "property-edit"}
 				open={isEditPropertyOpen}
 				onOpenChange={setIsEditPropertyOpen}
 				editingProperty={property}
@@ -462,6 +463,7 @@ function PropertyDetailPage() {
 			/>
 
 			<RoomFormDialog
+				key={editingRoom ? editingRoom.id : "new-room"}
 				open={isRoomFormOpen}
 				onOpenChange={setIsRoomFormOpen}
 				editingRoom={editingRoom}

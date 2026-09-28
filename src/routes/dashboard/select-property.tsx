@@ -262,6 +262,7 @@ function SelectPropertyPage() {
 
 			{/* Modals */}
 			<PropertyFormDialog
+				key={editingProperty ? editingProperty.id : "new-property"}
 				open={isFormOpen}
 				onOpenChange={setIsFormOpen}
 				editingProperty={editingProperty}
