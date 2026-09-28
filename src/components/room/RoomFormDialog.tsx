@@ -1,5 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { BedDouble } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Dialog,
@@ -56,6 +57,8 @@ export function RoomFormDialog({
 	editingRoom,
 	onSubmit,
 }: RoomFormDialogProps) {
+	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
 	const form = useForm({
 		defaultValues: {
 			roomNo: editingRoom?.roomNo ?? "",
@@ -66,11 +69,38 @@ export function RoomFormDialog({
 		},
 		onSubmit: async ({ value }) => {
 			const result = roomSchema.safeParse(value);
-			if (!result.success) return;
+			if (!result.success) {
+				const errorMessages = result.error.issues
+					.map((i) => i.message)
+					.join(", ");
+				setErrorMsg(`Validasi gagal: ${errorMessages}`);
+				return;
+			}
 			onSubmit(result.data);
 			onOpenChange(false);
 		},
 	});
+
+	useEffect(() => {
+		if (open) {
+			if (editingRoom) {
+				form.setFieldValue("roomNo", editingRoom.roomNo);
+				form.setFieldValue(
+					"type",
+					(editingRoom.type || "Standard") as RoomType,
+				);
+				form.setFieldValue("price", String(editingRoom.price));
+				form.setFieldValue(
+					"status",
+					(editingRoom.status || "Kosong") as RoomStatus,
+				);
+				form.setFieldValue("facilities", editingRoom.facilities || "");
+			} else {
+				form.reset();
+			}
+			setErrorMsg(null);
+		}
+	}, [open, editingRoom]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,6 +127,12 @@ export function RoomFormDialog({
 					Properti aktif:{" "}
 					<strong className="text-[#26372c]">{propertyName}</strong>
 				</div>
+
+				{errorMsg && (
+					<div className="text-[11px] text-[#a45149] bg-[#fff5f3] border border-[#f5cfcc] rounded-[10px] p-2.5 mb-2 font-medium">
+						{errorMsg}
+					</div>
+				)}
 
 				<form
 					onSubmit={(e) => {
