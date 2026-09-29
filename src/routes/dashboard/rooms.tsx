@@ -2,8 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	AlertCircle,
 	CheckCircle2,
-	ChevronLeft,
-	ChevronRight,
 	Loader2,
 	Plus,
 } from "lucide-react";
@@ -61,12 +59,10 @@ function RoomsPage() {
 	const updateMutation = useUpdateRoom();
 	const deleteMutation = useDeleteRoom();
 
-	// Local states for filtering and pagination
+	// Local states for filtering
 	const [activeFilter, setActiveFilter] = useState<"all" | RoomStatusType>(
 		"all",
 	);
-	const [currentPage, setCurrentPage] = useState<number>(1);
-	const itemsPerPage = 8;
 
 	// Dialog states
 	const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
@@ -90,7 +86,7 @@ function RoomsPage() {
 		setTimeout(() => setErrorMessage(null), 4000);
 	};
 
-	// ─── Filter & Pagination ───────────────────────────────────────────────────
+	// ─── Filter & Sorting (Direct Scroll without Pagination) ───────────────────
 	const sortedRooms = useMemo(() => {
 		return [...rooms].sort((a, b) => compareRoomNumbers(a.roomNo, b.roomNo));
 	}, [rooms]);
@@ -99,16 +95,6 @@ function RoomsPage() {
 		if (activeFilter === "all") return sortedRooms;
 		return sortedRooms.filter((r) => r.status === activeFilter);
 	}, [sortedRooms, activeFilter]);
-
-	const totalPages = Math.max(
-		1,
-		Math.ceil(filteredRooms.length / itemsPerPage),
-	);
-
-	const paginatedRooms = useMemo(() => {
-		const start = (currentPage - 1) * itemsPerPage;
-		return filteredRooms.slice(start, start + itemsPerPage);
-	}, [filteredRooms, currentPage]);
 
 	// Counts
 	const totalCount = rooms.length;
@@ -121,7 +107,6 @@ function RoomsPage() {
 	// ─── Handlers ──────────────────────────────────────────────────────────────
 	const handleFilterChange = (filter: "all" | RoomStatusType) => {
 		setActiveFilter(filter);
-		setCurrentPage(1);
 	};
 
 	const handleOpenAdd = () => {
@@ -318,7 +303,7 @@ function RoomsPage() {
 						? queryError.message
 						: "Terjadi kesalahan pada server."}
 				</div>
-			) : paginatedRooms.length === 0 ? (
+			) : filteredRooms.length === 0 ? (
 				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl text-center shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
 					<p className="text-xs text-[#737873]">
 						Tidak ada kamar yang sesuai dengan filter ini.
@@ -336,7 +321,7 @@ function RoomsPage() {
 				</div>
 			) : (
 				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-					{paginatedRooms.map((room) => (
+					{filteredRooms.map((room) => (
 						<RoomCard
 							key={room.id}
 							room={room}
@@ -347,45 +332,26 @@ function RoomsPage() {
 				</div>
 			)}
 
-			{/* Pagination Controls */}
-			{totalPages > 1 && (
-				<div className="flex items-center justify-between pt-4 border-t border-[#edf1ed]">
-					<span className="text-[11px] text-[#737873]">
-						Menampilkan {paginatedRooms.length} dari {filteredRooms.length}{" "}
-						kamar
+			{/* Room Count Summary Footer */}
+			{filteredRooms.length > 0 && (
+				<div className="flex items-center justify-between pt-4 border-t border-[#edf1ed] text-[11px] text-[#737873]">
+					<span>
+						Menampilkan seluruh <strong className="font-semibold text-[#252925]">{filteredRooms.length}</strong> kamar
+						{activeFilter !== "all" && (
+							<span className="text-[#4f6958] font-medium ml-1">
+								(Filter: {activeFilter})
+							</span>
+						)}
 					</span>
-					<div className="flex items-center gap-1.5">
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="h-8 text-xs border-[#e4e9e4] text-[#252925] disabled:opacity-40"
-							onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-							disabled={currentPage === 1}
-						>
-							<ChevronLeft className="w-3.5 h-3.5 mr-1" />
-							Sebelumnya
-						</Button>
-						<span className="text-xs font-semibold text-[#252925] px-2">
-							{currentPage} / {totalPages}
-						</span>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="h-8 text-xs border-[#e4e9e4] text-[#252925] disabled:opacity-40"
-							onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-							disabled={currentPage === totalPages}
-						>
-							Berikutnya
-							<ChevronRight className="w-3.5 h-3.5 ml-1" />
-						</Button>
-					</div>
+					<span className="text-[10.5px] text-[#8a958d]">
+						Total kamar properti: {rooms.length} kamar
+					</span>
 				</div>
 			)}
 
 			{/* Dialog Modals */}
 			<RoomFormDialog
+				key={editingRoom ? editingRoom.id : "new-room"}
 				open={isFormOpen}
 				onOpenChange={setIsFormOpen}
 				editingRoom={editingRoom}
