@@ -168,45 +168,78 @@ export function PaymentFormDialog({
 		);
 	}, [tenantQuery, activeTenantsWithRoom]);
 
+	const hasInitializedRef = useRef<boolean>(false);
+
 	useEffect(() => {
 		if (open) {
-			if (activeTenantsWithRoom.length > 0) {
-				const firstTenant = activeTenantsWithRoom[0];
-				setContractId(firstTenant.contractId || firstTenant.id);
-				const rentCalc = calculateTenantRent(firstTenant);
-				setAmount(rentCalc.totalRent);
+			if (!hasInitializedRef.current) {
+				hasInitializedRef.current = true;
+				if (activeTenantsWithRoom.length > 0) {
+					const firstTenant = activeTenantsWithRoom[0];
+					setContractId(firstTenant.contractId || firstTenant.id);
+					const rentCalc = calculateTenantRent(firstTenant);
+					setAmount(rentCalc.totalRent);
 
-				const initMonth = firstTenant.unpaidPeriod?.month || now.getMonth() + 1;
-				const initYear = firstTenant.unpaidPeriod?.year || currentYear;
-				setPeriodMonth(initMonth);
-				setPeriodYear(initYear);
-				setDueDate(computeDueDate(firstTenant.dueDate, initYear, initMonth));
-			} else {
-				const initMonth = now.getMonth() + 1;
-				const initYear = currentYear;
-				setContractId("");
-				setAmount(0);
-				setPeriodMonth(initMonth);
-				setPeriodYear(initYear);
-				setDueDate(computeDueDate(undefined, initYear, initMonth));
+					const initMonth = firstTenant.unpaidPeriod?.month || now.getMonth() + 1;
+					const initYear = firstTenant.unpaidPeriod?.year || currentYear;
+					setPeriodMonth(initMonth);
+					setPeriodYear(initYear);
+					setDueDate(computeDueDate(firstTenant.dueDate, initYear, initMonth));
+				} else {
+					const initMonth = now.getMonth() + 1;
+					const initYear = currentYear;
+					setContractId("");
+					setAmount(0);
+					setPeriodMonth(initMonth);
+					setPeriodYear(initYear);
+					setDueDate(computeDueDate(undefined, initYear, initMonth));
+				}
+				setNotes("");
+				setSendWhatsApp(false);
+				setErrors({});
+				setTenantQuery("");
+				setIsTenantDropdownOpen(false);
 			}
-			setNotes("");
-			setSendWhatsApp(false);
-			setErrors({});
-			setTenantQuery("");
-			setIsTenantDropdownOpen(false);
 		} else {
+			hasInitializedRef.current = false;
 			setTenantQuery("");
 			setIsTenantDropdownOpen(false);
 		}
 	}, [open, activeTenantsWithRoom, currentYear]);
 
-	// Keep dueDate updated when periodMonth, periodYear, or selectedTenant changes
-	useEffect(() => {
-		if (open) {
-			setDueDate(computeDueDate(selectedTenant?.dueDate, periodYear, periodMonth));
+	const handlePeriodMonthChange = (newMonth: number) => {
+		setPeriodMonth(newMonth);
+		const currentDay = dueDate
+			? extractDueDay(dueDate)
+			: extractDueDay(selectedTenant?.dueDate);
+		setDueDate(
+			`${periodYear}-${String(newMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`,
+		);
+		if (errors.dueDate) {
+			setErrors((prev) => {
+				const next = { ...prev };
+				delete next.dueDate;
+				return next;
+			});
 		}
-	}, [open, periodMonth, periodYear, selectedTenant?.dueDate]);
+	};
+
+	const handlePeriodYearChange = (newYear: number) => {
+		setPeriodYear(newYear);
+		const currentDay = dueDate
+			? extractDueDay(dueDate)
+			: extractDueDay(selectedTenant?.dueDate);
+		setDueDate(
+			`${newYear}-${String(periodMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`,
+		);
+		if (errors.dueDate) {
+			setErrors((prev) => {
+				const next = { ...prev };
+				delete next.dueDate;
+				return next;
+			});
+		}
+	};
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -218,8 +251,10 @@ export function PaymentFormDialog({
 		if (!amount || amount < 1000) {
 			newErrors.amount = "Nominal tagihan minimal Rp 1.000.";
 		}
-		if (!dueDate) {
-			newErrors.dueDate = "Tanggal jatuh tempo wajib diisi.";
+		const finalDueDate =
+			dueDate || computeDueDate(selectedTenant?.dueDate, periodYear, periodMonth);
+		if (!finalDueDate || !/^\d{4}-\d{2}-\d{2}$/.test(finalDueDate)) {
+			newErrors.dueDate = "Tanggal jatuh tempo wajib diisi dengan format YYYY-MM-DD.";
 		}
 
 		if (Object.keys(newErrors).length > 0) {
@@ -232,7 +267,7 @@ export function PaymentFormDialog({
 			periodMonth,
 			periodYear,
 			amount,
-			dueDate,
+			dueDate: finalDueDate,
 			notes: notes.trim() || undefined,
 			sendWhatsApp,
 		});
@@ -363,6 +398,13 @@ export function PaymentFormDialog({
 																targetMonth,
 															),
 														);
+														setErrors((prev) => {
+															const next = { ...prev };
+															delete next.contractId;
+															delete next.amount;
+															delete next.dueDate;
+															return next;
+														});
 														setIsTenantDropdownOpen(false);
 														setTenantQuery("");
 													}}
@@ -407,7 +449,7 @@ export function PaymentFormDialog({
 							<Select
 								value={String(periodMonth)}
 								onValueChange={(val) => {
-									if (val) setPeriodMonth(Number(val));
+									if (val) handlePeriodMonthChange(Number(val));
 								}}
 							>
 								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
@@ -432,7 +474,7 @@ export function PaymentFormDialog({
 							<Select
 								value={String(periodYear)}
 								onValueChange={(val) => {
-									if (val) setPeriodYear(Number(val));
+									if (val) handlePeriodYearChange(Number(val));
 								}}
 							>
 								<SelectTrigger className="w-full h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb]">
@@ -489,9 +531,33 @@ export function PaymentFormDialog({
 							</div>
 						</div>
 					)}
-					{errors.dueDate && (
-						<p className="text-[11px] text-[#a65f5b] mt-1">{errors.dueDate}</p>
-					)}
+					{/* Tanggal Jatuh Tempo */}
+					<div>
+						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
+							Tanggal Jatuh Tempo *
+						</Label>
+						<Input
+							type="date"
+							value={dueDate}
+							onChange={(e) => {
+								setDueDate(e.target.value);
+								if (errors.dueDate) {
+									setErrors((prev) => {
+										const next = { ...prev };
+										delete next.dueDate;
+										return next;
+									});
+								}
+							}}
+							className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
+						/>
+						<p className="text-[11px] text-[#737873] mt-1">
+							Otomatis dihitung sesuai siklus sewa, dapat disesuaikan jika ada dispensasi tanggal bayar.
+						</p>
+						{errors.dueDate && (
+							<p className="text-[11px] text-[#a65f5b] mt-1">{errors.dueDate}</p>
+						)}
+					</div>
 
 					{/* Nominal Tagihan */}
 					<div>
@@ -499,17 +565,25 @@ export function PaymentFormDialog({
 							Nominal Tagihan (Rp) *
 						</Label>
 						<Input
-							type="number"
-							min="1000"
-							step="1000"
-							value={amount || ""}
-							onChange={(e) => setAmount(Number(e.target.value) || 0)}
-							placeholder="Contoh: 1200000"
+							type="text"
+							inputMode="numeric"
+							value={amount > 0 ? formatRupiah(amount) : ""}
+							onChange={(e) => {
+								const digits = e.target.value.replace(/[^0-9]/g, "");
+								setAmount(digits ? Number.parseInt(digits, 10) : 0);
+								if (errors.amount) {
+									setErrors((prev) => {
+										const next = { ...prev };
+										delete next.amount;
+										return next;
+									});
+								}
+							}}
+							placeholder="Rp 0"
 							className="h-9 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 						<p className="text-[11px] text-[#737873] mt-1">
-							Nominal otomatis terhitung sesuai siklus sewa (dapat disesuaikan
-							jika ada biaya tambahan)
+							Nominal otomatis terhitung sesuai siklus sewa (dapat disesuaikan jika ada biaya tambahan).
 						</p>
 						{errors.amount && (
 							<p className="text-[11px] text-[#a65f5b] mt-1">{errors.amount}</p>

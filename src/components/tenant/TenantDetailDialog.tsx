@@ -9,7 +9,7 @@ import {
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
-import { formatShortDueDate } from "../../lib/date-utils.ts";
+import { formatDate, formatShortDueDate } from "../../lib/date-utils.ts";
 import { formatDisplayPhone } from "../../lib/phone-utils.ts";
 
 interface TenantDetailDialogProps {
@@ -91,7 +91,16 @@ export function TenantDetailDialog({
 									NIK (Nomor Induk Kependudukan)
 								</span>
 								<b className="text-[11.5px] text-[#34443a] font-mono tracking-wider">
-									{tenant.nik}
+									{tenant.nik || "—"}
+								</b>
+							</div>
+
+							<div className="bg-[#fcfdfc] border border-[#e7ece7] rounded-[10px] p-2.5">
+								<span className="block text-[9.5px] text-[#8a958d] font-semibold mb-0.5">
+									Tanggal Lahir
+								</span>
+								<b className="text-[11.5px] text-[#34443a]">
+									{tenant.birthDate ? formatDate(tenant.birthDate) : "—"}
 								</b>
 							</div>
 
@@ -100,7 +109,16 @@ export function TenantDetailDialog({
 									Nomor WhatsApp
 								</span>
 								<b className="text-[11.5px] text-[#34443a] font-mono">
-									{formatDisplayPhone(tenant.phone)}
+									{formatDisplayPhone(tenant.phone) || "—"}
+								</b>
+							</div>
+
+							<div className="bg-[#fcfdfc] border border-[#e7ece7] rounded-[10px] p-2.5">
+								<span className="block text-[9.5px] text-[#8a958d] font-semibold mb-0.5">
+									Email
+								</span>
+								<b className="text-[11.5px] text-[#34443a]">
+									{tenant.email || "—"}
 								</b>
 							</div>
 
@@ -116,10 +134,10 @@ export function TenantDetailDialog({
 
 							<div className="bg-[#fcfdfc] border border-[#e7ece7] rounded-[10px] p-2.5">
 								<span className="block text-[9.5px] text-[#8a958d] font-semibold mb-0.5">
-									Email
+									Status Penghuni
 								</span>
 								<b className="text-[11.5px] text-[#34443a]">
-									{tenant.email || "—"}
+									Aktif
 								</b>
 							</div>
 
@@ -127,7 +145,7 @@ export function TenantDetailDialog({
 								<span className="block text-[9.5px] text-[#8a958d] font-semibold mb-0.5">
 									Alamat Asal
 								</span>
-								<b className="text-[11.5px] text-[#34443a]">
+								<b className="text-[11.5px] text-[#34443a] leading-relaxed">
 									{tenant.originAddress || "—"}
 								</b>
 							</div>

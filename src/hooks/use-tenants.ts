@@ -6,7 +6,10 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import type { TenantItem } from "../common/types/index.ts";
-import type { TenantFormValues } from "../common/validations/index.ts";
+import type {
+	TenantFormValues,
+	UpdateTenantFormValues,
+} from "../common/validations/index.ts";
 import {
 	createTenantServerFn,
 	deleteTenantServerFn,
@@ -62,14 +65,22 @@ export function useCreateTenant(): UseMutationResult<
 export function useUpdateTenant(): UseMutationResult<
 	TenantItem,
 	Error,
-	{ id: string; propertyId: string; data: TenantFormValues }
+	{
+		id: string;
+		propertyId: string;
+		data: UpdateTenantFormValues | TenantFormValues;
+	}
 > {
 	const queryClient = useQueryClient();
 
 	return useMutation<
 		TenantItem,
 		Error,
-		{ id: string; propertyId: string; data: TenantFormValues }
+		{
+			id: string;
+			propertyId: string;
+			data: UpdateTenantFormValues | TenantFormValues;
+		}
 	>({
 		mutationFn: (variables) => updateTenantServerFn({ data: variables }),
 		onSuccess: (_, variables) => {

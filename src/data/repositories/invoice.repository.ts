@@ -289,6 +289,54 @@ export class InvoiceRepository {
 		});
 	}
 
+	async findContractById(id: string) {
+		return this.db.rentalContract.findUnique({
+			where: { id },
+			include: {
+				tenant: true,
+				room: {
+					include: { property: true },
+				},
+			},
+		});
+	}
+
+	async findActiveContractByTenantId(tenantId: string) {
+		return this.db.rentalContract.findFirst({
+			where: {
+				tenantId,
+				status: "ACTIVE",
+			},
+			include: {
+				tenant: true,
+				room: {
+					include: { property: true },
+				},
+			},
+			orderBy: { createdAt: "desc" },
+		});
+	}
+
+	async findByInvoiceNumber(invoiceNumber: string) {
+		return this.db.invoice.findUnique({
+			where: { invoiceNumber },
+		});
+	}
+
+	async findExistingInvoice(
+		contractId: string,
+		periodMonth: number,
+		periodYear: number,
+	) {
+		return this.db.invoice.findFirst({
+			where: {
+				contractId,
+				periodMonth,
+				periodYear,
+			},
+		});
+	}
+
 	/**
 	 * Buat Invoice Tagihan Manual
 	 */
@@ -409,17 +457,24 @@ export class InvoiceRepository {
 	}
 
 	async deleteInvoice(id: string) {
-		const invoice = await this.db.invoice.findUnique({
-			where: { id },
-			select: { status: true },
-		});
+		return this.db.$transaction(async (tx) => {
+			const invoice = await tx.invoice.findUnique({
+				where: { id },
+				select: { id: true, status: true, invoiceNumber: true },
+			});
 
-		if (invoice?.status === "PAID") {
-			throw new Error("Tagihan yang sudah lunas tidak dapat dihapus.");
-		}
+			if (!invoice) {
+				throw new Error("Tagihan tidak ditemukan atau sudah dihapus.");
+			}
 
-		return this.db.invoice.delete({
-			where: { id },
+			// Hapus transaksi kas masuk terkait jika ada (agar kas bersih dari double-input)
+			await tx.transaction.deleteMany({
+				where: { invoiceId: id },
+			});
+
+			return tx.invoice.delete({
+				where: { id },
+			});
 		});
 	}
 }

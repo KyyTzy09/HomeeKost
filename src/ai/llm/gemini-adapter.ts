@@ -94,49 +94,87 @@ export class GeminiAdapter {
 		const ai = this.aiClient;
 		const prompt = buildKtpReviewerPrompt();
 
-		const response = await ai.models.generateContent({
-			model: this.model,
-			config: {
-				responseMimeType: "application/json",
-				temperature: 0.1,
-			},
-			contents: [
-				{
-					inlineData: {
-						mimeType,
-						data: base64Data,
-					},
-				},
-				prompt,
-			],
-		});
+		// Daftar model kandidat dengan fallback jika terjadi High Demand (503 / 429)
+		const candidateModels = Array.from(
+			new Set([this.model, "gemini-2.0-flash", "gemini-1.5-flash"]),
+		);
 
-		const text = response.text;
-		if (!text) {
-			throw new Error("Gemini Vision tidak mengembalikan teks output.");
+		let lastError: unknown = null;
+
+		for (const modelCandidate of candidateModels) {
+			try {
+				// Timeout 12 detik untuk mencegah request menggantung
+				const timeoutPromise = new Promise<never>((_, reject) =>
+					setTimeout(
+						() =>
+							reject(
+								new Error(
+									`Timeout OCR setelah 12 detik pada model ${modelCandidate}`,
+								),
+							),
+						12000,
+					),
+				);
+
+				const generatePromise = ai.models.generateContent({
+					model: modelCandidate,
+					config: {
+						responseMimeType: "application/json",
+						temperature: 0.1,
+					},
+					contents: [
+						{
+							inlineData: {
+								mimeType,
+								data: base64Data,
+							},
+						},
+						prompt,
+					],
+				});
+
+				const response = await Promise.race([generatePromise, timeoutPromise]);
+				const text = response.text;
+
+				if (!text) {
+					continue;
+				}
+
+				const cleaned = text
+					.replace(/^```json\s*/i, "")
+					.replace(/^```\s*/i, "")
+					.replace(/\s*```$/i, "")
+					.trim();
+
+				const parsed = JSON.parse(cleaned);
+
+				return KtpExtractedSchema.parse({
+					nik: String(parsed.nik || "")
+						.replace(/\D/g, "")
+						.slice(0, 16),
+					name: String(parsed.name || "").trim(),
+					birthDate: String(parsed.birthDate || "").trim(),
+					originAddress: String(parsed.originAddress || "").trim(),
+					occupation:
+						parsed.occupation === "Mahasiswa" ||
+						parsed.occupation === "Karyawan"
+							? parsed.occupation
+							: "Lainnya",
+					institution: String(parsed.institution || "").trim(),
+				});
+			} catch (err) {
+				lastError = err;
+				const errMsg = err instanceof Error ? err.message : String(err);
+				console.warn(
+					`[GeminiAdapter] Gagal pada model ${modelCandidate} (${errMsg}). Mencoba fallback model berikutnya jika ada...`,
+				);
+			}
 		}
 
-		const cleaned = text
-			.replace(/^```json\s*/i, "")
-			.replace(/^```\s*/i, "")
-			.replace(/\s*```$/i, "")
-			.trim();
-
-		const parsed = JSON.parse(cleaned);
-
-		return KtpExtractedSchema.parse({
-			nik: String(parsed.nik || "")
-				.replace(/\D/g, "")
-				.slice(0, 16),
-			name: String(parsed.name || "").trim(),
-			birthDate: String(parsed.birthDate || "").trim(),
-			originAddress: String(parsed.originAddress || "").trim(),
-			occupation:
-				parsed.occupation === "Mahasiswa" || parsed.occupation === "Karyawan"
-					? parsed.occupation
-					: "Lainnya",
-			institution: String(parsed.institution || "").trim(),
-		});
+		console.error("[GeminiAdapter] Seluruh model OCR gagal:", lastError);
+		throw new Error(
+			"Layanan AI OCR sedang mengalami antrean tinggi (High Demand). Formulir dapat diisi secara manual.",
+		);
 	}
 }
 

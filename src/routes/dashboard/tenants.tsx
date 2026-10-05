@@ -10,7 +10,10 @@ import {
 import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
-import type { TenantFormValues } from "../../common/validations/index.ts";
+import type {
+	TenantFormValues,
+	UpdateTenantFormValues,
+} from "../../common/validations/index.ts";
 import {
 	type RoomOption,
 	TenantDeleteDialog,
@@ -71,6 +74,15 @@ function TenantsPage() {
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [editingTenant, setEditingTenant] = useState<TenantItem | null>(null);
 	const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
+
+	// Ensure detail dialog always receives fresh data from TanStack Query cache
+	const activeDetailTenant = useMemo(() => {
+		if (!selectedDetailTenant) return null;
+		return (
+			tenants.find((t) => t.id === selectedDetailTenant.id) ||
+			selectedDetailTenant
+		);
+	}, [tenants, selectedDetailTenant]);
 
 	// Derived dynamic room options for combobox (Only display vacant/available rooms, or current room if editing)
 	const roomOptions: RoomOption[] = useMemo(() => {
@@ -137,7 +149,9 @@ function TenantsPage() {
 		setIsFormOpen(true);
 	};
 
-	const handleSaveTenant = (values: TenantFormValues) => {
+	const handleSaveTenant = (
+		values: TenantFormValues | UpdateTenantFormValues,
+	) => {
 		if (!propertyId) {
 			showError("Pilih cabang kos aktif terlebih dahulu.");
 			return;
@@ -169,7 +183,7 @@ function TenantsPage() {
 			createTenantMutation.mutate(
 				{
 					propertyId,
-					data: values,
+					data: values as TenantFormValues,
 				},
 				{
 					onSuccess: (created) => {
@@ -376,7 +390,7 @@ function TenantsPage() {
 			<TenantDetailDialog
 				open={Boolean(selectedDetailTenant)}
 				onOpenChange={(open) => !open && setSelectedDetailTenant(null)}
-				tenant={selectedDetailTenant}
+				tenant={activeDetailTenant}
 				propertyName={propertyName}
 				onEdit={handleOpenEdit}
 				onDelete={(t) => {
@@ -387,6 +401,7 @@ function TenantsPage() {
 
 			{/* Form Registration / Edit Dialog (TanStack Form + Zod) */}
 			<TenantFormDialog
+				key={editingTenant ? editingTenant.id : "new-tenant"}
 				open={isFormOpen}
 				onOpenChange={setIsFormOpen}
 				propertyName={propertyName}

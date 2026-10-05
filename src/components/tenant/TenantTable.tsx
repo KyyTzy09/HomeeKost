@@ -96,21 +96,30 @@ export function TenantTable({
 						<div className="flex items-center justify-end gap-2">
 							<button
 								type="button"
-								onClick={() => onDetail(tenant)}
+								onClick={(e) => {
+									e.stopPropagation();
+									onDetail(tenant);
+								}}
 								className="text-[10.5px] font-semibold text-[#4f6958] hover:underline cursor-pointer bg-transparent border-0 p-0"
 							>
 								Detail
 							</button>
 							<button
 								type="button"
-								onClick={() => onEdit(tenant)}
+								onClick={(e) => {
+									e.stopPropagation();
+									onEdit(tenant);
+								}}
 								className="text-[10.5px] font-semibold text-[#506257] hover:underline cursor-pointer bg-transparent border-0 p-0"
 							>
 								Edit
 							</button>
 							<button
 								type="button"
-								onClick={() => onDelete(tenant)}
+								onClick={(e) => {
+									e.stopPropagation();
+									onDelete(tenant);
+								}}
 								className="text-[10.5px] font-semibold text-[#b66b68] hover:underline cursor-pointer bg-transparent border-0 p-0"
 							>
 								Check-Out
@@ -163,7 +172,8 @@ export function TenantTable({
 							table.getRowModel().rows.map((row) => (
 								<tr
 									key={row.id}
-									className="border-b border-[#eef1ee] hover:bg-[#fbfcfb] transition-colors"
+									onClick={() => onDetail(row.original)}
+									className="border-b border-[#eef1ee] hover:bg-[#f8faf8] transition-colors cursor-pointer"
 								>
 									{row.getVisibleCells().map((cell) => (
 										<td key={cell.id} className="py-3 px-2 text-[#454b46]">

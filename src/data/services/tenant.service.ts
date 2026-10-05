@@ -5,7 +5,10 @@ import type {
 	TenantItem,
 	TenantPaymentStatus,
 } from "../../common/types/index.ts";
-import type { TenantFormValues } from "../../common/validations/index.ts";
+import type {
+	TenantFormValues,
+	UpdateTenantFormValues,
+} from "../../common/validations/index.ts";
 import type { BillingCycle } from "../../generated/prisma/client.js";
 import { formatDate, getMonthName } from "../../lib/date-utils.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
@@ -721,7 +724,7 @@ export class TenantService {
 	async updateTenant(
 		id: string,
 		propertyId: string,
-		input: TenantFormValues,
+		input: UpdateTenantFormValues | TenantFormValues,
 	): Promise<TenantItem> {
 		const canonicalPhone = sanitizePhone(input.phone);
 		let roomId: string | undefined;
@@ -736,7 +739,9 @@ export class TenantService {
 			}
 		}
 
-		const billingCycle = this.mapDurationToBillingCycle(input.duration);
+		const billingCycle = input.duration
+			? this.mapDurationToBillingCycle(input.duration)
+			: undefined;
 		const startDate = input.startDate ? new Date(input.startDate) : undefined;
 		const birthDate = input.birthDate ? new Date(input.birthDate) : null;
 		const dueDateDay = startDate?.getDate();
@@ -773,7 +778,7 @@ export class TenantService {
 		const fullTenant = await this.getTenantById(id);
 		if (fullTenant) return fullTenant;
 
-		const rentAmount = parseRupiah(input.rent);
+		const rentAmount = parseRupiah(input.rent || "0");
 
 		return {
 			id,
@@ -787,11 +792,11 @@ export class TenantService {
 			email: input.email || "",
 			occupationStatus: input.occupationStatus,
 			institution: input.institution || input.occupationStatus,
-			roomNo: input.roomNo,
+			roomNo: input.roomNo || "—",
 			rent: formatRupiah(rentAmount),
 			monthlyRent: rentAmount,
 			totalRent: rentAmount,
-			duration: input.duration,
+			duration: (input.duration as RentDuration) || "Bulanan",
 			startDate: input.startDate || "—",
 			dueDate: input.dueDate || "—",
 			vehicle: input.vehicle || null,

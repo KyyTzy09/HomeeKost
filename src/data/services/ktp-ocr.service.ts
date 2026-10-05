@@ -47,12 +47,24 @@ export class KtpOcrService {
 				"[KtpOcrService] Gagal mengekstrak KTP via LLM Vision Adapter:",
 				error,
 			);
+			const rawMsg =
+				error instanceof Error
+					? error.message
+					: "Gagal memproses gambar KTP dengan AI.";
+
+			const friendlyMsg =
+				rawMsg.includes("High Demand") ||
+				rawMsg.includes("503") ||
+				rawMsg.includes("overloaded") ||
+				rawMsg.includes("429")
+					? "Layanan AI sedang sibuk (antrean tinggi). Silakan lengkapi formulir secara manual."
+					: rawMsg.includes("GEMINI_API_KEY")
+						? "Konfigurasi kunci AI tidak ditemukan."
+						: rawMsg;
+
 			return {
 				success: false,
-				error:
-					error instanceof Error
-						? error.message
-						: "Gagal memproses gambar KTP dengan AI.",
+				error: friendlyMsg,
 			};
 		}
 	}
