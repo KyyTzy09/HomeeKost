@@ -43,6 +43,11 @@ export function PaymentDeleteDialog({
 							{payment?.tenantName} · {payment?.roomNumber}
 						</b>{" "}
 						periode {payment?.period}? Tindakan ini tidak dapat dibatalkan.
+						{payment?.status === "PAID" && (
+							<span className="block mt-1 text-[#b66b68] font-medium">
+								Catatan: Tagihan ini berstatus Lunas. Menghapus data ini juga akan menghapus pencatatan pemasukan kas terkait agar tidak terjadi pembukuan ganda.
+							</span>
+						)}
 					</DialogDescription>
 				</DialogHeader>
 

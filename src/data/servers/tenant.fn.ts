@@ -3,7 +3,9 @@ import { z } from "zod";
 import type { TenantItem } from "../../common/types/index.ts";
 import {
 	type TenantFormValues,
+	type UpdateTenantFormValues,
 	tenantSchema,
+	updateTenantSchema,
 } from "../../common/validations/index.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import {
@@ -85,12 +87,16 @@ export const updateTenantServerFn = createServerFn({
 	method: "POST",
 })
 	.validator(
-		(input: { id: string; propertyId: string; data: TenantFormValues }) => {
+		(input: {
+			id: string;
+			propertyId: string;
+			data: UpdateTenantFormValues;
+		}) => {
 			return z
 				.object({
 					id: z.string().min(1),
 					propertyId: z.string().min(1),
-					data: tenantSchema,
+					data: updateTenantSchema,
 				})
 				.parse(input);
 		},

@@ -58,6 +58,9 @@ export function useCreateManualInvoice() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: PAYMENT_STATS_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 		},
 	});
 }
@@ -94,7 +97,14 @@ export function useDeleteInvoice() {
 		mutationFn: (id: string) => deleteInvoiceServerFn({ data: { id } }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: PAYMENT_STATS_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["cashflow-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
+			queryClient.invalidateQueries({ queryKey: ["reports"] });
 		},
 	});
 }

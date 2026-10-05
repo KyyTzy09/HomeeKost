@@ -68,7 +68,10 @@ function PaymentsPage() {
 	const activePropertyId = dashboardContext.activeProperty?.id;
 
 	const { data: properties = [] } = useProperties();
-	const { data: tenants = [] } = useTenants(activePropertyId);
+	const { data: propertyTenants = [] } = useTenants(activePropertyId);
+	const { data: allTenants = [] } = useTenants();
+	const availableTenants =
+		propertyTenants.length > 0 ? propertyTenants : allTenants;
 
 	const now = new Date();
 	const currentPeriodVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -263,7 +266,7 @@ function PaymentsPage() {
 			await deleteInvoiceMutation.mutateAsync(selectedPayment.id);
 			setIsDeleteOpen(false);
 			setSelectedPayment(null);
-			showToast("Tagihan sewa berhasil dihapus.");
+			showToast("Data pembayaran / tagihan berhasil dihapus.");
 		} catch (err: unknown) {
 			const error = err as Error;
 			showToast(error.message || "Gagal menghapus tagihan sewa.");
@@ -363,7 +366,7 @@ function PaymentsPage() {
 			<PaymentFormDialog
 				open={isFormOpen}
 				onOpenChange={setIsFormOpen}
-				tenants={tenants}
+				tenants={availableTenants}
 				onSubmit={handleCreateManualInvoice}
 				isSubmitting={createInvoiceMutation.isPending}
 			/>

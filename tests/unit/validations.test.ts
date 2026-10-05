@@ -3,6 +3,7 @@ import {
 	roomSchema,
 	tenantSchema,
 	transactionFormSchema,
+	updateTenantSchema,
 } from "../../src/common/validations/index.ts";
 
 describe("Zod Validation Schemas", () => {
@@ -40,6 +41,33 @@ describe("Zod Validation Schemas", () => {
 				...validTenantData,
 				agreement: false,
 			});
+			expect(result.success).toBe(false);
+		});
+	});
+
+	describe("updateTenantSchema", () => {
+		it("harus meloloskan pembaruan data identitas tanpa field kontrak sewa/agreement", () => {
+			const updateData = {
+				name: "Budi Santoso Edit",
+				nik: "3302142404090006",
+				phone: "6281234567890",
+				birthDate: "2000-05-15",
+				occupationStatus: "Karyawan" as const,
+				institution: "PT Teknologi Maju",
+				originAddress: "Jl. Sudirman No. 45, Jakarta",
+			};
+			const result = updateTenantSchema.safeParse(updateData);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak pembaruan data jika nama kosong atau NIK tidak valid", () => {
+			const invalidUpdate = {
+				name: "",
+				nik: "123",
+				phone: "6281234567890",
+				occupationStatus: "Karyawan" as const,
+			};
+			const result = updateTenantSchema.safeParse(invalidUpdate);
 			expect(result.success).toBe(false);
 		});
 	});

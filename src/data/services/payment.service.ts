@@ -319,13 +319,56 @@ export class PaymentService {
 		input: CreateManualInvoiceInput,
 		_user?: SessionUser,
 	) {
-		const timestamp = Date.now().toString().slice(-4);
+		// 1. Resolve Contract ID (Mendukung contractId langsung atau fallback tenantId)
+		let targetContractId = input.contractId;
+		let contract = await this.invoiceRepo.findContractById(targetContractId);
+
+		if (!contract) {
+			const contractByTenant =
+				await this.invoiceRepo.findActiveContractByTenantId(input.contractId);
+			if (contractByTenant) {
+				targetContractId = contractByTenant.id;
+				contract = contractByTenant;
+			} else {
+				throw new Error(
+					"Kontrak sewa untuk penghuni ini tidak ditemukan. Pastikan penghuni memiliki kamar aktif.",
+				);
+			}
+		}
+
+		// 2. Cek apakah tagihan untuk periode ini sudah pernah dibuat
+		const existingInvoice = await this.invoiceRepo.findExistingInvoice(
+			targetContractId,
+			input.periodMonth,
+			input.periodYear,
+		);
+		if (existingInvoice) {
+			throw new Error(
+				`Tagihan untuk periode ${input.periodMonth}/${input.periodYear} sudah pernah dibuat (${existingInvoice.invoiceNumber} - status: ${existingInvoice.status}).`,
+			);
+		}
+
+		// 3. Generate Nomor Invoice Unik & Aman dari Collision
 		const monthPadded = String(input.periodMonth).padStart(2, "0");
-		const invoiceNumber = `INV-${input.periodYear}${monthPadded}-${timestamp}`;
+		let invoiceNumber = "";
+		let attempts = 0;
+		while (!invoiceNumber && attempts < 5) {
+			attempts++;
+			const uniqueCode = `${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+			const candidateNumber = `INV-${input.periodYear}${monthPadded}-${uniqueCode}`;
+			const existing = await this.invoiceRepo.findByInvoiceNumber(candidateNumber);
+			if (!existing) {
+				invoiceNumber = candidateNumber;
+			}
+		}
+		if (!invoiceNumber) {
+			invoiceNumber = `INV-${input.periodYear}${monthPadded}-${Date.now()}`;
+		}
+
 		const dueDate = new Date(input.dueDate);
 
 		const invoice = await this.invoiceRepo.createInvoice({
-			contractId: input.contractId,
+			contractId: targetContractId,
 			invoiceNumber,
 			periodMonth: input.periodMonth,
 			periodYear: input.periodYear,

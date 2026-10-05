@@ -1,5 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import {
+	AlertCircle,
+	CalendarDays,
 	Check,
 	CheckCircle2,
 	ChevronsUpDown,
@@ -29,12 +31,15 @@ import type {
 } from "../../common/types/index.ts";
 import {
 	type TenantFormValues,
+	type UpdateTenantFormValues,
 	tenantSchema,
+	updateTenantSchema,
 } from "../../common/validations/index.ts";
 import { useScanKtp } from "../../hooks/use-tenants.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import {
 	calculateDueDate,
+	formatDate,
 	getDurationMonths,
 	getTodayDateString,
 } from "../../lib/date-utils.ts";
@@ -52,7 +57,7 @@ interface TenantFormDialogProps {
 	propertyName: string;
 	roomOptions?: RoomOption[];
 	editingTenant: TenantItem | null;
-	onSubmit: (values: TenantFormValues) => void;
+	onSubmit: (values: TenantFormValues | UpdateTenantFormValues) => void;
 }
 
 /**
@@ -125,6 +130,50 @@ function toInputDateFormat(dateStr?: string | null): string {
 	return "";
 }
 
+/**
+ * Kompresi gambar client-side (maks lebar 1280px, kualitas 0.75 JPEG)
+ * Menghindari pengiriman base64 raksasa (5-15MB) yang membebani memori dan jaringan.
+ */
+function compressImage(
+	file: File,
+	maxWidth = 1280,
+	quality = 0.75,
+): Promise<string> {
+	return new Promise((resolve) => {
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const dataUrl = e.target?.result as string;
+			if (!dataUrl) {
+				resolve("");
+				return;
+			}
+			const img = new Image();
+			img.onload = () => {
+				const canvas = document.createElement("canvas");
+				let { width, height } = img;
+				if (width > maxWidth) {
+					height = Math.round((height * maxWidth) / width);
+					width = maxWidth;
+				}
+				canvas.width = width;
+				canvas.height = height;
+				const ctx = canvas.getContext("2d");
+				if (!ctx) {
+					resolve(dataUrl);
+					return;
+				}
+				ctx.drawImage(img, 0, 0, width, height);
+				const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+				resolve(compressedDataUrl);
+			};
+			img.onerror = () => resolve(dataUrl);
+			img.src = dataUrl;
+		};
+		reader.onerror = () => resolve("");
+		reader.readAsDataURL(file);
+	});
+}
+
 export function TenantFormDialog({
 	open,
 	onOpenChange,
@@ -133,6 +182,7 @@ export function TenantFormDialog({
 	editingTenant,
 	onSubmit,
 }: TenantFormDialogProps) {
+	const isEditing = Boolean(editingTenant);
 	const todayStr = useMemo(() => getTodayDateString(), []);
 
 	// Searchable combobox states
@@ -146,7 +196,7 @@ export function TenantFormDialog({
 	);
 	const [ktpFileName, setKtpFileName] = useState<string>("");
 	const [scanStatus, setScanStatus] = useState<
-		"idle" | "scanning" | "success" | "error"
+		"idle" | "scanning" | "success" | "warning" | "error"
 	>("idle");
 	const [scanFeedback, setScanFeedback] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -196,11 +246,21 @@ export function TenantFormDialog({
 		},
 		validators: {
 			onSubmit: ({ value }) => {
+				const autoDue =
+					value.dueDate ||
+					(value.startDate
+						? calculateDueDate(
+								value.startDate,
+								(value.duration || "Bulanan") as RentDuration,
+							)
+						: "");
 				const sanitizedValue = {
 					...value,
+					dueDate: autoDue,
 					phone: sanitizePhone(value.phone),
 				};
-				const result = tenantSchema.safeParse(sanitizedValue);
+				const schema = isEditing ? updateTenantSchema : tenantSchema;
+				const result = schema.safeParse(sanitizedValue);
 				if (!result.success) {
 					const fieldErrors: Record<string, string> = {};
 					for (const issue of result.error.issues) {
@@ -215,12 +275,28 @@ export function TenantFormDialog({
 			},
 		},
 		onSubmit: async ({ value }) => {
-			const sanitizedValue: TenantFormValues = {
+			const autoDue =
+				value.dueDate ||
+				(value.startDate
+					? calculateDueDate(
+							value.startDate,
+							(value.duration || "Bulanan") as RentDuration,
+						)
+					: "");
+			const sanitizedValue = {
 				...value,
+				dueDate: autoDue,
 				phone: sanitizePhone(value.phone),
 			};
-			const result = tenantSchema.safeParse(sanitizedValue);
-			if (!result.success) return;
+			const schema = isEditing ? updateTenantSchema : tenantSchema;
+			const result = schema.safeParse(sanitizedValue);
+			if (!result.success) {
+				console.error(
+					"[TenantFormDialog] Form validation failed:",
+					result.error.format(),
+				);
+				return;
+			}
 			onSubmit(result.data);
 			onOpenChange(false);
 		},
@@ -327,7 +403,9 @@ export function TenantFormDialog({
 		}
 	}, [open, editingTenant, roomOptions, todayStr, form]);
 
-	const handleKtpFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleKtpFileChange = async (
+		e: React.ChangeEvent<HTMLInputElement>,
+	) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
 
@@ -338,54 +416,74 @@ export function TenantFormDialog({
 		}
 
 		setKtpFileName(file.name);
-		const reader = new FileReader();
-		reader.onload = async () => {
-			const base64 = reader.result as string;
-			setKtpPreview(base64);
-			form.setFieldValue("ktpUrl", base64);
+		setScanStatus("scanning");
+		setScanFeedback("Mengompresi dan menganalisis foto KTP...");
 
-			// Call Gemini Multimodal OCR
-			setScanStatus("scanning");
-			setScanFeedback(
-				"Sedang menganalisis foto KTP",
-			);
+		try {
+			// Kompresi client-side (maks 1280px) agar cepat dan hemat bandwidth
+			const compressedBase64 = await compressImage(file);
+			if (!compressedBase64) {
+				throw new Error("Gagal membaca file gambar.");
+			}
+
+			// Simpan preview & form value terlebih dahulu agar foto tetap terlampir apapun status AI
+			setKtpPreview(compressedBase64);
+			form.setFieldValue("ktpUrl", compressedBase64);
+
+			// Panggil OCR AI di latar belakang secara non-blocking
 			try {
-				const res = await scanKtpMutation.mutateAsync({ imageBase64: base64 });
+				const res = await scanKtpMutation.mutateAsync({
+					imageBase64: compressedBase64,
+				});
+
+				// Jika server berhasil mengunggah ke storage cloud/lokal, gunakan URL resminya
+				if (res.ktpUrl) {
+					form.setFieldValue("ktpUrl", res.ktpUrl);
+				}
+
 				if (res.success && res.data) {
 					if (res.data.nik) form.setFieldValue("nik", res.data.nik);
 					if (res.data.name) form.setFieldValue("name", res.data.name);
-					if (res.data.birthDate)
+					if (res.data.birthDate) {
 						form.setFieldValue(
 							"birthDate",
 							toInputDateFormat(res.data.birthDate),
 						);
-					if (res.data.originAddress)
+					}
+					if (res.data.originAddress) {
 						form.setFieldValue("originAddress", res.data.originAddress);
-					if (res.data.occupation)
+					}
+					if (res.data.occupation) {
 						form.setFieldValue("occupationStatus", res.data.occupation);
-					if (res.data.institution)
+					}
+					if (res.data.institution) {
 						form.setFieldValue("institution", res.data.institution);
-					if (res.ktpUrl) form.setFieldValue("ktpUrl", res.ktpUrl);
+					}
 
 					setScanStatus("success");
 					setScanFeedback(
-						"Foto KTP berhasil dianalisis! Data NIK, Nama, dan Tanggal Lahir telah terisi otomatis.",
+						"Foto KTP berhasil disimpan dan data identitas terisi otomatis!",
 					);
 				} else {
-					setScanStatus("error");
+					// AI sedang busy/high demand atau OCR tidak jelas, tapi foto KTP SUDAH tersimpan
+					setScanStatus("warning");
 					setScanFeedback(
 						res.error ||
-						"Tidak dapat membaca KTP dengan jelas. Silakan periksa atau isi formulir secara manual.",
+							"Foto KTP berhasil dilampirkan. Layanan AI sedang sibuk (antrean tinggi), silakan lengkapi formulir secara manual.",
 					);
 				}
-			} catch {
-				setScanStatus("error");
+			} catch (aiErr) {
+				console.warn("[TenantFormDialog] AI OCR fallback:", aiErr);
+				setScanStatus("warning");
 				setScanFeedback(
-					"Deteksi KTP tidak tersedia, silakan isi data identitas secara manual.",
+					"Foto KTP berhasil dilampirkan. Layanan AI sedang sibuk (antrean tinggi), silakan lengkapi formulir secara manual.",
 				);
 			}
-		};
-		reader.readAsDataURL(file);
+		} catch (err) {
+			console.error("[TenantFormDialog] Error memproses file KTP:", err);
+			setScanStatus("error");
+			setScanFeedback("Gagal memproses file foto. Silakan coba file lain.");
+		}
 	};
 
 	const handleClearKtp = () => {
@@ -469,8 +567,6 @@ export function TenantFormDialog({
 			form.setFieldValue("dueDate", calculated);
 		}
 	};
-
-	const isEditing = Boolean(editingTenant);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -592,19 +688,24 @@ export function TenantFormDialog({
 						{/* Scan Feedback status */}
 						{scanFeedback && (
 							<div
-								className={`mt-2.5 p-2 rounded-[8px] text-[10.5px] flex items-start gap-1.5 font-medium ${scanStatus === "success"
-									? "bg-[#eaf4ec] text-[#346641] border border-[#c4e2cb]"
-									: scanStatus === "error"
-										? "bg-[#fdf0ee] text-[#b66b68] border border-[#f5cfcc]"
-										: "bg-[#edf4ee] text-[#4f6958] border border-[#d6e4d9]"
-									}`}
+								className={`mt-2.5 p-2 rounded-[8px] text-[10.5px] flex items-start gap-1.5 font-medium ${
+									scanStatus === "success"
+										? "bg-[#eaf4ec] text-[#346641] border border-[#c4e2cb]"
+										: scanStatus === "warning"
+											? "bg-[#fef9ee] text-[#8f6d2b] border border-[#f5e6c7]"
+											: scanStatus === "error"
+												? "bg-[#fdf0ee] text-[#b66b68] border border-[#f5cfcc]"
+												: "bg-[#edf4ee] text-[#4f6958] border border-[#d6e4d9]"
+								}`}
 							>
 								{scanStatus === "success" ? (
-									<CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+									<CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#346641]" />
+								) : scanStatus === "warning" ? (
+									<AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#8f6d2b]" />
 								) : scanStatus === "error" ? (
-									<X className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+									<X className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#b66b68]" />
 								) : (
-									<Loader2 className="w-3.5 h-3.5 shrink-0 mt-0.5 animate-spin" />
+									<Loader2 className="w-3.5 h-3.5 shrink-0 mt-0.5 animate-spin text-[#4f6958]" />
 								)}
 								<span>{scanFeedback}</span>
 							</div>
@@ -1206,41 +1307,52 @@ export function TenantFormDialog({
 									}}
 								</form.Subscribe>
 
-								{/* Tanggal Jatuh Tempo (Input Date, Auto-calculated) */}
-								<form.Field
-									name="dueDate"
-									validators={{
-										onChange: ({ value }) =>
-											!value ? "Tanggal jatuh tempo wajib diisi" : undefined,
-									}}
+								{/* Tanggal Jatuh Tempo (Read-Only Dynamic Preview Card) */}
+								<form.Subscribe
+									selector={(state) => [
+										state.values.startDate,
+										state.values.duration,
+										state.values.dueDate,
+									]}
 								>
-									{(field) => {
-										const hasError = field.state.meta.errors.length > 0;
+									{([startDateVal, durationVal, dueDateVal]) => {
+										const currentDuration =
+											(durationVal as RentDuration) || "Bulanan";
+										const months = getDurationMonths(currentDuration);
+										const effectiveDueDate =
+											(dueDateVal as string) ||
+											calculateDueDate(
+												startDateVal as string,
+												currentDuration,
+											);
+
+										const formattedDue = effectiveDueDate
+											? formatDate(effectiveDueDate)
+											: "Pilih tanggal mulai sewa";
+
 										return (
 											<div className="space-y-1">
-												<div className="flex items-center justify-between">
-													<Label className="text-[11px] font-bold text-[#506257]">
-														Tanggal Jatuh Tempo{" "}
-													</Label>
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Tanggal Jatuh Tempo Berikutnya
+												</Label>
+												<div className="h-[41px] border border-[#d6e2d9] rounded-[11px] px-3 bg-[#f4f7f4] flex items-center justify-between">
+													<div className="flex items-center gap-2 min-w-0">
+														<CalendarDays className="w-4 h-4 text-[#4f6958] shrink-0" />
+														<span className="text-[12px] font-bold text-[#233528] truncate">
+															{formattedDue}
+														</span>
+													</div>
+													<span className="text-[10px] font-medium text-[#4f6958] bg-[#e4ede6] px-2 py-0.5 rounded-[6px] shrink-0">
+														+{months} Bulan
+													</span>
 												</div>
-												<Input
-													type="date"
-													value={field.state.value}
-													onChange={(e) => field.handleChange(e.target.value)}
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-														}`}
-												/>
-												{hasError && (
-													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{field.state.meta.errors[0]}
-													</p>
-												)}
+												<p className="text-[9.5px] text-[#718276] leading-tight m-0">
+													Dihitung otomatis dari tanggal mulai sewa &amp; durasi.
+												</p>
 											</div>
 										);
 									}}
-								</form.Field>
+								</form.Subscribe>
 
 								{/* No Kendaraan */}
 								<form.Field name="vehicle">

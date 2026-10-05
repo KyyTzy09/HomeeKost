@@ -59,3 +59,15 @@ export const tenantSchema = z.object({
 });
 
 export type TenantFormValues = z.infer<typeof tenantSchema>;
+
+export const updateTenantSchema = tenantSchema.extend({
+	roomNo: z.string().optional(),
+	rent: z.string().optional(),
+	duration: z.enum(["Bulanan", "Triwulan", "Semesteran", "Tahunan"]).optional(),
+	startDate: z.string().optional(),
+	dueDate: z.string().optional(),
+	registrationDate: z.string().optional(),
+	agreement: z.boolean().optional(),
+});
+
+export type UpdateTenantFormValues = z.infer<typeof updateTenantSchema>;

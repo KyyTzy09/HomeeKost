@@ -294,7 +294,23 @@ export class TenantRepository {
 	) {
 		return this.db.$transaction(
 			async (tx) => {
-				// 1. Update Tenant profile
+				// 1. Check duplicate NIK with other tenants
+				if (data.nik) {
+					const existingWithNik = await tx.tenant.findFirst({
+						where: {
+							NIK: data.nik,
+							id: { not: tenantId },
+						},
+						select: { name: true },
+					});
+					if (existingWithNik) {
+						throw new Error(
+							`NIK ${data.nik} sudah digunakan oleh penghuni lain (${existingWithNik.name}).`,
+						);
+					}
+				}
+
+				// 2. Update Tenant profile
 				const updatedTenant = await tx.tenant.update({
 					where: { id: tenantId },
 					data: {
