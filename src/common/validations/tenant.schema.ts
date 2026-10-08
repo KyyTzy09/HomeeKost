@@ -4,6 +4,7 @@ export const tenantSchema = z.object({
 	name: z.string().min(1, "Nama lengkap wajib diisi"),
 	birthDate: z
 		.string()
+		.nullable()
 		.optional()
 		.refine(
 			(val) => !val || new Date(val) <= new Date(),
@@ -23,16 +24,18 @@ export const tenantSchema = z.object({
 			/^[0-9+]{10,16}$/,
 			"Nomor WhatsApp harus berupa angka (10-16 digit)",
 		),
-	originAddress: z.string().optional(),
+	originAddress: z.string().nullable().optional(),
 	email: z
 		.string()
 		.email("Format email tidak valid")
+		.nullable()
 		.optional()
-		.or(z.literal("")),
+		.or(z.literal(""))
+		.or(z.literal(null)),
 	occupationStatus: z.enum(["Mahasiswa", "Karyawan", "Lainnya"], {
 		message: "Status pekerjaan harus dipilih",
 	}),
-	institution: z.string().optional(),
+	institution: z.string().nullable().optional(),
 	roomNo: z.string().min(1, "Nomor kamar wajib dipilih"),
 	rent: z.string().min(1, "Harga sewa per bulan wajib diisi"),
 	duration: z.enum(["Bulanan", "Triwulan", "Semesteran", "Tahunan"], {
@@ -40,19 +43,24 @@ export const tenantSchema = z.object({
 	}),
 	startDate: z.string().min(1, "Tanggal mulai sewa wajib diisi"),
 	dueDate: z.string().min(1, "Tanggal jatuh tempo wajib diisi"),
-	vehicle: z.string().optional(),
-	deposit: z.string().optional(),
-	emergencyName: z.string().optional(),
-	emergencyRelation: z.string().optional(),
+	vehicle: z.string().nullable().optional(),
+	deposit: z.string().nullable().optional(),
+	emergencyName: z.string().nullable().optional(),
+	emergencyRelation: z.string().nullable().optional(),
 	emergencyPhone: z
 		.string()
-		.regex(/^[0-9+]{9,16}$/, "Nomor telepon darurat harus berupa angka")
+		.regex(
+			/^[0-9+ -]{9,20}$/,
+			"Nomor telepon darurat harus berupa angka (9-20 digit)",
+		)
+		.nullable()
 		.optional()
-		.or(z.literal("")),
+		.or(z.literal(""))
+		.or(z.literal(null)),
 	registrationDate: z.string().min(1, "Tanggal pendaftaran wajib diisi"),
-	notes: z.string().optional(),
-	ktpUrl: z.string().optional().nullable(),
-	markPastPeriodsPaid: z.boolean().optional(),
+	notes: z.string().nullable().optional(),
+	ktpUrl: z.string().nullable().optional(),
+	markPastPeriodsPaid: z.boolean().nullable().optional(),
 	agreement: z.boolean().refine((val) => val === true, {
 		message: "Persetujuan formulir wajib dicentang",
 	}),
@@ -61,13 +69,14 @@ export const tenantSchema = z.object({
 export type TenantFormValues = z.infer<typeof tenantSchema>;
 
 export const updateTenantSchema = tenantSchema.extend({
-	roomNo: z.string().optional(),
-	rent: z.string().optional(),
-	duration: z.enum(["Bulanan", "Triwulan", "Semesteran", "Tahunan"]).optional(),
-	startDate: z.string().optional(),
-	dueDate: z.string().optional(),
-	registrationDate: z.string().optional(),
-	agreement: z.boolean().optional(),
+	roomNo: z.string().nullable().optional(),
+	rent: z.string().nullable().optional(),
+	duration: z.enum(["Bulanan", "Triwulan", "Semesteran", "Tahunan"]).nullable().optional(),
+	startDate: z.string().nullable().optional(),
+	dueDate: z.string().nullable().optional(),
+	registrationDate: z.string().nullable().optional(),
+	agreement: z.boolean().nullable().optional(),
 });
 
 export type UpdateTenantFormValues = z.infer<typeof updateTenantSchema>;
+

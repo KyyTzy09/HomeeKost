@@ -174,6 +174,29 @@ function compressImage(
 	});
 }
 
+const FIELD_LABELS: Record<string, string> = {
+	name: "Nama Lengkap",
+	birthDate: "Tanggal Lahir",
+	nik: "Nomor Induk Kependudukan (NIK)",
+	phone: "Nomor WhatsApp",
+	originAddress: "Alamat Asal",
+	email: "Email",
+	occupationStatus: "Status Pekerjaan",
+	institution: "Nama Institusi",
+	roomNo: "Nomor Kamar",
+	rent: "Harga Total Sewa",
+	duration: "Lama Sewa",
+	startDate: "Tanggal Mulai Sewa",
+	dueDate: "Tanggal Jatuh Tempo",
+	vehicle: "Nomor Kendaraan",
+	deposit: "Deposit",
+	emergencyName: "Nama Kontak Darurat",
+	emergencyRelation: "Hubungan Kontak Darurat",
+	emergencyPhone: "Nomor Kontak Darurat",
+	registrationDate: "Tanggal Pendaftaran",
+	agreement: "Persetujuan Formulir",
+};
+
 export function TenantFormDialog({
 	open,
 	onOpenChange,
@@ -184,6 +207,19 @@ export function TenantFormDialog({
 }: TenantFormDialogProps) {
 	const isEditing = Boolean(editingTenant);
 	const todayStr = useMemo(() => getTodayDateString(), []);
+
+	// Validation error state for prominent UI feedback
+	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+	const dialogContentRef = useRef<HTMLDivElement>(null);
+
+	const clearFieldError = (fieldName: string) => {
+		setFormErrors((prev) => {
+			if (!prev[fieldName]) return prev;
+			const next = { ...prev };
+			delete next[fieldName];
+			return next;
+		});
+	};
 
 	// Searchable combobox states
 	const [roomQuery, setRoomQuery] = useState("");
@@ -211,6 +247,50 @@ export function TenantFormDialog({
 		calculateDueDate(initialStartDate, initialDuration);
 
 	const defaultInitialRoom = roomOptions[0];
+
+	const sanitizeValues = (val: {
+		name: string;
+		birthDate?: string;
+		nik: string;
+		phone: string;
+		originAddress?: string;
+		email?: string;
+		occupationStatus: OccupationStatus;
+		institution?: string;
+		roomNo?: string;
+		rent?: string;
+		duration?: RentDuration;
+		startDate?: string;
+		dueDate?: string;
+		vehicle?: string;
+		deposit?: string;
+		emergencyName?: string;
+		emergencyRelation?: string;
+		emergencyPhone?: string;
+		registrationDate?: string;
+		notes?: string;
+		ktpUrl?: string;
+		markPastPeriodsPaid?: boolean;
+		agreement?: boolean;
+	}) => {
+		const autoDue =
+			val.dueDate ||
+			(val.startDate
+				? calculateDueDate(
+						val.startDate,
+						(val.duration || "Bulanan") as RentDuration,
+					)
+				: "");
+		return {
+			...val,
+			dueDate: autoDue,
+			phone: sanitizePhone(val.phone || ""),
+			emergencyPhone: val.emergencyPhone
+				? val.emergencyPhone.replace(/[^0-9+]/g, "")
+				: "",
+			nik: (val.nik || "").replace(/[^0-9]/g, ""),
+		};
+	};
 
 	const form = useForm({
 		defaultValues: {
@@ -246,57 +326,50 @@ export function TenantFormDialog({
 		},
 		validators: {
 			onSubmit: ({ value }) => {
-				const autoDue =
-					value.dueDate ||
-					(value.startDate
-						? calculateDueDate(
-								value.startDate,
-								(value.duration || "Bulanan") as RentDuration,
-							)
-						: "");
-				const sanitizedValue = {
-					...value,
-					dueDate: autoDue,
-					phone: sanitizePhone(value.phone),
-				};
+				const sanitizedValue = sanitizeValues(value);
 				const schema = isEditing ? updateTenantSchema : tenantSchema;
 				const result = schema.safeParse(sanitizedValue);
 				if (!result.success) {
 					const fieldErrors: Record<string, string> = {};
 					for (const issue of result.error.issues) {
-						const field = issue.path[0];
-						if (field && !fieldErrors[String(field)]) {
-							fieldErrors[String(field)] = issue.message;
+						const field = String(issue.path[0] || "form");
+						if (!fieldErrors[field]) {
+							fieldErrors[field] = issue.message;
 						}
 					}
+					setFormErrors(fieldErrors);
+					setTimeout(() => {
+						dialogContentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+					}, 50);
 					return fieldErrors;
 				}
+				setFormErrors({});
 				return undefined;
 			},
 		},
 		onSubmit: async ({ value }) => {
-			const autoDue =
-				value.dueDate ||
-				(value.startDate
-					? calculateDueDate(
-							value.startDate,
-							(value.duration || "Bulanan") as RentDuration,
-						)
-					: "");
-			const sanitizedValue = {
-				...value,
-				dueDate: autoDue,
-				phone: sanitizePhone(value.phone),
-			};
+			const sanitizedValue = sanitizeValues(value);
 			const schema = isEditing ? updateTenantSchema : tenantSchema;
 			const result = schema.safeParse(sanitizedValue);
 			if (!result.success) {
+				const fieldErrors: Record<string, string> = {};
+				for (const issue of result.error.issues) {
+					const field = String(issue.path[0] || "form");
+					if (!fieldErrors[field]) {
+						fieldErrors[field] = issue.message;
+					}
+				}
+				setFormErrors(fieldErrors);
+				setTimeout(() => {
+					dialogContentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+				}, 50);
 				console.error(
 					"[TenantFormDialog] Form validation failed:",
 					result.error.format(),
 				);
 				return;
 			}
+			setFormErrors({});
 			onSubmit(result.data);
 			onOpenChange(false);
 		},
@@ -305,6 +378,7 @@ export function TenantFormDialog({
 	// Synchronize form fields automatically whenever modal opens or editingTenant changes
 	useEffect(() => {
 		if (open) {
+			setFormErrors({});
 			if (editingTenant) {
 				const startDate =
 					toInputDateFormat(editingTenant.startDate) || todayStr;
@@ -318,8 +392,14 @@ export function TenantFormDialog({
 					"birthDate",
 					toInputDateFormat(editingTenant.birthDate) || "",
 				);
-				form.setFieldValue("nik", editingTenant.nik || "");
-				form.setFieldValue("phone", editingTenant.phone || "");
+				form.setFieldValue(
+					"nik",
+					editingTenant.nik ? editingTenant.nik.replace(/[^0-9]/g, "") : "",
+				);
+				form.setFieldValue(
+					"phone",
+					editingTenant.phone ? sanitizePhone(editingTenant.phone) : "",
+				);
 				form.setFieldValue("originAddress", editingTenant.originAddress || "");
 				form.setFieldValue("email", editingTenant.email || "");
 				form.setFieldValue(
@@ -350,7 +430,9 @@ export function TenantFormDialog({
 				);
 				form.setFieldValue(
 					"emergencyPhone",
-					editingTenant.emergencyPhone || "",
+					editingTenant.emergencyPhone
+						? editingTenant.emergencyPhone.replace(/[^0-9+]/g, "")
+						: "",
 				);
 				form.setFieldValue(
 					"registrationDate",
@@ -570,7 +652,10 @@ export function TenantFormDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-[760px] max-h-[90vh] overflow-y-auto rounded-[20px] border-[#e1e8e2] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]">
+			<DialogContent
+				ref={dialogContentRef}
+				className="max-w-[760px] max-h-[90vh] overflow-y-auto rounded-[20px] border-[#e1e8e2] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+			>
 				<DialogHeader>
 					<div className="flex items-center gap-2.5 mb-1">
 						<div className="w-8 h-8 rounded-[9px] bg-[#edf4ee] text-[#4f6958] flex items-center justify-center">
@@ -607,6 +692,26 @@ export function TenantFormDialog({
 					}}
 					className="space-y-5"
 				>
+					{/* ERROR SUMMARY ALERT BANNER */}
+					{Object.keys(formErrors).length > 0 && (
+						<div className="bg-[#fdf0ee] border border-[#f5cfcc] rounded-[14px] p-3.5 mb-2 text-[#b66b68] shadow-sm animate-in fade-in duration-200">
+							<div className="flex items-center gap-2 font-bold text-[12px] mb-1.5 text-[#a84d4a]">
+								<AlertCircle className="w-4 h-4 shrink-0 text-[#b66b68]" />
+								<span>Mohon periksa dan perbaiki isian berikut sebelum menyimpan:</span>
+							</div>
+							<ul className="list-disc list-inside text-[11px] space-y-1 pl-1 font-medium text-[#7a3835]">
+								{Object.entries(formErrors).map(([key, msg]) => (
+									<li key={key}>
+										<span className="font-semibold text-[#8b3532]">
+											{FIELD_LABELS[key] || key}:
+										</span>{" "}
+										{msg}
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
+
 					{/* TOP SECTION: Upload & Scan KTP dengan Asisten AI */}
 					<div className="bg-gradient-to-br from-[#f8faf8] to-[#edf4ee] border border-[#d8e4da] rounded-[16px] p-4 mb-2">
 						<div className="flex items-center justify-between gap-3 mb-2.5">
@@ -731,7 +836,9 @@ export function TenantFormDialog({
 								}}
 							>
 								{(field) => {
-									const hasError = field.state.meta.errors.length > 0;
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.name;
+									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
@@ -739,7 +846,10 @@ export function TenantFormDialog({
 											</Label>
 											<Input
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												onChange={(e) => {
+													clearFieldError("name");
+													field.handleChange(e.target.value);
+												}}
 												placeholder="Nama lengkap penghuni"
 												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
 													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
@@ -748,7 +858,7 @@ export function TenantFormDialog({
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{field.state.meta.errors[0]}
+													{errorMsg}
 												</p>
 											)}
 										</div>
@@ -769,7 +879,9 @@ export function TenantFormDialog({
 								}}
 							>
 								{(field) => {
-									const hasError = field.state.meta.errors.length > 0;
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.birthDate;
+									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
@@ -779,7 +891,10 @@ export function TenantFormDialog({
 												type="date"
 												max={todayStr}
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												onChange={(e) => {
+													clearFieldError("birthDate");
+													field.handleChange(e.target.value);
+												}}
 												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
 													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
 													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
@@ -787,7 +902,7 @@ export function TenantFormDialog({
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{field.state.meta.errors[0]}
+													{errorMsg}
 												</p>
 											)}
 										</div>
@@ -809,7 +924,9 @@ export function TenantFormDialog({
 								}}
 							>
 								{(field) => {
-									const hasError = field.state.meta.errors.length > 0;
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.nik;
+									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
@@ -820,6 +937,7 @@ export function TenantFormDialog({
 												value={field.state.value}
 												maxLength={16}
 												onChange={(e) => {
+													clearFieldError("nik");
 													const digitsOnly = e.target.value.replace(
 														/[^0-9]/g,
 														"",
@@ -837,7 +955,7 @@ export function TenantFormDialog({
 											</span>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{field.state.meta.errors[0]}
+													{errorMsg}
 												</p>
 											)}
 										</div>
@@ -852,13 +970,15 @@ export function TenantFormDialog({
 									onChange: ({ value }) =>
 										!value
 											? "Nomor WhatsApp wajib diisi"
-											: value.length < 10
+											: value.replace(/[^0-9]/g, "").length < 10
 												? "Nomor minimal 10 digit"
 												: undefined,
 								}}
 							>
 								{(field) => {
-									const hasError = field.state.meta.errors.length > 0;
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.phone;
+									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
@@ -869,6 +989,7 @@ export function TenantFormDialog({
 												value={field.state.value}
 												inputMode="tel"
 												onChange={(e) => {
+													clearFieldError("phone");
 													const cleaned = e.target.value.replace(
 														/[^0-9+]/g,
 														"",
@@ -883,7 +1004,7 @@ export function TenantFormDialog({
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{field.state.meta.errors[0]}
+													{errorMsg}
 												</p>
 											)}
 										</div>
@@ -901,7 +1022,10 @@ export function TenantFormDialog({
 											</Label>
 											<textarea
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												onChange={(e) => {
+													clearFieldError("originAddress");
+													field.handleChange(e.target.value);
+												}}
 												rows={2}
 												placeholder="Alamat asal sesuai KTP / domisili"
 												className="w-full border border-[#dfe7e0] rounded-[11px] p-2.5 text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] outline-none"
@@ -922,7 +1046,9 @@ export function TenantFormDialog({
 								}}
 							>
 								{(field) => {
-									const hasError = field.state.meta.errors.length > 0;
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.email;
+									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
 											<Label className="text-[11px] font-bold text-[#506257]">
@@ -931,7 +1057,10 @@ export function TenantFormDialog({
 											<Input
 												type="email"
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												onChange={(e) => {
+													clearFieldError("email");
+													field.handleChange(e.target.value);
+												}}
 												placeholder="nama@email.com"
 												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
 													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
@@ -940,7 +1069,7 @@ export function TenantFormDialog({
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{field.state.meta.errors[0]}
+													{errorMsg}
 												</p>
 											)}
 										</div>
@@ -1033,7 +1162,9 @@ export function TenantFormDialog({
 									}}
 								>
 									{(field) => {
-										const hasError = field.state.meta.errors.length > 0;
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.roomNo;
+										const hasError = Boolean(errorMsg);
 										return (
 											<div className="space-y-1 relative" ref={comboboxRef}>
 												<Label className="text-[11px] font-bold text-[#506257]">
@@ -1065,7 +1196,7 @@ export function TenantFormDialog({
 
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{field.state.meta.errors[0]}
+														{errorMsg}
 													</p>
 												)}
 
@@ -1095,7 +1226,10 @@ export function TenantFormDialog({
 																		<button
 																			key={room.roomNo}
 																			type="button"
-																			onClick={() => handleSelectRoom(room)}
+																			onClick={() => {
+																				clearFieldError("roomNo");
+																				handleSelectRoom(room);
+																			}}
 																			className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${isSelected
 																				? "bg-[#edf4ee] text-[#3e5646] font-bold"
 																				: "hover:bg-[#f6faf6] text-[#37443c]"
@@ -1136,43 +1270,56 @@ export function TenantFormDialog({
 
 								{/* Lama Sewa Radio */}
 								<form.Field name="duration">
-									{(field) => (
-										<div className="space-y-1.5">
-											<Label className="text-[11px] font-bold text-[#506257]">
-												Lama Sewa <span className="text-[#b66b68]">*</span>
-											</Label>
-											<div className="flex flex-wrap gap-3 py-1">
-												{(
-													[
-														"Bulanan",
-														"Triwulan",
-														"Semesteran",
-														"Tahunan",
-													] as const
-												).map((dur) => (
-													<label
-														key={dur}
-														className="flex items-center gap-1.5 text-[11.5px] text-[#34443a] cursor-pointer"
-													>
-														<input
-															type="radio"
-															name="duration"
-															value={dur}
-															checked={field.state.value === dur}
-															onChange={() => handleChangeDuration(dur)}
-															className="accent-[#4f6958]"
-														/>
-														<span>
-															{dur}{" "}
-															<span className="text-[9.5px] text-[#8a958d]">
-																({getDurationMonths(dur)} bln)
+									{(field) => {
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.duration;
+										const hasError = Boolean(errorMsg);
+										return (
+											<div className="space-y-1.5">
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Lama Sewa <span className="text-[#b66b68]">*</span>
+												</Label>
+												<div className="flex flex-wrap gap-3 py-1">
+													{(
+														[
+															"Bulanan",
+															"Triwulan",
+															"Semesteran",
+															"Tahunan",
+														] as const
+													).map((dur) => (
+														<label
+															key={dur}
+															className="flex items-center gap-1.5 text-[11.5px] text-[#34443a] cursor-pointer"
+														>
+															<input
+																type="radio"
+																name="duration"
+																value={dur}
+																checked={field.state.value === dur}
+																onChange={() => {
+																	clearFieldError("duration");
+																	handleChangeDuration(dur);
+																}}
+																className="accent-[#4f6958]"
+															/>
+															<span>
+																{dur}{" "}
+																<span className="text-[9.5px] text-[#8a958d]">
+																	({getDurationMonths(dur)} bln)
+																</span>
 															</span>
-														</span>
-													</label>
-												))}
+														</label>
+													))}
+												</div>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{errorMsg}
+													</p>
+												)}
 											</div>
-										</div>
-									)}
+										);
+									}}
 								</form.Field>
 
 								{/* Harga Total Sewa (Auto-calculated, Editable) */}
@@ -1184,7 +1331,9 @@ export function TenantFormDialog({
 									}}
 								>
 									{(field) => {
-										const hasError = field.state.meta.errors.length > 0;
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.rent;
+										const hasError = Boolean(errorMsg);
 										return (
 											<div className="space-y-1">
 												<div className="flex items-center justify-between">
@@ -1196,6 +1345,7 @@ export function TenantFormDialog({
 													value={field.state.value}
 													inputMode="numeric"
 													onChange={(e) => {
+														clearFieldError("rent");
 														const digits = e.target.value.replace(
 															/[^0-9]/g,
 															"",
@@ -1212,7 +1362,7 @@ export function TenantFormDialog({
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{field.state.meta.errors[0]}
+														{errorMsg}
 													</p>
 												)}
 											</div>
@@ -1229,7 +1379,9 @@ export function TenantFormDialog({
 									}}
 								>
 									{(field) => {
-										const hasError = field.state.meta.errors.length > 0;
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.startDate;
+										const hasError = Boolean(errorMsg);
 										return (
 											<div className="space-y-1">
 												<Label className="text-[11px] font-bold text-[#506257]">
@@ -1238,9 +1390,10 @@ export function TenantFormDialog({
 												<Input
 													type="date"
 													value={field.state.value}
-													onChange={(e) =>
-														handleChangeStartDate(e.target.value)
-													}
+													onChange={(e) => {
+														clearFieldError("startDate");
+														handleChangeStartDate(e.target.value);
+													}}
 													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
 														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
 														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
@@ -1248,7 +1401,7 @@ export function TenantFormDialog({
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{field.state.meta.errors[0]}
+														{errorMsg}
 													</p>
 												)}
 											</div>
@@ -1408,55 +1561,114 @@ export function TenantFormDialog({
 
 						<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 							<form.Field name="emergencyName">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Nama Kontak
-										</Label>
-										<Input
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="Nama kontak darurat"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.emergencyName;
+									const hasError = Boolean(errorMsg);
+									return (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Nama Kontak
+											</Label>
+											<Input
+												value={field.state.value}
+												onChange={(e) => {
+													clearFieldError("emergencyName");
+													field.handleChange(e.target.value);
+												}}
+												placeholder="Nama kontak darurat"
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+											/>
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											)}
+										</div>
+									);
+								}}
 							</form.Field>
 
 							<form.Field name="emergencyRelation">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Hubungan
-										</Label>
-										<Input
-											value={field.state.value}
-											onChange={(e) => field.handleChange(e.target.value)}
-											placeholder="Orang tua / saudara / lainnya"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.emergencyRelation;
+									const hasError = Boolean(errorMsg);
+									return (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Hubungan
+											</Label>
+											<Input
+												value={field.state.value}
+												onChange={(e) => {
+													clearFieldError("emergencyRelation");
+													field.handleChange(e.target.value);
+												}}
+												placeholder="Orang tua / saudara / lainnya"
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+											/>
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											)}
+										</div>
+									);
+								}}
 							</form.Field>
 
-							<form.Field name="emergencyPhone">
-								{(field) => (
-									<div className="space-y-1">
-										<Label className="text-[11px] font-bold text-[#506257]">
-											Nomor Telepon / HP
-										</Label>
-										<Input
-											value={field.state.value}
-											inputMode="tel"
-											onChange={(e) => {
-												const cleaned = e.target.value.replace(/[^0-9+]/g, "");
-												field.handleChange(cleaned);
-											}}
-											placeholder="08xxxxxxxxxx"
-											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-										/>
-									</div>
-								)}
+							<form.Field
+								name="emergencyPhone"
+								validators={{
+									onChange: ({ value }) => {
+										if (value && value.trim() !== "") {
+											const digits = value.replace(/[^0-9]/g, "");
+											if (digits.length > 0 && digits.length < 9) {
+												return "Nomor telepon darurat minimal 9 digit";
+											}
+										}
+										return undefined;
+									},
+								}}
+							>
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.emergencyPhone;
+									const hasError = Boolean(errorMsg);
+									return (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Nomor Telepon / HP
+											</Label>
+											<Input
+												value={field.state.value}
+												inputMode="tel"
+												onChange={(e) => {
+													clearFieldError("emergencyPhone");
+													const cleaned = e.target.value.replace(/[^0-9+]/g, "");
+													field.handleChange(cleaned);
+												}}
+												placeholder="08xxxxxxxxxx"
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+											/>
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											)}
+										</div>
+									);
+								}}
 							</form.Field>
 						</div>
 
@@ -1471,7 +1683,10 @@ export function TenantFormDialog({
 											</Label>
 											<textarea
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												onChange={(e) => {
+													clearFieldError("notes");
+													field.handleChange(e.target.value);
+												}}
 												rows={2}
 												placeholder="Catatan tambahan tentang penghuni"
 												className="w-full border border-[#dfe7e0] rounded-[11px] p-2.5 text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] outline-none"
@@ -1502,7 +1717,9 @@ export function TenantFormDialog({
 									}}
 								>
 									{(field) => {
-										const hasError = field.state.meta.errors.length > 0;
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.registrationDate;
+										const hasError = Boolean(errorMsg);
 										return (
 											<div className="space-y-1">
 												<Label className="text-[11px] font-bold text-[#506257]">
@@ -1512,7 +1729,10 @@ export function TenantFormDialog({
 												<Input
 													type="date"
 													value={field.state.value}
-													onChange={(e) => field.handleChange(e.target.value)}
+													onChange={(e) => {
+														clearFieldError("registrationDate");
+														field.handleChange(e.target.value);
+													}}
 													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
 														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
 														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
@@ -1520,7 +1740,7 @@ export function TenantFormDialog({
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{field.state.meta.errors[0]}
+														{errorMsg}
 													</p>
 												)}
 											</div>
@@ -1536,7 +1756,10 @@ export function TenantFormDialog({
 											</Label>
 											<textarea
 												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
+												onChange={(e) => {
+													clearFieldError("notes");
+													field.handleChange(e.target.value);
+												}}
 												rows={2}
 												placeholder="Catatan tambahan tentang penghuni"
 												className="w-full border border-[#dfe7e0] rounded-[11px] p-2.5 text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] outline-none"
@@ -1555,7 +1778,9 @@ export function TenantFormDialog({
 									}}
 								>
 									{(field) => {
-										const hasError = field.state.meta.errors.length > 0;
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.agreement;
+										const hasError = Boolean(errorMsg);
 										return (
 											<div className="space-y-1">
 												<div className="bg-[#f7faf7] border border-[#e4ebe5] rounded-[12px] p-3 mt-1">
@@ -1563,9 +1788,10 @@ export function TenantFormDialog({
 														<input
 															type="checkbox"
 															checked={field.state.value}
-															onChange={(e) =>
-																field.handleChange(e.target.checked)
-															}
+															onChange={(e) => {
+																clearFieldError("agreement");
+																field.handleChange(e.target.checked);
+															}}
 															className="mt-0.5 accent-[#4f6958]"
 														/>
 														<span>
@@ -1578,7 +1804,7 @@ export function TenantFormDialog({
 												</div>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{field.state.meta.errors[0]}
+														{errorMsg}
 													</p>
 												)}
 											</div>
@@ -1599,15 +1825,24 @@ export function TenantFormDialog({
 							Batal
 						</Button>
 						<form.Subscribe
-							selector={(state) => [state.canSubmit, state.isSubmitting]}
+							selector={(state) => [state.isSubmitting]}
 						>
-							{([canSubmit, isSubmitting]) => (
+							{([isSubmitting]) => (
 								<Button
 									type="submit"
-									disabled={!canSubmit || isSubmitting}
-									className="h-[38px] px-5 rounded-[9px] bg-[#4f6958] hover:bg-[#425949] text-white font-semibold text-[12px]"
+									disabled={isSubmitting}
+									className="h-[38px] px-5 rounded-[9px] bg-[#4f6958] hover:bg-[#425949] text-white font-semibold text-[12px] cursor-pointer"
 								>
-									{isEditing ? "Simpan Perubahan" : "Simpan Pendaftaran"}
+									{isSubmitting ? (
+										<span className="flex items-center gap-1.5">
+											<Loader2 className="w-3.5 h-3.5 animate-spin" />
+											Menyimpan...
+										</span>
+									) : isEditing ? (
+										"Simpan Perubahan"
+									) : (
+										"Simpan Pendaftaran"
+									)}
 								</Button>
 							)}
 						</form.Subscribe>

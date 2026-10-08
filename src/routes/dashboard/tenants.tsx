@@ -152,7 +152,8 @@ function TenantsPage() {
 	const handleSaveTenant = (
 		values: TenantFormValues | UpdateTenantFormValues,
 	) => {
-		if (!propertyId) {
+		const targetPropertyId = propertyId || editingTenant?.propertyId;
+		if (!targetPropertyId) {
 			showError("Pilih cabang kos aktif terlebih dahulu.");
 			return;
 		}
@@ -161,7 +162,7 @@ function TenantsPage() {
 			updateTenantMutation.mutate(
 				{
 					id: editingTenant.id,
-					propertyId,
+					propertyId: targetPropertyId,
 					data: values,
 				},
 				{
@@ -182,7 +183,7 @@ function TenantsPage() {
 		} else {
 			createTenantMutation.mutate(
 				{
-					propertyId,
+					propertyId: targetPropertyId,
 					data: values as TenantFormValues,
 				},
 				{
