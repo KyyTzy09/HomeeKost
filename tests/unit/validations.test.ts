@@ -60,6 +60,28 @@ describe("Zod Validation Schemas", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("harus meloloskan data dengan field nullable dan nomor darurat ber-spasi atau dash", () => {
+			const updateDataWithNulls = {
+				name: "Siti Rahma",
+				nik: "3201014506990001",
+				phone: "6281234567890",
+				birthDate: null,
+				originAddress: null,
+				email: null,
+				occupationStatus: "Mahasiswa" as const,
+				institution: null,
+				emergencyName: null,
+				emergencyRelation: null,
+				emergencyPhone: "0812 3456 7890", // format ber-spasi
+				vehicle: null,
+				deposit: null,
+				notes: null,
+				ktpUrl: null,
+			};
+			const result = updateTenantSchema.safeParse(updateDataWithNulls);
+			expect(result.success).toBe(true);
+		});
+
 		it("harus menolak pembaruan data jika nama kosong atau NIK tidak valid", () => {
 			const invalidUpdate = {
 				name: "",
