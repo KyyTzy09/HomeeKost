@@ -100,7 +100,7 @@ export class RoomRepository {
 			status?: RoomStatus;
 		},
 	) {
-		return this.db.room.update({
+		const updatedRoom = await this.db.room.update({
 			where: { id },
 			data: {
 				...(data.roomNumber !== undefined && { roomNumber: data.roomNumber }),
@@ -126,6 +126,28 @@ export class RoomRepository {
 				},
 			},
 		});
+
+		// Jika harga master kamar diubah, sinkronkan seluruh tagihan PENDING penghuni aktif di kamar ini
+		if (data.price !== undefined && data.price > 0) {
+			const activeContracts = await this.db.rentalContract.findMany({
+				where: { roomId: id, status: "ACTIVE" },
+				select: { id: true },
+			});
+			if (activeContracts.length > 0) {
+				const contractIds = activeContracts.map((c) => c.id);
+				await this.db.invoice.updateMany({
+					where: {
+						contractId: { in: contractIds },
+						status: "PENDING",
+					},
+					data: {
+						amount: data.price,
+					},
+				});
+			}
+		}
+
+		return updatedRoom;
 	}
 
 	async deleteRoom(id: string) {

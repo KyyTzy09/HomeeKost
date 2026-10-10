@@ -58,6 +58,12 @@ export function useCreateTenant(): UseMutationResult<
 			queryClient.invalidateQueries({
 				queryKey: ["dashboard-overview", variables.propertyId],
 			});
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["finances"] });
+			queryClient.invalidateQueries({ queryKey: ["reports"] });
 		},
 	});
 }
@@ -92,6 +98,12 @@ export function useUpdateTenant(): UseMutationResult<
 			queryClient.invalidateQueries({
 				queryKey: ["dashboard-overview", variables.propertyId],
 			});
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["finances"] });
+			queryClient.invalidateQueries({ queryKey: ["reports"] });
 		},
 	});
 }
@@ -121,6 +133,12 @@ export function useDeleteTenant(): UseMutationResult<
 				});
 			}
 			queryClient.invalidateQueries({ queryKey: ["properties"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["finances"] });
+			queryClient.invalidateQueries({ queryKey: ["reports"] });
 		},
 	});
 }

@@ -358,10 +358,14 @@ export class TenantRepository {
 				});
 
 				if (activeContract) {
-					// If room changed
-					if (data.roomId && data.roomId !== activeContract.roomId) {
+					const isRoomChanged = Boolean(
+						data.roomId && data.roomId !== activeContract.roomId,
+					);
+					let targetRoom: any = null;
+
+					if (isRoomChanged && data.roomId) {
 						// 3a. Verify target room exists & is not occupied by another tenant
-						const targetRoom = await tx.room.findUnique({
+						targetRoom = await tx.room.findUnique({
 							where: { id: data.roomId },
 						});
 						if (!targetRoom) {
@@ -400,7 +404,7 @@ export class TenantRepository {
 								},
 							});
 
-							await tx.rentalContract.create({
+							const newContract = await tx.rentalContract.create({
 								data: {
 									roomId: data.roomId,
 									tenantId,
@@ -409,6 +413,23 @@ export class TenantRepository {
 									startDate: data.startDate || now,
 									dueDateDay: data.dueDateDay ?? activeContract.dueDateDay,
 									status: "ACTIVE",
+								},
+							});
+
+							// Jika ada tagihan PENDING pada kontrak lama, alihkan ke kontrak baru dengan nominal baru
+							const effectivePrice =
+								data.newRentAmount && data.newRentAmount > 0
+									? data.newRentAmount
+									: Number(targetRoom.price);
+
+							await tx.invoice.updateMany({
+								where: {
+									contractId: activeContract.id,
+									status: "PENDING",
+								},
+								data: {
+									contractId: newContract.id,
+									...(effectivePrice > 0 && { amount: effectivePrice }),
 								},
 							});
 						} else {
@@ -424,112 +445,6 @@ export class TenantRepository {
 									...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
 								},
 							});
-
-							// Sesuaikan tagihan & catatan kas masuk periode berjalan jika diminta (Koreksi Typo)
-							if (
-								data.updatePendingInvoiceAmount &&
-								data.newRentAmount &&
-								data.newRentAmount > 0
-							) {
-								const now = new Date();
-								const currentMonth = now.getMonth() + 1;
-								const currentYear = now.getFullYear();
-								const targetRoomNumber = targetRoom.roomNumber;
-								const oldRoomNumber = activeContract.room.roomNumber;
-
-								// 1. Cari invoice periode berjalan (bulan & tahun sekarang)
-								let currentInvoice = await tx.invoice.findFirst({
-									where: {
-										contractId: activeContract.id,
-										periodMonth: currentMonth,
-										periodYear: currentYear,
-									},
-									include: { transactions: true },
-									orderBy: { createdAt: "desc" },
-								});
-
-								// Fallback: Jika baru mendaftar dan kontrak hanya punya 1 invoice
-								if (!currentInvoice) {
-									const contractInvoices = await tx.invoice.findMany({
-										where: { contractId: activeContract.id },
-										include: { transactions: true },
-										take: 2,
-									});
-									if (contractInvoices.length === 1) {
-										currentInvoice = contractInvoices[0];
-									}
-								}
-
-								if (currentInvoice) {
-									// Update nominal invoice
-									await tx.invoice.update({
-										where: { id: currentInvoice.id },
-										data: { amount: data.newRentAmount },
-									});
-
-									// Jika invoice ini sudah PAID, sinkronkan juga catatan kas masuk (Transaction)
-									if (currentInvoice.status === "PAID") {
-										if (
-											currentInvoice.transactions &&
-											currentInvoice.transactions.length > 0
-										) {
-											for (const trans of currentInvoice.transactions) {
-												const updatedDesc = trans.description
-													? trans.description.replace(
-															`Kamar ${oldRoomNumber}`,
-															`Kamar ${targetRoomNumber}`,
-														)
-													: undefined;
-												await tx.transaction.update({
-													where: { id: trans.id },
-													data: {
-														amount: data.newRentAmount,
-														...(updatedDesc && { description: updatedDesc }),
-													},
-												});
-											}
-										} else {
-											// Cari transaksi kas pemasukan sewa pendaftaran yang belum ter-link invoiceId
-											const startOfMonth = new Date(
-												currentYear,
-												currentMonth - 1,
-												1,
-											);
-											const endOfMonth = new Date(currentYear, currentMonth, 1);
-											const relatedTx = await tx.transaction.findFirst({
-												where: {
-													propertyId: activeContract.room.propertyId,
-													type: "INCOME",
-													category: "RENT",
-													description: { contains: activeContract.tenant.name },
-													transactionDate: {
-														gte: startOfMonth,
-														lt: endOfMonth,
-													},
-												},
-												orderBy: { createdAt: "desc" },
-											});
-
-											if (relatedTx) {
-												const updatedDesc = relatedTx.description
-													? relatedTx.description.replace(
-															`Kamar ${oldRoomNumber}`,
-															`Kamar ${targetRoomNumber}`,
-														)
-													: `Pembayaran Sewa Kamar ${targetRoomNumber} - ${activeContract.tenant.name}`;
-												await tx.transaction.update({
-													where: { id: relatedTx.id },
-													data: {
-														amount: data.newRentAmount,
-														invoiceId: currentInvoice.id,
-														description: updatedDesc,
-													},
-												});
-											}
-										}
-									}
-								}
-							}
 						}
 					} else if (data.billingCycle || data.startDate || data.dueDateDay) {
 						await tx.rentalContract.update({
@@ -540,13 +455,38 @@ export class TenantRepository {
 								...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
 							},
 						});
+					}
 
-						// Jika kamar tidak berubah tetapi tarif sewa diedit dan minta penyesuaian invoice & kas
-						if (
-							data.updatePendingInvoiceAmount &&
-							data.newRentAmount &&
-							data.newRentAmount > 0
-						) {
+					// Sesuaikan tagihan & catatan kas masuk jika bukan TRANSFER dan updatePendingInvoiceAmount !== false
+					if (
+						data.roomChangeMode !== "TRANSFER" &&
+						data.updatePendingInvoiceAmount !== false
+					) {
+						const effectiveRentAmount =
+							data.newRentAmount && data.newRentAmount > 0
+								? data.newRentAmount
+								: isRoomChanged && targetRoom
+									? Number(targetRoom.price)
+									: undefined;
+
+						if (effectiveRentAmount && effectiveRentAmount > 0) {
+							const targetRoomNumber = targetRoom
+								? targetRoom.roomNumber
+								: activeContract.room.roomNumber;
+							const oldRoomNumber = activeContract.room.roomNumber;
+
+							// 1. Selalu perbarui SELURUH tagihan PENDING pada kontrak aktif ke tarif baru
+							await tx.invoice.updateMany({
+								where: {
+									contractId: activeContract.id,
+									status: "PENDING",
+								},
+								data: {
+									amount: effectiveRentAmount,
+								},
+							});
+
+							// 2. Cari invoice periode berjalan atau invoice terbaru kontrak aktif
 							const now = new Date();
 							const currentMonth = now.getMonth() + 1;
 							const currentYear = now.getFullYear();
@@ -561,32 +501,72 @@ export class TenantRepository {
 								orderBy: { createdAt: "desc" },
 							});
 
+							// Fallback: Jika tidak cocok bulan/tahun (misal data lampau / seed), ambil invoice terbaru
 							if (!currentInvoice) {
-								const contractInvoices = await tx.invoice.findMany({
+								currentInvoice = await tx.invoice.findFirst({
 									where: { contractId: activeContract.id },
 									include: { transactions: true },
-									take: 2,
+									orderBy: [
+										{ dueDate: "desc" },
+										{ createdAt: "desc" },
+									],
 								});
-								if (contractInvoices.length === 1) {
-									currentInvoice = contractInvoices[0];
-								}
 							}
 
 							if (currentInvoice) {
+								// Update nominal invoice
 								await tx.invoice.update({
 									where: { id: currentInvoice.id },
-									data: { amount: data.newRentAmount },
+									data: { amount: effectiveRentAmount },
 								});
 
+								// Jika invoice ini sudah PAID, sinkronkan juga catatan kas masuk (Transaction)
 								if (currentInvoice.status === "PAID") {
 									if (
 										currentInvoice.transactions &&
 										currentInvoice.transactions.length > 0
 									) {
 										for (const trans of currentInvoice.transactions) {
+											const updatedDesc = trans.description
+												? trans.description.replace(
+														`Kamar ${oldRoomNumber}`,
+														`Kamar ${targetRoomNumber}`,
+													)
+												: undefined;
 											await tx.transaction.update({
 												where: { id: trans.id },
-												data: { amount: data.newRentAmount },
+												data: {
+													amount: effectiveRentAmount,
+													...(updatedDesc && { description: updatedDesc }),
+												},
+											});
+										}
+									} else {
+										// Cari transaksi kas pemasukan sewa pendaftaran untuk tenant & properti ini
+										const relatedTx = await tx.transaction.findFirst({
+											where: {
+												propertyId: activeContract.room.propertyId,
+												type: "INCOME",
+												category: "RENT",
+												description: { contains: activeContract.tenant.name },
+											},
+											orderBy: { createdAt: "desc" },
+										});
+
+										if (relatedTx) {
+											const updatedDesc = relatedTx.description
+												? relatedTx.description.replace(
+														`Kamar ${oldRoomNumber}`,
+														`Kamar ${targetRoomNumber}`,
+													)
+												: `Pembayaran Sewa Kamar ${targetRoomNumber} - ${activeContract.tenant.name}`;
+											await tx.transaction.update({
+												where: { id: relatedTx.id },
+												data: {
+													amount: effectiveRentAmount,
+													invoiceId: currentInvoice.id,
+													description: updatedDesc,
+												},
 											});
 										}
 									}

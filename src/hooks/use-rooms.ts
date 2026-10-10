@@ -49,6 +49,11 @@ export function useCreateRoom(): UseMutationResult<
 				queryKey: [...ROOMS_QUERY_KEY, variables.propertyId],
 			});
 			queryClient.invalidateQueries({ queryKey: PROPERTIES_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 		},
 	});
 }
@@ -82,6 +87,11 @@ export function useUpdateRoom(): UseMutationResult<
 				queryKey: [...ROOMS_QUERY_KEY, "detail", variables.id],
 			});
 			queryClient.invalidateQueries({ queryKey: PROPERTIES_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 		},
 	});
 }
@@ -109,6 +119,11 @@ export function useDeleteRoom(): UseMutationResult<
 				queryKey: [...ROOMS_QUERY_KEY, variables.propertyId],
 			});
 			queryClient.invalidateQueries({ queryKey: PROPERTIES_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 		},
 	});
 }

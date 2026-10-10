@@ -265,11 +265,17 @@ export class TenantService {
 			const baseMonthlyRent =
 				room && Number(room.price) > 0 ? Number(room.price) : 850000;
 			let totalCycleRent = baseMonthlyRent * cycleMonths;
+			const latestInvoice = activeContract?.invoices?.length
+				? [...activeContract.invoices].sort(
+						(a, b) =>
+							new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+					)[0]
+				: null;
 			if (
-				activeContract?.invoices?.[0]?.amount &&
-				Number(activeContract.invoices[0].amount) > 0
+				latestInvoice?.amount &&
+				Number(latestInvoice.amount) > 0
 			) {
-				totalCycleRent = Number(activeContract.invoices[0].amount);
+				totalCycleRent = Number(latestInvoice.amount);
 			}
 
 			const dueDateDay = activeContract?.dueDateDay || 10;
@@ -352,11 +358,17 @@ export class TenantService {
 		const baseMonthlyRent =
 			room && Number(room.price) > 0 ? Number(room.price) : 850000;
 		let totalCycleRent = baseMonthlyRent * cycleMonths;
+		const latestInvoice = activeContract?.invoices?.length
+			? [...activeContract.invoices].sort(
+					(a, b) =>
+						new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime(),
+				)[0]
+			: null;
 		if (
-			activeContract?.invoices?.[0]?.amount &&
-			Number(activeContract.invoices[0].amount) > 0
+			latestInvoice?.amount &&
+			Number(latestInvoice.amount) > 0
 		) {
-			totalCycleRent = Number(activeContract.invoices[0].amount);
+			totalCycleRent = Number(latestInvoice.amount);
 		}
 
 		const dueDateDay = activeContract?.dueDateDay || 10;
@@ -755,8 +767,8 @@ export class TenantService {
 			"roomChangeMode" in input ? input.roomChangeMode : undefined;
 		const updatePendingInvoiceAmount =
 			"updatePendingInvoiceAmount" in input
-				? Boolean(input.updatePendingInvoiceAmount)
-				: false;
+				? input.updatePendingInvoiceAmount !== false
+				: true;
 		const newRentAmount = input.rent ? parseRupiah(input.rent) : undefined;
 
 		await this.tenantRepo.updateTenantWithContract(id, {
