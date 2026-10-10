@@ -291,6 +291,8 @@ export class TenantRepository {
 			startDate?: Date;
 			dueDateDay?: number;
 			roomChangeMode?: "CORRECTION" | "TRANSFER" | null;
+			updatePendingInvoiceAmount?: boolean;
+			newRentAmount?: number;
 		},
 	) {
 		return this.db.$transaction(
@@ -409,6 +411,50 @@ export class TenantRepository {
 									...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
 								},
 							});
+
+							// Sesuaikan tagihan PENDING periode berjalan jika diminta (Koreksi Typo)
+							if (
+								data.updatePendingInvoiceAmount &&
+								data.newRentAmount &&
+								data.newRentAmount > 0
+							) {
+								const now = new Date();
+								const currentMonth = now.getMonth() + 1;
+								const currentYear = now.getFullYear();
+
+								// 1. Cari invoice PENDING di periode berjalan (bulan & tahun sekarang)
+								const currentPendingInvoice = await tx.invoice.findFirst({
+									where: {
+										contractId: activeContract.id,
+										status: "PENDING",
+										periodMonth: currentMonth,
+										periodYear: currentYear,
+									},
+									orderBy: { createdAt: "desc" },
+								});
+
+								if (currentPendingInvoice) {
+									await tx.invoice.update({
+										where: { id: currentPendingInvoice.id },
+										data: { amount: data.newRentAmount },
+									});
+								} else {
+									// 2. Fallback: Jika baru mendaftar dan kontrak hanya punya 1 invoice dan statusnya PENDING
+									const contractInvoices = await tx.invoice.findMany({
+										where: { contractId: activeContract.id },
+										take: 2,
+									});
+									if (
+										contractInvoices.length === 1 &&
+										contractInvoices[0].status === "PENDING"
+									) {
+										await tx.invoice.update({
+											where: { id: contractInvoices[0].id },
+											data: { amount: data.newRentAmount },
+										});
+									}
+								}
+							}
 						}
 					} else if (data.billingCycle || data.startDate || data.dueDateDay) {
 						await tx.rentalContract.update({
@@ -419,6 +465,34 @@ export class TenantRepository {
 								...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
 							},
 						});
+
+						// Jika kamar tidak berubah tetapi tarif sewa diedit dan minta penyesuaian invoice pending
+						if (
+							data.updatePendingInvoiceAmount &&
+							data.newRentAmount &&
+							data.newRentAmount > 0
+						) {
+							const now = new Date();
+							const currentMonth = now.getMonth() + 1;
+							const currentYear = now.getFullYear();
+
+							const currentPendingInvoice = await tx.invoice.findFirst({
+								where: {
+									contractId: activeContract.id,
+									status: "PENDING",
+									periodMonth: currentMonth,
+									periodYear: currentYear,
+								},
+								orderBy: { createdAt: "desc" },
+							});
+
+							if (currentPendingInvoice) {
+								await tx.invoice.update({
+									where: { id: currentPendingInvoice.id },
+									data: { amount: data.newRentAmount },
+								});
+							}
+						}
 					}
 				}
 
