@@ -290,6 +290,7 @@ export class TenantRepository {
 			billingCycle?: BillingCycle;
 			startDate?: Date;
 			dueDateDay?: number;
+			roomChangeMode?: "CORRECTION" | "TRANSFER" | null;
 		},
 	) {
 		return this.db.$transaction(
@@ -333,7 +334,7 @@ export class TenantRepository {
 					},
 				});
 
-				// 2. Find active rental contract
+				// 3. Find active rental contract
 				const activeContract = await tx.rentalContract.findFirst({
 					where: {
 						tenantId,
@@ -344,28 +345,71 @@ export class TenantRepository {
 				if (activeContract) {
 					// If room changed
 					if (data.roomId && data.roomId !== activeContract.roomId) {
-						// Free previous room
+						// 3a. Verify target room exists & is not occupied by another tenant
+						const targetRoom = await tx.room.findUnique({
+							where: { id: data.roomId },
+						});
+						if (!targetRoom) {
+							throw new Error("Kamar tujuan tidak ditemukan.");
+						}
+						if (
+							targetRoom.status === "OCCUPIED" &&
+							targetRoom.id !== activeContract.roomId
+						) {
+							throw new Error(
+								`Kamar ${targetRoom.roomNumber} sudah ditempati oleh penghuni lain.`,
+							);
+						}
+
+						// 3b. Free previous room
 						await tx.room.update({
 							where: { id: activeContract.roomId },
 							data: { status: "VACANT" },
 						});
 
-						// Occupy new room
+						// 3c. Occupy new room
 						await tx.room.update({
 							where: { id: data.roomId },
 							data: { status: "OCCUPIED" },
 						});
 
-						// Update contract
-						await tx.rentalContract.update({
-							where: { id: activeContract.id },
-							data: {
-								roomId: data.roomId,
-								...(data.billingCycle && { billingCycle: data.billingCycle }),
-								...(data.startDate && { startDate: data.startDate }),
-								...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
-							},
-						});
+						// 3d. Update or recreate contract depending on roomChangeMode
+						if (data.roomChangeMode === "TRANSFER") {
+							// Mode Pindah Kamar Resmi: akhiri kontrak lama, buat kontrak baru
+							const now = new Date();
+							await tx.rentalContract.update({
+								where: { id: activeContract.id },
+								data: {
+									status: "TERMINATED",
+									endDate: now,
+								},
+							});
+
+							await tx.rentalContract.create({
+								data: {
+									roomId: data.roomId,
+									tenantId,
+									billingCycle:
+										data.billingCycle || activeContract.billingCycle,
+									startDate: data.startDate || now,
+									dueDateDay: data.dueDateDay ?? activeContract.dueDateDay,
+									status: "ACTIVE",
+								},
+							});
+						} else {
+							// Mode Koreksi Data (Default): perbarui kamar pada kontrak berjalan
+							await tx.rentalContract.update({
+								where: { id: activeContract.id },
+								data: {
+									roomId: data.roomId,
+									...(data.billingCycle && {
+										billingCycle: data.billingCycle,
+									}),
+									...(data.startDate && { startDate: data.startDate }),
+									...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
+								},
+							});
+						}
 					} else if (data.billingCycle || data.startDate || data.dueDateDay) {
 						await tx.rentalContract.update({
 							where: { id: activeContract.id },
