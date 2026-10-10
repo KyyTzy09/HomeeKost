@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import {
 	AlertCircle,
+	ArrowRightLeft,
 	CalendarDays,
 	Check,
 	CheckCircle2,
@@ -195,6 +196,7 @@ const FIELD_LABELS: Record<string, string> = {
 	emergencyPhone: "Nomor Kontak Darurat",
 	registrationDate: "Tanggal Pendaftaran",
 	agreement: "Persetujuan Formulir",
+	roomChangeMode: "Jenis Penanganan Kontrak",
 };
 
 export function TenantFormDialog({
@@ -272,6 +274,7 @@ export function TenantFormDialog({
 		ktpUrl?: string;
 		markPastPeriodsPaid?: boolean;
 		agreement?: boolean;
+		roomChangeMode?: "CORRECTION" | "TRANSFER";
 	}) => {
 		const autoDue =
 			val.dueDate ||
@@ -289,6 +292,7 @@ export function TenantFormDialog({
 				? val.emergencyPhone.replace(/[^0-9+]/g, "")
 				: "",
 			nik: (val.nik || "").replace(/[^0-9]/g, ""),
+			roomChangeMode: val.roomChangeMode || "CORRECTION",
 		};
 	};
 
@@ -323,6 +327,7 @@ export function TenantFormDialog({
 			ktpUrl: editingTenant?.ktpUrl ?? "",
 			markPastPeriodsPaid: true,
 			agreement: true,
+			roomChangeMode: "CORRECTION" as "CORRECTION" | "TRANSFER",
 		},
 		validators: {
 			onSubmit: ({ value }) => {
@@ -442,6 +447,7 @@ export function TenantFormDialog({
 				form.setFieldValue("ktpUrl", editingTenant.ktpUrl || "");
 				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
+				form.setFieldValue("roomChangeMode", "CORRECTION");
 				setKtpPreview(editingTenant.ktpUrl || null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -477,6 +483,7 @@ export function TenantFormDialog({
 				form.setFieldValue("ktpUrl", "");
 				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
+				form.setFieldValue("roomChangeMode", "CORRECTION");
 				setKtpPreview(null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -1142,133 +1149,239 @@ export function TenantFormDialog({
 						</div>
 					</div>
 
-					{/* Section C: Rincian Pendaftaran Kost (Hanya ditampilkan pada Pendaftaran Baru) */}
-					{!isEditing && (
-						<div className="border-t border-[#edf1ed] pt-3">
-							<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
-								C. Rincian Pendaftaran Kost
-							</h3>
-							<p className="text-[10px] text-[#737873] m-0 mb-3">
-								Detail kamar, durasi, dan kendaraan penghuni.
-							</p>
+					{/* Section C: Kamar & Rincian Sewa */}
+					<div className="border-t border-[#edf1ed] pt-3">
+						<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
+							{isEditing
+								? "C. Kamar & Rincian Sewa"
+								: "C. Rincian Pendaftaran Kost"}
+						</h3>
+						<p className="text-[10px] text-[#737873] m-0 mb-3">
+							{isEditing
+								? "Detail kamar, harga sewa, dan informasi kendaraan penghuni."
+								: "Detail kamar, durasi, dan kendaraan penghuni."}
+						</p>
 
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-								{/* Searchable Combobox for Room Selection */}
-								<form.Field
-									name="roomNo"
-									validators={{
-										onChange: ({ value }) =>
-											!value ? "Nomor kamar wajib dipilih" : undefined,
-									}}
-								>
-									{(field) => {
-										const errorMsg =
-											field.state.meta.errors[0] || formErrors.roomNo;
-										const hasError = Boolean(errorMsg);
-										return (
-											<div className="space-y-1 relative" ref={comboboxRef}>
-												<Label className="text-[11px] font-bold text-[#506257]">
-													Nomor Kamar <span className="text-[#b66b68]">*</span>
-												</Label>
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+							{/* Searchable Combobox for Room Selection */}
+							<form.Field
+								name="roomNo"
+								validators={{
+									onChange: ({ value }) =>
+										!value ? "Nomor kamar wajib dipilih" : undefined,
+								}}
+							>
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.roomNo;
+									const hasError = Boolean(errorMsg);
+									return (
+										<div className="space-y-1 relative" ref={comboboxRef}>
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Nomor Kamar <span className="text-[#b66b68]">*</span>
+											</Label>
 
-												{/* Trigger Button */}
-												<button
-													type="button"
-													onClick={() => setIsComboboxOpen((prev) => !prev)}
-													className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${hasError
-														? "border-[#b66b68]"
-														: "border-[#dfe7e0] hover:border-[#8fa594]"
-														}`}
-												>
-													<span>
-														{field.state.value ? (
-															<span className="font-semibold text-[#252925]">
-																Kamar {field.state.value}
-															</span>
+											{/* Trigger Button */}
+											<button
+												type="button"
+												onClick={() => setIsComboboxOpen((prev) => !prev)}
+												className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${hasError
+													? "border-[#b66b68]"
+													: "border-[#dfe7e0] hover:border-[#8fa594]"
+													}`}
+											>
+												<span>
+													{field.state.value ? (
+														<span className="font-semibold text-[#252925]">
+															Kamar {field.state.value}
+														</span>
+													) : (
+														<span className="text-[#8a958d]">
+															Pilih Kamar
+														</span>
+													)}
+												</span>
+												<ChevronsUpDown className="w-4 h-4 text-[#8a958d] shrink-0" />
+											</button>
+
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											)}
+
+											{/* Combobox Dropdown */}
+											{isComboboxOpen && (
+												<div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-[#dfe7e0] rounded-[12px] shadow-[0_10px_30px_rgba(30,45,35,0.12)] p-2 space-y-1.5 max-h-[260px] overflow-hidden flex flex-col">
+													{/* Search Input */}
+													<div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f5f8f5] border border-[#dce6df] rounded-[8px]">
+														<Search className="w-3.5 h-3.5 text-[#737873] shrink-0" />
+														<input
+															type="text"
+															autoFocus
+															value={roomQuery}
+															onChange={(e) => setRoomQuery(e.target.value)}
+															placeholder="Cari no kamar / tipe..."
+															className="w-full text-[11.5px] bg-transparent outline-none text-[#252925] placeholder:text-[#9aa09b]"
+														/>
+													</div>
+
+													{/* Room List */}
+													<div className="overflow-y-auto space-y-1 pr-1 flex-1">
+														{filteredRooms.length > 0 ? (
+															filteredRooms.map((room) => {
+																const isSelected =
+																	field.state.value === room.roomNo;
+																return (
+																	<button
+																		key={room.roomNo}
+																		type="button"
+																		onClick={() => {
+																			clearFieldError("roomNo");
+																			handleSelectRoom(room);
+																		}}
+																		className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${isSelected
+																			? "bg-[#edf4ee] text-[#3e5646] font-bold"
+																			: "hover:bg-[#f6faf6] text-[#37443c]"
+																			}`}
+																	>
+																		<div className="flex items-center gap-2">
+																			<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
+																			<span>
+																				<strong>Kamar {room.roomNo}</strong> (
+																				{room.type})
+																			</span>
+																		</div>
+																		<div className="flex items-center gap-2">
+																			<span className="text-[11px] text-[#55705d] font-mono">
+																				{formatRupiah(room.price)}/bln
+																			</span>
+																			{isSelected && (
+																				<Check className="w-3.5 h-3.5 text-[#4f6958]" />
+																			)}
+																		</div>
+																	</button>
+																);
+															})
 														) : (
-															<span className="text-[#8a958d]">
-																Pilih Kamar
-															</span>
+															<div className="py-4 px-2 text-center text-[11px] text-[#8a958d]">
+																{roomOptions.length === 0
+																	? "Tidak ada kamar kosong yang tersedia di properti ini."
+																	: "Kamar tidak ditemukan."}
+															</div>
 														)}
+													</div>
+												</div>
+											)}
+										</div>
+									);
+								}}
+							</form.Field>
+
+							{/* Room Change Context-Aware Card (Ditampilkan saat kamar diubah pada mode Edit) */}
+							<form.Subscribe selector={(state) => state.values.roomNo}>
+								{(currentRoomNo) => {
+									const isRoomChanged =
+										isEditing &&
+										Boolean(editingTenant?.roomNo) &&
+										Boolean(currentRoomNo) &&
+										currentRoomNo !== editingTenant?.roomNo;
+
+									if (!isRoomChanged) return null;
+
+									const targetRoom = roomOptions.find(
+										(r) => r.roomNo === currentRoomNo,
+									);
+
+									return (
+										<div className="col-span-1 sm:col-span-2 bg-[#fdfbf7] border border-[#d8e4da] rounded-[12px] p-3.5 space-y-2.5 shadow-sm animate-in fade-in duration-200">
+											<div className="flex flex-wrap items-center justify-between gap-2">
+												<div className="flex items-center gap-2 text-[#2d4334] font-bold text-[12px]">
+													<ArrowRightLeft className="w-4 h-4 text-[#4f6958] shrink-0" />
+													<span>Perubahan Kamar Terdeteksi</span>
+												</div>
+												<div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#4f6958] bg-[#eef4ef] px-2.5 py-0.5 rounded-full border border-[#d3e2d6]">
+													<span>Kamar {editingTenant?.roomNo}</span>
+													<span>➔</span>
+													<span>
+														Kamar {currentRoomNo}
+														{targetRoom ? ` (${targetRoom.type})` : ""}
 													</span>
-													<ChevronsUpDown className="w-4 h-4 text-[#8a958d] shrink-0" />
-												</button>
+												</div>
+											</div>
 
-												{hasError && (
-													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{errorMsg}
-													</p>
-												)}
+											<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
+												Pilih mode penanganan mutasi kamar untuk penghuni ini. Tagihan periode berikutnya akan otomatis menggunakan tarif kamar baru.
+											</p>
 
-												{/* Combobox Dropdown */}
-												{isComboboxOpen && (
-													<div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 bg-white border border-[#dfe7e0] rounded-[12px] shadow-[0_10px_30px_rgba(30,45,35,0.12)] p-2 space-y-1.5 max-h-[260px] overflow-hidden flex flex-col">
-														{/* Search Input */}
-														<div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f5f8f5] border border-[#dce6df] rounded-[8px]">
-															<Search className="w-3.5 h-3.5 text-[#737873] shrink-0" />
+											<form.Field name="roomChangeMode">
+												{(modeField) => (
+													<div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+														{/* Option 1: CORRECTION */}
+														<label
+															className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																modeField.state.value === "CORRECTION"
+																	? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
+																	: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+															}`}
+														>
 															<input
-																type="text"
-																autoFocus
-																value={roomQuery}
-																onChange={(e) => setRoomQuery(e.target.value)}
-																placeholder="Cari no kamar / tipe..."
-																className="w-full text-[11.5px] bg-transparent outline-none text-[#252925] placeholder:text-[#9aa09b]"
+																type="radio"
+																name="roomChangeMode"
+																value="CORRECTION"
+																checked={modeField.state.value === "CORRECTION"}
+																onChange={() =>
+																	modeField.handleChange("CORRECTION")
+																}
+																className="accent-[#4f6958] mt-0.5"
 															/>
-														</div>
+															<div className="space-y-0.5">
+																<span className="text-[11.5px] font-bold block text-[#24342b]">
+																	Koreksi Salah Input (Default)
+																</span>
+																<p className="text-[10px] text-[#55695a] leading-tight m-0">
+																	Gunakan jika salah pilih saat input awal. Nomor kamar di kontrak aktif diubah tanpa memutus kontrak atau mengubah riwayat invoice.
+																</p>
+															</div>
+														</label>
 
-														{/* Room List */}
-														<div className="overflow-y-auto space-y-1 pr-1 flex-1">
-															{filteredRooms.length > 0 ? (
-																filteredRooms.map((room) => {
-																	const isSelected =
-																		field.state.value === room.roomNo;
-																	return (
-																		<button
-																			key={room.roomNo}
-																			type="button"
-																			onClick={() => {
-																				clearFieldError("roomNo");
-																				handleSelectRoom(room);
-																			}}
-																			className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${isSelected
-																				? "bg-[#edf4ee] text-[#3e5646] font-bold"
-																				: "hover:bg-[#f6faf6] text-[#37443c]"
-																				}`}
-																		>
-																			<div className="flex items-center gap-2">
-																				<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
-																				<span>
-																					<strong>Kamar {room.roomNo}</strong> (
-																					{room.type})
-																				</span>
-																			</div>
-																			<div className="flex items-center gap-2">
-																				<span className="text-[11px] text-[#55705d] font-mono">
-																					{formatRupiah(room.price)}/bln
-																				</span>
-																				{isSelected && (
-																					<Check className="w-3.5 h-3.5 text-[#4f6958]" />
-																				)}
-																			</div>
-																		</button>
-																	);
-																})
-															) : (
-																<div className="py-4 px-2 text-center text-[11px] text-[#8a958d]">
-																	{roomOptions.length === 0
-																		? "Tidak ada kamar kosong yang tersedia di properti ini."
-																		: "Kamar tidak ditemukan."}
-																</div>
-															)}
-														</div>
+														{/* Option 2: TRANSFER */}
+														<label
+															className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																modeField.state.value === "TRANSFER"
+																	? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
+																	: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+															}`}
+														>
+															<input
+																type="radio"
+																name="roomChangeMode"
+																value="TRANSFER"
+																checked={modeField.state.value === "TRANSFER"}
+																onChange={() =>
+																	modeField.handleChange("TRANSFER")
+																}
+																className="accent-[#4f6958] mt-0.5"
+															/>
+															<div className="space-y-0.5">
+																<span className="text-[11.5px] font-bold block text-[#24342b]">
+																	Pindah Kamar Resmi
+																</span>
+																<p className="text-[10px] text-[#55695a] leading-tight m-0">
+																	Gunakan jika penghuni mutasi fisik ke kamar baru. Kontrak lama ditutup (TERMINATED) dan kontrak baru diterbitkan per hari ini.
+																</p>
+															</div>
+														</label>
 													</div>
 												)}
-											</div>
-										);
-									}}
-								</form.Field>
+											</form.Field>
+										</div>
+									);
+								}}
+							</form.Subscribe>
 
-								{/* Lama Sewa Radio */}
+							{/* Lama Sewa Radio (Hanya Pendaftaran Baru) */}
+							{!isEditing && (
 								<form.Field name="duration">
 									{(field) => {
 										const errorMsg =
@@ -1321,239 +1434,244 @@ export function TenantFormDialog({
 										);
 									}}
 								</form.Field>
+							)}
 
-								{/* Harga Total Sewa (Auto-calculated, Editable) */}
-								<form.Field
-									name="rent"
-									validators={{
-										onChange: ({ value }) =>
-											!value ? "Harga sewa wajib diisi" : undefined,
-									}}
-								>
-									{(field) => {
-										const errorMsg =
-											field.state.meta.errors[0] || formErrors.rent;
-										const hasError = Boolean(errorMsg);
-										return (
-											<div className="space-y-1">
-												<div className="flex items-center justify-between">
-													<Label className="text-[11px] font-bold text-[#506257]">
-														Harga Total Sewa
-													</Label>
-												</div>
-												<Input
-													value={field.state.value}
-													inputMode="numeric"
-													onChange={(e) => {
-														clearFieldError("rent");
-														const digits = e.target.value.replace(
-															/[^0-9]/g,
-															"",
-														);
-														field.handleChange(
-															digits ? formatRupiah(Number(digits)) : "",
-														);
-													}}
-													placeholder="Rp850.000"
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-														}`}
-												/>
-												{hasError && (
-													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{errorMsg}
-													</p>
-												)}
-											</div>
-										);
-									}}
-								</form.Field>
-
-								{/* Tanggal Mulai Sewa (Input Date) */}
-								<form.Field
-									name="startDate"
-									validators={{
-										onChange: ({ value }) =>
-											!value ? "Tanggal mulai sewa wajib diisi" : undefined,
-									}}
-								>
-									{(field) => {
-										const errorMsg =
-											field.state.meta.errors[0] || formErrors.startDate;
-										const hasError = Boolean(errorMsg);
-										return (
-											<div className="space-y-1">
-												<Label className="text-[11px] font-bold text-[#506257]">
-													Tanggal Mulai Sewa
-												</Label>
-												<Input
-													type="date"
-													value={field.state.value}
-													onChange={(e) => {
-														clearFieldError("startDate");
-														handleChangeStartDate(e.target.value);
-													}}
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-														}`}
-												/>
-												{hasError && (
-													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-														{errorMsg}
-													</p>
-												)}
-											</div>
-										);
-									}}
-								</form.Field>
-
-								{/* Multi-Period or Initial Period Settlement Option */}
-								<form.Subscribe selector={(state) => state.values.startDate}>
-									{(startDateValue) => {
-										const isPast = Boolean(
-											startDateValue &&
-											new Date(startDateValue) < new Date(todayStr),
-										);
-
-										return (
-											<div className="col-span-1 sm:col-span-2 bg-[#f4f8f4] border border-[#cfdfd1] rounded-[12px] p-3 text-[11.5px] space-y-2 mt-1">
-												<div className="flex items-center gap-2 text-[#314a38] font-bold">
-													{isPast ? (
-														<History className="w-4 h-4 text-[#4f6958]" />
-													) : (
-														<CheckCircle2 className="w-4 h-4 text-[#4f6958]" />
-													)}
-													<span>
-														{isPast
-															? `Deteksi Migrasi Data Lampau (Mulai: ${startDateValue})`
-															: "Status Pembayaran Sewa Periode Pertama"}
-													</span>
-												</div>
-												<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
-													{isPast
-														? "Tanggal mulai sewa berada di masa lalu. Sistem dapat otomatis mencatat seluruh periode sewa lampau yang telah berjalan sejak tanggal tersebut sebagai LUNAS (PAID) dalam 1 kali simpan."
-														: "Centang opsi ini jika penghuni langsung melunasi tagihan sewa periode awal saat pendaftaran kamar (otomatis berstatus LUNAS & tercatat di kas)."}
-												</p>
-												<form.Field name="markPastPeriodsPaid">
-													{(pastField) => (
-														<label className="flex items-center gap-2 cursor-pointer pt-1 font-semibold text-[#273a2d]">
-															<input
-																type="checkbox"
-																checked={Boolean(pastField.state.value)}
-																onChange={(e) =>
-																	pastField.handleChange(e.target.checked)
-																}
-																className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer"
-															/>
-															<span>
-																{isPast
-																	? "Tandai semua periode sewa lampau sebagai LUNAS"
-																	: "Tandai tagihan sewa pertama sebagai LUNAS (Sudah Bayar)"}
-															</span>
-														</label>
-													)}
-												</form.Field>
-											</div>
-										);
-									}}
-								</form.Subscribe>
-
-								{/* Tanggal Jatuh Tempo (Read-Only Dynamic Preview Card) */}
-								<form.Subscribe
-									selector={(state) => [
-										state.values.startDate,
-										state.values.duration,
-										state.values.dueDate,
-									]}
-								>
-									{([startDateVal, durationVal, dueDateVal]) => {
-										const currentDuration =
-											(durationVal as RentDuration) || "Bulanan";
-										const months = getDurationMonths(currentDuration);
-										const effectiveDueDate =
-											(dueDateVal as string) ||
-											calculateDueDate(
-												startDateVal as string,
-												currentDuration,
-											);
-
-										const formattedDue = effectiveDueDate
-											? formatDate(effectiveDueDate)
-											: "Pilih tanggal mulai sewa";
-
-										return (
-											<div className="space-y-1">
-												<Label className="text-[11px] font-bold text-[#506257]">
-													Tanggal Jatuh Tempo Berikutnya
-												</Label>
-												<div className="h-[41px] border border-[#d6e2d9] rounded-[11px] px-3 bg-[#f4f7f4] flex items-center justify-between">
-													<div className="flex items-center gap-2 min-w-0">
-														<CalendarDays className="w-4 h-4 text-[#4f6958] shrink-0" />
-														<span className="text-[12px] font-bold text-[#233528] truncate">
-															{formattedDue}
-														</span>
-													</div>
-													<span className="text-[10px] font-medium text-[#4f6958] bg-[#e4ede6] px-2 py-0.5 rounded-[6px] shrink-0">
-														+{months} Bulan
-													</span>
-												</div>
-												<p className="text-[9.5px] text-[#718276] leading-tight m-0">
-													Dihitung otomatis dari tanggal mulai sewa &amp; durasi.
-												</p>
-											</div>
-										);
-									}}
-								</form.Subscribe>
-
-								{/* No Kendaraan */}
-								<form.Field name="vehicle">
-									{(field) => (
+							{/* Harga Total Sewa (Auto-calculated, Editable) */}
+							<form.Field
+								name="rent"
+								validators={{
+									onChange: ({ value }) =>
+										!value ? "Harga sewa wajib diisi" : undefined,
+								}}
+							>
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.rent;
+									const hasError = Boolean(errorMsg);
+									return (
 										<div className="space-y-1">
-											<Label className="text-[11px] font-bold text-[#506257]">
-												No. Kendaraan (jika ada)
-											</Label>
-											<Input
-												value={field.state.value}
-												onChange={(e) => field.handleChange(e.target.value)}
-												placeholder="B 1234 ABC"
-												className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
-											/>
-										</div>
-									)}
-								</form.Field>
-
-								{/* Deposit */}
-								<form.Field name="deposit">
-									{(field) => (
-										<div className="space-y-1">
-											<Label className="text-[11px] font-bold text-[#506257]">
-												Deposit
-											</Label>
+											<div className="flex items-center justify-between">
+												<Label className="text-[11px] font-bold text-[#506257]">
+													{isEditing ? "Tarif Sewa Kamar" : "Harga Total Sewa"}
+												</Label>
+											</div>
 											<Input
 												value={field.state.value}
 												inputMode="numeric"
 												onChange={(e) => {
-													const digits = e.target.value.replace(/[^0-9]/g, "");
+													clearFieldError("rent");
+													const digits = e.target.value.replace(
+														/[^0-9]/g,
+														"",
+													);
 													field.handleChange(
 														digits ? formatRupiah(Number(digits)) : "",
 													);
 												}}
-												placeholder="Contoh: Rp500.000 (opsional)"
-												className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
+												placeholder="Rp850.000"
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 											/>
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											)}
 										</div>
-									)}
-								</form.Field>
-							</div>
-						</div>
-					)}
+									);
+								}}
+							</form.Field>
 
-					{/* Section D (atau C saat Edit): Kontak Darurat */}
+							{/* Tanggal Mulai Sewa & Settlement Option & Due Date Preview (Hanya Pendaftaran Baru) */}
+							{!isEditing && (
+								<>
+									{/* Tanggal Mulai Sewa (Input Date) */}
+									<form.Field
+										name="startDate"
+										validators={{
+											onChange: ({ value }) =>
+												!value ? "Tanggal mulai sewa wajib diisi" : undefined,
+										}}
+									>
+										{(field) => {
+											const errorMsg =
+												field.state.meta.errors[0] || formErrors.startDate;
+											const hasError = Boolean(errorMsg);
+											return (
+												<div className="space-y-1">
+													<Label className="text-[11px] font-bold text-[#506257]">
+														Tanggal Mulai Sewa
+													</Label>
+													<Input
+														type="date"
+														value={field.state.value}
+														onChange={(e) => {
+															clearFieldError("startDate");
+															handleChangeStartDate(e.target.value);
+														}}
+														className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+															}`}
+													/>
+													{hasError && (
+														<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+															{errorMsg}
+														</p>
+													)}
+												</div>
+											);
+										}}
+									</form.Field>
+
+									{/* Multi-Period or Initial Period Settlement Option */}
+									<form.Subscribe selector={(state) => state.values.startDate}>
+										{(startDateValue) => {
+											const isPast = Boolean(
+												startDateValue &&
+												new Date(startDateValue) < new Date(todayStr),
+											);
+
+											return (
+												<div className="col-span-1 sm:col-span-2 bg-[#f4f8f4] border border-[#cfdfd1] rounded-[12px] p-3 text-[11.5px] space-y-2 mt-1">
+													<div className="flex items-center gap-2 text-[#314a38] font-bold">
+														{isPast ? (
+															<History className="w-4 h-4 text-[#4f6958]" />
+														) : (
+															<CheckCircle2 className="w-4 h-4 text-[#4f6958]" />
+														)}
+														<span>
+															{isPast
+																? `Deteksi Migrasi Data Lampau (Mulai: ${startDateValue})`
+																: "Status Pembayaran Sewa Periode Pertama"}
+														</span>
+													</div>
+													<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
+														{isPast
+															? "Tanggal mulai sewa berada di masa lalu. Sistem dapat otomatis mencatat seluruh periode sewa lampau yang telah berjalan sejak tanggal tersebut sebagai LUNAS (PAID) dalam 1 kali simpan."
+															: "Centang opsi ini jika penghuni langsung melunasi tagihan sewa periode awal saat pendaftaran kamar (otomatis berstatus LUNAS & tercatat di kas)."}
+													</p>
+													<form.Field name="markPastPeriodsPaid">
+														{(pastField) => (
+															<label className="flex items-center gap-2 cursor-pointer pt-1 font-semibold text-[#273a2d]">
+																<input
+																	type="checkbox"
+																	checked={Boolean(pastField.state.value)}
+																	onChange={(e) =>
+																		pastField.handleChange(e.target.checked)
+																	}
+																	className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer"
+																/>
+																<span>
+																	{isPast
+																		? "Tandai semua periode sewa lampau sebagai LUNAS"
+																		: "Tandai tagihan sewa pertama sebagai LUNAS (Sudah Bayar)"}
+																</span>
+															</label>
+														)}
+													</form.Field>
+												</div>
+											);
+										}}
+									</form.Subscribe>
+
+									{/* Tanggal Jatuh Tempo (Read-Only Dynamic Preview Card) */}
+									<form.Subscribe
+										selector={(state) => [
+											state.values.startDate,
+											state.values.duration,
+											state.values.dueDate,
+										]}
+									>
+										{([startDateVal, durationVal, dueDateVal]) => {
+											const currentDuration =
+												(durationVal as RentDuration) || "Bulanan";
+											const months = getDurationMonths(currentDuration);
+											const effectiveDueDate =
+												(dueDateVal as string) ||
+												calculateDueDate(
+													startDateVal as string,
+													currentDuration,
+												);
+
+											const formattedDue = effectiveDueDate
+												? formatDate(effectiveDueDate)
+												: "Pilih tanggal mulai sewa";
+
+											return (
+												<div className="space-y-1">
+													<Label className="text-[11px] font-bold text-[#506257]">
+														Tanggal Jatuh Tempo Berikutnya
+													</Label>
+													<div className="h-[41px] border border-[#d6e2d9] rounded-[11px] px-3 bg-[#f4f7f4] flex items-center justify-between">
+														<div className="flex items-center gap-2 min-w-0">
+															<CalendarDays className="w-4 h-4 text-[#4f6958] shrink-0" />
+															<span className="text-[12px] font-bold text-[#233528] truncate">
+																{formattedDue}
+															</span>
+														</div>
+														<span className="text-[10px] font-medium text-[#4f6958] bg-[#e4ede6] px-2 py-0.5 rounded-[6px] shrink-0">
+															+{months} Bulan
+														</span>
+													</div>
+													<p className="text-[9.5px] text-[#718276] leading-tight m-0">
+														Dihitung otomatis dari tanggal mulai sewa &amp; durasi.
+													</p>
+												</div>
+											);
+										}}
+									</form.Subscribe>
+								</>
+							)}
+
+							{/* No Kendaraan */}
+							<form.Field name="vehicle">
+								{(field) => (
+									<div className="space-y-1">
+										<Label className="text-[11px] font-bold text-[#506257]">
+											No. Kendaraan (jika ada)
+										</Label>
+										<Input
+											value={field.state.value}
+											onChange={(e) => field.handleChange(e.target.value)}
+											placeholder="B 1234 ABC"
+											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
+										/>
+									</div>
+								)}
+							</form.Field>
+
+							{/* Deposit */}
+							<form.Field name="deposit">
+								{(field) => (
+									<div className="space-y-1">
+										<Label className="text-[11px] font-bold text-[#506257]">
+											Deposit
+										</Label>
+										<Input
+											value={field.state.value}
+											inputMode="numeric"
+											onChange={(e) => {
+												const digits = e.target.value.replace(/[^0-9]/g, "");
+												field.handleChange(
+													digits ? formatRupiah(Number(digits)) : "",
+												);
+											}}
+											placeholder="Contoh: Rp500.000 (opsional)"
+											className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]"
+										/>
+									</div>
+								)}
+							</form.Field>
+						</div>
+					</div>
+
+					{/* Section D: Kontak Darurat */}
 					<div className="border-t border-[#edf1ed] pt-3">
 						<h3 className="text-[13px] font-bold text-[#24342b] m-0 mb-0.5">
-							{isEditing ? "C. Kontak Darurat" : "D. Kontak Darurat"}
+							D. Kontak Darurat
 						</h3>
 						<p className="text-[10px] text-[#737873] m-0 mb-3">
 							Kontak yang dapat dihubungi jika terjadi keadaan darurat.

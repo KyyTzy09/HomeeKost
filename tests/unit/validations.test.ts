@@ -92,6 +92,43 @@ describe("Zod Validation Schemas", () => {
 			const result = updateTenantSchema.safeParse(invalidUpdate);
 			expect(result.success).toBe(false);
 		});
+
+		it("harus meloloskan perubahan kamar dengan mode CORRECTION dan TRANSFER", () => {
+			const updateCorrection = {
+				name: "Budi Santoso",
+				nik: "3302142404090006",
+				phone: "6281234567890",
+				occupationStatus: "Karyawan" as const,
+				roomNo: "B-02",
+				roomChangeMode: "CORRECTION" as const,
+			};
+			const resCorrection = updateTenantSchema.safeParse(updateCorrection);
+			expect(resCorrection.success).toBe(true);
+
+			const updateTransfer = {
+				name: "Budi Santoso",
+				nik: "3302142404090006",
+				phone: "6281234567890",
+				occupationStatus: "Karyawan" as const,
+				roomNo: "C-05",
+				roomChangeMode: "TRANSFER" as const,
+			};
+			const resTransfer = updateTenantSchema.safeParse(updateTransfer);
+			expect(resTransfer.success).toBe(true);
+		});
+
+		it("harus menolak roomChangeMode selain CORRECTION atau TRANSFER", () => {
+			const invalidMode = {
+				name: "Budi Santoso",
+				nik: "3302142404090006",
+				phone: "6281234567890",
+				occupationStatus: "Karyawan" as const,
+				roomNo: "B-02",
+				roomChangeMode: "INVALID_MODE",
+			};
+			const res = updateTenantSchema.safeParse(invalidMode);
+			expect(res.success).toBe(false);
+		});
 	});
 
 	describe("roomSchema", () => {

@@ -751,6 +751,8 @@ export class TenantService {
 		const emergencyPhoneClean = input.emergencyPhone
 			? sanitizePhone(input.emergencyPhone)
 			: null;
+		const roomChangeMode =
+			"roomChangeMode" in input ? input.roomChangeMode : undefined;
 
 		await this.tenantRepo.updateTenantWithContract(id, {
 			name: input.name,
@@ -773,6 +775,7 @@ export class TenantService {
 			billingCycle,
 			startDate,
 			dueDateDay,
+			roomChangeMode,
 		});
 
 		const fullTenant = await this.getTenantById(id);
