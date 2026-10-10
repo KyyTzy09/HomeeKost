@@ -753,6 +753,11 @@ export class TenantService {
 			: null;
 		const roomChangeMode =
 			"roomChangeMode" in input ? input.roomChangeMode : undefined;
+		const updatePendingInvoiceAmount =
+			"updatePendingInvoiceAmount" in input
+				? Boolean(input.updatePendingInvoiceAmount)
+				: false;
+		const newRentAmount = input.rent ? parseRupiah(input.rent) : undefined;
 
 		await this.tenantRepo.updateTenantWithContract(id, {
 			name: input.name,
@@ -776,6 +781,8 @@ export class TenantService {
 			startDate,
 			dueDateDay,
 			roomChangeMode,
+			updatePendingInvoiceAmount,
+			newRentAmount,
 		});
 
 		const fullTenant = await this.getTenantById(id);

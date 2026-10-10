@@ -197,6 +197,7 @@ const FIELD_LABELS: Record<string, string> = {
 	registrationDate: "Tanggal Pendaftaran",
 	agreement: "Persetujuan Formulir",
 	roomChangeMode: "Jenis Penanganan Kontrak",
+	updatePendingInvoiceAmount: "Penyesuaian Tagihan Belum Lunas",
 };
 
 export function TenantFormDialog({
@@ -275,6 +276,7 @@ export function TenantFormDialog({
 		markPastPeriodsPaid?: boolean;
 		agreement?: boolean;
 		roomChangeMode?: "CORRECTION" | "TRANSFER";
+		updatePendingInvoiceAmount?: boolean;
 	}) => {
 		const autoDue =
 			val.dueDate ||
@@ -293,6 +295,7 @@ export function TenantFormDialog({
 				: "",
 			nik: (val.nik || "").replace(/[^0-9]/g, ""),
 			roomChangeMode: val.roomChangeMode || "CORRECTION",
+			updatePendingInvoiceAmount: val.updatePendingInvoiceAmount !== false,
 		};
 	};
 
@@ -328,6 +331,7 @@ export function TenantFormDialog({
 			markPastPeriodsPaid: true,
 			agreement: true,
 			roomChangeMode: "CORRECTION" as "CORRECTION" | "TRANSFER",
+			updatePendingInvoiceAmount: true,
 		},
 		validators: {
 			onSubmit: ({ value }) => {
@@ -448,6 +452,7 @@ export function TenantFormDialog({
 				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
 				form.setFieldValue("roomChangeMode", "CORRECTION");
+				form.setFieldValue("updatePendingInvoiceAmount", true);
 				setKtpPreview(editingTenant.ktpUrl || null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -1316,62 +1321,104 @@ export function TenantFormDialog({
 
 											<form.Field name="roomChangeMode">
 												{(modeField) => (
-													<div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
-														{/* Option 1: CORRECTION */}
-														<label
-															className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
-																modeField.state.value === "CORRECTION"
-																	? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
-																	: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
-															}`}
-														>
-															<input
-																type="radio"
-																name="roomChangeMode"
-																value="CORRECTION"
-																checked={modeField.state.value === "CORRECTION"}
-																onChange={() =>
-																	modeField.handleChange("CORRECTION")
-																}
-																className="accent-[#4f6958] mt-0.5"
-															/>
-															<div className="space-y-0.5">
-																<span className="text-[11.5px] font-bold block text-[#24342b]">
-																	Koreksi Salah Input (Default)
-																</span>
-																<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																	Gunakan jika salah pilih saat input awal. Nomor kamar di kontrak aktif diubah tanpa memutus kontrak atau mengubah riwayat invoice.
-																</p>
-															</div>
-														</label>
+													<div className="space-y-2 pt-0.5">
+														<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+															{/* Option 1: CORRECTION */}
+															<label
+																className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																	modeField.state.value === "CORRECTION"
+																		? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
+																		: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+																}`}
+															>
+																<input
+																	type="radio"
+																	name="roomChangeMode"
+																	value="CORRECTION"
+																	checked={modeField.state.value === "CORRECTION"}
+																	onChange={() =>
+																		modeField.handleChange("CORRECTION")
+																	}
+																	className="accent-[#4f6958] mt-0.5"
+																/>
+																<div className="space-y-0.5">
+																	<span className="text-[11.5px] font-bold block text-[#24342b]">
+																		Koreksi Salah Input (Default)
+																	</span>
+																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
+																		Gunakan jika salah pilih saat input awal. Nomor kamar di kontrak aktif diubah tanpa memutus kontrak atau mengubah riwayat invoice.
+																	</p>
+																</div>
+															</label>
 
-														{/* Option 2: TRANSFER */}
-														<label
-															className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
-																modeField.state.value === "TRANSFER"
-																	? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
-																	: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
-															}`}
-														>
-															<input
-																type="radio"
-																name="roomChangeMode"
-																value="TRANSFER"
-																checked={modeField.state.value === "TRANSFER"}
-																onChange={() =>
-																	modeField.handleChange("TRANSFER")
-																}
-																className="accent-[#4f6958] mt-0.5"
-															/>
-															<div className="space-y-0.5">
-																<span className="text-[11.5px] font-bold block text-[#24342b]">
-																	Pindah Kamar Resmi
-																</span>
-																<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																	Gunakan jika penghuni mutasi fisik ke kamar baru. Kontrak lama ditutup (TERMINATED) dan kontrak baru diterbitkan per hari ini.
-																</p>
-															</div>
-														</label>
+															{/* Option 2: TRANSFER */}
+															<label
+																className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																	modeField.state.value === "TRANSFER"
+																		? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
+																		: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+																}`}
+															>
+																<input
+																	type="radio"
+																	name="roomChangeMode"
+																	value="TRANSFER"
+																	checked={modeField.state.value === "TRANSFER"}
+																	onChange={() =>
+																		modeField.handleChange("TRANSFER")
+																	}
+																	className="accent-[#4f6958] mt-0.5"
+																/>
+																<div className="space-y-0.5">
+																	<span className="text-[11.5px] font-bold block text-[#24342b]">
+																		Pindah Kamar Resmi
+																	</span>
+																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
+																		Gunakan jika penghuni mutasi fisik ke kamar baru. Kontrak lama ditutup (TERMINATED) dan kontrak baru diterbitkan per hari ini.
+																	</p>
+																</div>
+															</label>
+														</div>
+
+														{/* Penyesuaian Tagihan Belum Lunas Periode Berjalan */}
+														{modeField.state.value === "CORRECTION" && (
+															<form.Field name="updatePendingInvoiceAmount">
+																{(invField) => {
+																	const oldRoomPrice = roomOptions.find(
+																		(r) => r.roomNo === editingTenant?.roomNo,
+																	)?.price;
+																	const newRoomPrice = targetRoom?.price;
+																	const priceDiffers =
+																		oldRoomPrice != null &&
+																		newRoomPrice != null &&
+																		oldRoomPrice !== newRoomPrice;
+
+																	return (
+																		<label className="flex items-start gap-2 p-2 bg-white/80 rounded-[8px] border border-[#dbe6de] cursor-pointer text-[#324536]">
+																			<input
+																				type="checkbox"
+																				checked={Boolean(invField.state.value)}
+																				onChange={(e) =>
+																					invField.handleChange(e.target.checked)
+																				}
+																				className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer mt-0.5 shrink-0"
+																			/>
+																			<div className="text-[11px] leading-tight space-y-0.5">
+																				<span className="font-semibold block text-[#25392b]">
+																					Sesuaikan nominal tagihan belum bayar (Pending) bulan ini ke tarif baru
+																					{priceDiffers
+																						? ` (${formatRupiah(oldRoomPrice)} ➔ ${formatRupiah(newRoomPrice)})`
+																						: ""}
+																				</span>
+																				<span className="text-[9.5px] text-[#6d7d71] block">
+																					Hanya berlaku untuk tagihan periode berjalan yang belum lunas. Tagihan bulan-bulan lampau tidak akan diubah.
+																				</span>
+																			</div>
+																		</label>
+																	);
+																}}
+															</form.Field>
+														)}
 													</div>
 												)}
 											</form.Field>

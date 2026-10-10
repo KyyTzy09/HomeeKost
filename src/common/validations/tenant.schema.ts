@@ -77,6 +77,7 @@ export const updateTenantSchema = tenantSchema.extend({
 	registrationDate: z.string().nullable().optional(),
 	agreement: z.boolean().nullable().optional(),
 	roomChangeMode: z.enum(["CORRECTION", "TRANSFER"]).nullable().optional(),
+	updatePendingInvoiceAmount: z.boolean().nullable().optional(),
 });
 
 export type UpdateTenantFormValues = z.infer<typeof updateTenantSchema>;

@@ -93,7 +93,7 @@ describe("Zod Validation Schemas", () => {
 			expect(result.success).toBe(false);
 		});
 
-		it("harus meloloskan perubahan kamar dengan mode CORRECTION dan TRANSFER", () => {
+		it("harus meloloskan perubahan kamar dengan mode CORRECTION dan TRANSFER serta flag updatePendingInvoiceAmount", () => {
 			const updateCorrection = {
 				name: "Budi Santoso",
 				nik: "3302142404090006",
@@ -101,6 +101,7 @@ describe("Zod Validation Schemas", () => {
 				occupationStatus: "Karyawan" as const,
 				roomNo: "B-02",
 				roomChangeMode: "CORRECTION" as const,
+				updatePendingInvoiceAmount: true,
 			};
 			const resCorrection = updateTenantSchema.safeParse(updateCorrection);
 			expect(resCorrection.success).toBe(true);
@@ -112,6 +113,7 @@ describe("Zod Validation Schemas", () => {
 				occupationStatus: "Karyawan" as const,
 				roomNo: "C-05",
 				roomChangeMode: "TRANSFER" as const,
+				updatePendingInvoiceAmount: false,
 			};
 			const resTransfer = updateTenantSchema.safeParse(updateTransfer);
 			expect(resTransfer.success).toBe(true);
