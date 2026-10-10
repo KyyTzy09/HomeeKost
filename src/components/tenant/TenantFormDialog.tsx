@@ -1405,13 +1405,13 @@ export function TenantFormDialog({
 																			/>
 																			<div className="text-[11px] leading-tight space-y-0.5">
 																				<span className="font-semibold block text-[#25392b]">
-																					Sesuaikan nominal tagihan belum bayar (Pending) bulan ini ke tarif baru
+																					Sesuaikan nominal tagihan &amp; catatan kas bulan ini ke tarif baru
 																					{priceDiffers
 																						? ` (${formatRupiah(oldRoomPrice)} ➔ ${formatRupiah(newRoomPrice)})`
 																						: ""}
 																				</span>
 																				<span className="text-[9.5px] text-[#6d7d71] block">
-																					Hanya berlaku untuk tagihan periode berjalan yang belum lunas. Tagihan bulan-bulan lampau tidak akan diubah.
+																					Otomatis mengoreksi nominal tagihan dan pembukuan kas masuk periode berjalan agar laporan keuangan tidak selisih. Tagihan bulan-bulan lampau tidak akan diubah.
 																				</span>
 																			</div>
 																		</label>
