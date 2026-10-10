@@ -769,6 +769,10 @@ export class TenantService {
 			"updatePendingInvoiceAmount" in input
 				? input.updatePendingInvoiceAmount !== false
 				: true;
+		const createDifferenceInvoice =
+			"createDifferenceInvoice" in input
+				? input.createDifferenceInvoice !== false
+				: true;
 		const newRentAmount = input.rent ? parseRupiah(input.rent) : undefined;
 
 		await this.tenantRepo.updateTenantWithContract(id, {
@@ -794,6 +798,7 @@ export class TenantService {
 			dueDateDay,
 			roomChangeMode,
 			updatePendingInvoiceAmount,
+			createDifferenceInvoice,
 			newRentAmount,
 		});
 

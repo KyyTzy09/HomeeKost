@@ -198,6 +198,7 @@ const FIELD_LABELS: Record<string, string> = {
 	agreement: "Persetujuan Formulir",
 	roomChangeMode: "Jenis Penanganan Kontrak",
 	updatePendingInvoiceAmount: "Penyesuaian Tagihan Belum Lunas",
+	createDifferenceInvoice: "Tagihan Selisih Pindah Kamar",
 };
 
 export function TenantFormDialog({
@@ -277,6 +278,7 @@ export function TenantFormDialog({
 		agreement?: boolean;
 		roomChangeMode?: "CORRECTION" | "TRANSFER";
 		updatePendingInvoiceAmount?: boolean;
+		createDifferenceInvoice?: boolean;
 	}) => {
 		const autoDue =
 			val.dueDate ||
@@ -296,6 +298,7 @@ export function TenantFormDialog({
 			nik: (val.nik || "").replace(/[^0-9]/g, ""),
 			roomChangeMode: val.roomChangeMode || "CORRECTION",
 			updatePendingInvoiceAmount: val.updatePendingInvoiceAmount !== false,
+			createDifferenceInvoice: val.createDifferenceInvoice !== false,
 		};
 	};
 
@@ -332,6 +335,7 @@ export function TenantFormDialog({
 			agreement: true,
 			roomChangeMode: "CORRECTION" as "CORRECTION" | "TRANSFER",
 			updatePendingInvoiceAmount: true,
+			createDifferenceInvoice: true,
 		},
 		validators: {
 			onSubmit: ({ value }) => {
@@ -453,6 +457,7 @@ export function TenantFormDialog({
 				form.setFieldValue("agreement", true);
 				form.setFieldValue("roomChangeMode", "CORRECTION");
 				form.setFieldValue("updatePendingInvoiceAmount", true);
+				form.setFieldValue("createDifferenceInvoice", true);
 				setKtpPreview(editingTenant.ktpUrl || null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -489,6 +494,7 @@ export function TenantFormDialog({
 				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
 				form.setFieldValue("roomChangeMode", "CORRECTION");
+				form.setFieldValue("createDifferenceInvoice", true);
 				setKtpPreview(null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -1415,6 +1421,68 @@ export function TenantFormDialog({
 																				</span>
 																			</div>
 																		</label>
+																	);
+																}}
+															</form.Field>
+														)}
+
+														{/* Penanganan Selisih Harga untuk Mode TRANSFER */}
+														{modeField.state.value === "TRANSFER" && (
+															<form.Field name="createDifferenceInvoice">
+																{(diffField) => {
+																	const oldRoomPrice =
+																		roomOptions.find(
+																			(r) =>
+																				r.roomNo ===
+																				editingTenant?.roomNo,
+																		)?.price ?? 0;
+																	const newRoomPrice =
+																		targetRoom?.price ?? 0;
+																	const priceDiff =
+																		newRoomPrice - oldRoomPrice;
+
+																	if (priceDiff > 0) {
+																		return (
+																			<label className="flex items-start gap-2 p-2.5 bg-[#edf4ee]/70 rounded-[8px] border border-[#cfdfd1] cursor-pointer text-[#324536] transition-colors hover:bg-[#edf4ee]">
+																				<input
+																					type="checkbox"
+																					checked={Boolean(
+																						diffField.state.value,
+																					)}
+																					onChange={(e) =>
+																						diffField.handleChange(
+																							e.target.checked,
+																						)
+																					}
+																					className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer mt-0.5 shrink-0"
+																				/>
+																				<div className="text-[11px] leading-tight space-y-1">
+																					<div className="flex items-center gap-1.5 flex-wrap">
+																						<span className="font-bold text-[#25392b]">
+																							Otomatis buat tagihan selisih bulan ini:
+																						</span>
+																						<span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#4f6958] text-white">
+																							+{formatRupiah(priceDiff)}
+																						</span>
+																						<span className="text-[10px] text-[#6d7d71]">
+																							({formatRupiah(oldRoomPrice)} ➔ {formatRupiah(newRoomPrice)})
+																						</span>
+																					</div>
+																					<span className="text-[9.5px] text-[#55695a] block">
+																						Sistem akan menerbitkan 1 invoice tagihan penyesuaian (Belum Lunas) untuk melunasi kekurangan harga sewa kamar baru bulan ini. Tagihan bulan depan otomatis tarif penuh.
+																					</span>
+																				</div>
+																			</label>
+																		);
+																	}
+
+																	return (
+																		<div className="p-2.5 bg-[#f5f8f5] rounded-[8px] border border-[#dbe6de] text-[10.5px] text-[#4f6354] leading-relaxed">
+																			<span className="font-semibold block text-[#2c3d31] mb-0.5">
+																				ℹ️ Tidak ada tagihan selisih biaya
+																			</span>
+																			Tarif kamar baru sama atau lebih murah ({formatRupiah(oldRoomPrice)} ➔ {formatRupiah(newRoomPrice)}). Tidak ada tambahan tagihan bulan ini, dan tarif baru otomatis berlaku penuh mulai periode sewa berikutnya.
+																		</div>
 																	);
 																}}
 															</form.Field>

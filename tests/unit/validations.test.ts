@@ -114,6 +114,7 @@ describe("Zod Validation Schemas", () => {
 				roomNo: "C-05",
 				roomChangeMode: "TRANSFER" as const,
 				updatePendingInvoiceAmount: false,
+				createDifferenceInvoice: true,
 			};
 			const resTransfer = updateTenantSchema.safeParse(updateTransfer);
 			expect(resTransfer.success).toBe(true);
