@@ -242,13 +242,28 @@ export function PaymentTable({
 						)}
 					</button>
 				),
-				cell: (info) => (
-					<div className="text-right">
-						<span className="text-xs font-bold text-[#252925] whitespace-nowrap font-mono">
-							{formatRupiah(info.getValue())}
-						</span>
-					</div>
-				),
+				cell: (info) => {
+					const item = info.row.original;
+					return (
+						<div className="text-right">
+							<span className="text-xs font-bold text-[#252925] whitespace-nowrap font-mono">
+								{formatRupiah(info.getValue())}
+							</span>
+							{item.isPartial && item.remainingAmount !== undefined && (
+								<span className="text-[10px] text-[#737873] block mt-0.5 whitespace-nowrap">
+									Terbayar:{" "}
+									<b className="text-[#4f6958]">
+										{formatRupiah(item.paidAmount || 0)}
+									</b>{" "}
+									· Sisa:{" "}
+									<b className="text-[#99773d]">
+										{formatRupiah(item.remainingAmount)}
+									</b>
+								</span>
+							)}
+						</div>
+					);
+				},
 			}),
 			columnHelper.accessor("status", {
 				id: "status",
@@ -257,12 +272,14 @@ export function PaymentTable({
 					const status = info.getValue() as PaymentStatus;
 					const badgeColors: Record<PaymentStatus, string> = {
 						PAID: "bg-[#e8f0ea] text-[#4f6958] border-[#c8dacb]",
+						PARTIAL: "bg-[#fbf4ea] text-[#99773d] border-[#ebd8bc]",
 						PENDING: "bg-[#fbf4ea] text-[#99773d] border-[#ebd8bc]",
 						OVERDUE: "bg-[#fdf0ed] text-[#b8382e] border-[#f5c6c2]",
 						CANCELLED: "bg-[#f0f2f0] text-[#737873] border-[#d6dfd7]",
 					};
 					const statusLabels: Record<PaymentStatus, string> = {
 						PAID: "✓ Lunas",
+						PARTIAL: "🌓 Dicicil",
 						PENDING: "⏳ Menunggu",
 						OVERDUE: "⚠️ Terlambat",
 						CANCELLED: "✕ Dibatalkan",
@@ -286,17 +303,25 @@ export function PaymentTable({
 
 					return (
 						<div className="flex items-center justify-end gap-1.5">
-							{/* Konfirmasi Pembayaran Lunas */}
+							{/* Konfirmasi Pembayaran Lunas / Catat Cicilan */}
 							{!isPaid ? (
 								<Button
 									type="button"
 									size="sm"
-									className="h-7 px-2.5 text-[11px] font-semibold bg-[#4f6958] hover:bg-[#425949] text-white shadow-2xs rounded-lg"
+									className={`h-7 px-2.5 text-[11px] font-semibold text-white shadow-2xs rounded-lg ${
+										item.isPartial
+											? "bg-[#99773d] hover:bg-[#856633]"
+											: "bg-[#4f6958] hover:bg-[#425949]"
+									}`}
 									onClick={() => onConfirmPayment(item)}
-									title="Verifikasi Pembayaran & Tandai Lunas"
+									title={
+										item.isPartial
+											? "Catat Cicilan Lanjutan atau Pelunasan"
+											: "Verifikasi Pembayaran & Tandai Lunas"
+									}
 								>
 									<CheckCircle2 className="w-3 h-3 mr-1" />
-									Konfirmasi
+									{item.isPartial ? "Catat Cicilan" : "Konfirmasi"}
 								</Button>
 							) : (
 								<Button
@@ -321,11 +346,15 @@ export function PaymentTable({
 									size="sm"
 									className="h-7 px-2.5 text-[11px] font-semibold text-[#568062] border-[#e4e9e4] hover:bg-[#e8f0ea] rounded-lg"
 									onClick={() => onSendWhatsApp(item)}
-									title="Kirim Pesan Penagihan ke WhatsApp Penghuni"
+									title={
+										item.isPartial
+											? "Kirim Pengingat Sisa Cicilan ke WhatsApp Penghuni"
+											: "Kirim Pesan Penagihan ke WhatsApp Penghuni"
+									}
 									disabled={isSendingWhatsApp}
 								>
 									<Send className="w-3 h-3 mr-1" />
-									Kirim WA
+									{item.isPartial ? "Ingatkan Sisa" : "Kirim WA"}
 								</Button>
 							)}
 

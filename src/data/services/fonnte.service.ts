@@ -11,8 +11,10 @@ import {
 } from "../../lib/phone-sanitizer.ts";
 import {
 	type DueReminderTemplateParams,
+	type InstallmentReminderTemplateParams,
 	type InvoiceTemplateParams,
 	type PaymentReceiptTemplateParams,
+	type PartialPaymentReceiptTemplateParams,
 	whatsappTemplates,
 } from "../../lib/whatsapp-templates.ts";
 
@@ -197,6 +199,104 @@ export class FonnteService {
 			"INVOICE",
 			status,
 			`Kwitansi Lunas #${params.invoiceNumber} — ${apiRes.detail || (apiRes.status ? "Success" : "Failed")}`,
+		);
+
+		return {
+			success: apiRes.status,
+			directWhatsAppUrl,
+			message,
+			detail: apiRes.detail,
+			logId: log?.id,
+		};
+	}
+
+	/**
+	 * Kirim Bukti Penerimaan Cicilan Sewa Bertahap via WhatsApp
+	 */
+	async sendPartialPaymentReceipt(
+		phoneNumber: string,
+		params: PartialPaymentReceiptTemplateParams,
+		attachment?: WhatsAppAttachmentOptions,
+	): Promise<SendWhatsAppResult> {
+		const message = whatsappTemplates.partialPaymentReceipt(params);
+		const sanitizedPhone = sanitizePhoneNumber(phoneNumber);
+		const directWhatsAppUrl = getWhatsAppDirectUrl(sanitizedPhone, message);
+
+		let apiRes: { status: boolean; detail?: string } = {
+			status: false,
+			detail: "Failed to send message",
+		};
+
+		if (attachment?.file || attachment?.url) {
+			apiRes = await this.client.sendFile({
+				target: sanitizedPhone,
+				message,
+				file: attachment.file,
+				url: attachment.url,
+				filename: attachment.filename || `Bukti-Cicilan-${params.invoiceNumber}.pdf`,
+			});
+		} else {
+			apiRes = await this.client.sendText({
+				target: sanitizedPhone,
+				message,
+			});
+		}
+
+		const status: NotificationStatus = apiRes.status ? "SENT" : "FAILED";
+		const log = await this.logNotification(
+			sanitizedPhone,
+			"INVOICE",
+			status,
+			`Bukti Cicilan #${params.invoiceNumber} — ${apiRes.detail || (apiRes.status ? "Success" : "Failed")}`,
+		);
+
+		return {
+			success: apiRes.status,
+			directWhatsAppUrl,
+			message,
+			detail: apiRes.detail,
+			logId: log?.id,
+		};
+	}
+
+	/**
+	 * Kirim Pengingat Sisa Cicilan Menjelang Akhir Bulan via WhatsApp
+	 */
+	async sendInstallmentReminder(
+		phoneNumber: string,
+		params: InstallmentReminderTemplateParams,
+		attachment?: WhatsAppAttachmentOptions,
+	): Promise<SendWhatsAppResult> {
+		const message = whatsappTemplates.installmentReminder(params);
+		const sanitizedPhone = sanitizePhoneNumber(phoneNumber);
+		const directWhatsAppUrl = getWhatsAppDirectUrl(sanitizedPhone, message);
+
+		let apiRes: { status: boolean; detail?: string } = {
+			status: false,
+			detail: "Failed to send message",
+		};
+
+		if (attachment?.file || attachment?.url) {
+			apiRes = await this.client.sendFile({
+				target: sanitizedPhone,
+				message,
+				file: attachment.file,
+				url: attachment.url,
+				filename: attachment.filename || `Pengingat-Cicilan-${params.invoiceNumber}.pdf`,
+			});
+		} else {
+			apiRes = await this.client.sendText({
+				target: sanitizedPhone,
+				message,
+			});
+		}
+
+		const status: NotificationStatus = apiRes.status ? "SENT" : "FAILED";
+		const log = await this.logNotification(
+			sanitizedPhone,
+			"DUE_DATE_REMINDER",
+			status,
+			`Pengingat Cicilan #${params.invoiceNumber} — ${apiRes.detail || (apiRes.status ? "Success" : "Failed")}`,
 		);
 
 		return {

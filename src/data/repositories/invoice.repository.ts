@@ -174,7 +174,13 @@ export class InvoiceRepository {
 			}),
 			this.db.invoice.findMany({
 				where: baseWhere,
-				select: { amount: true, status: true },
+				select: {
+					amount: true,
+					status: true,
+					transactions: {
+						select: { amount: true },
+					},
+				},
 			}),
 		]);
 
@@ -183,12 +189,19 @@ export class InvoiceRepository {
 		let unpaidAmount = 0;
 
 		for (const inv of allInvoices) {
-			const amt = Number(inv.amount);
-			totalAmount += amt;
+			const invoiceAmt = Number(inv.amount);
+			totalAmount += invoiceAmt;
+
+			const txTotal = (inv.transactions || []).reduce(
+				(sum, t) => sum + Number(t.amount),
+				0,
+			);
+
 			if (inv.status === "PAID") {
-				paidAmount += amt;
+				paidAmount += Math.max(invoiceAmt, txTotal);
 			} else if (inv.status !== "CANCELLED") {
-				unpaidAmount += amt;
+				paidAmount += txTotal;
+				unpaidAmount += Math.max(0, invoiceAmt - txTotal);
 			}
 		}
 
@@ -208,20 +221,25 @@ export class InvoiceRepository {
 	}
 
 	/**
-	 * Konfirmasi Pembayaran Lunas (Atomic Prisma Transaction)
-	 * Memperbarui status Invoice menjadi PAID dan secara otomatis mencatat Pemasukan Kas (Transaction).
+	 * Konfirmasi Pembayaran (Pelunasan Penuh atau Cicilan Bertahap)
+	 * Atomic Prisma Transaction:
+	 * - Menghitung total transaksi kas yang sudah tercatat
+	 * - Mencatat Pemasukan Kas (Transaction) baru untuk nominal yang dibayarkan
+	 * - Memperbarui status Invoice menjadi PAID jika total pembayaran mencapai nilai tagihan
 	 */
-	async markAsPaid(
+	async recordPayment(
 		invoiceId: string,
 		paymentMethod: PaymentMethod,
 		paidDate: Date,
 		createdByUserId: string,
-		_notes?: string,
+		amountToPay?: number,
+		notes?: string,
 	) {
 		return this.db.$transaction(async (tx) => {
 			const invoice = await tx.invoice.findUnique({
 				where: { id: invoiceId },
 				include: {
+					transactions: true,
 					contract: {
 						include: {
 							tenant: true,
@@ -243,12 +261,39 @@ export class InvoiceRepository {
 				throw new Error("Invoice ini sudah ditandai lunas sebelumnya.");
 			}
 
+			const totalInvoiceAmount = Number(invoice.amount);
+			const alreadyPaid = (invoice.transactions || []).reduce(
+				(sum, t) => sum + Number(t.amount),
+				0,
+			);
+			const remainingBefore = Math.max(0, totalInvoiceAmount - alreadyPaid);
+
+			// Tentukan nominal yang dibayar kali ini
+			const payThisTime =
+				amountToPay !== undefined && amountToPay > 0
+					? Math.min(amountToPay, remainingBefore)
+					: remainingBefore;
+
+			if (payThisTime <= 0) {
+				throw new Error("Sisa tagihan invoice ini sudah Rp 0.");
+			}
+
+			const isSettled = alreadyPaid + payThisTime >= totalInvoiceAmount;
+			const installmentIndex = (invoice.transactions || []).length + 1;
+
 			// 1. Update Invoice status
 			const updatedInvoice = await tx.invoice.update({
 				where: { id: invoiceId },
 				data: {
-					status: "PAID",
-					paidAt: paidDate,
+					...(isSettled
+						? {
+								status: "PAID",
+								paidAt: paidDate,
+						  }
+						: {
+								status: "PENDING",
+						  }),
+					updatedAt: new Date(),
 				},
 				include: {
 					contract: {
@@ -270,6 +315,14 @@ export class InvoiceRepository {
 			const roomNo = invoice.contract.room.roomNumber;
 			const periodStr = `${invoice.periodMonth}/${invoice.periodYear}`;
 
+			const noteSuffix = notes ? ` (${notes})` : "";
+			const description =
+				isSettled && installmentIndex === 1
+					? `Pembayaran Sewa Kamar ${roomNo} (${periodStr}) - ${tenantName}${noteSuffix}`
+					: isSettled
+						? `Pelunasan Sewa Kamar ${roomNo} (${periodStr}) - ${tenantName}${noteSuffix}`
+						: `Cicilan ke-${installmentIndex} Sewa Kamar ${roomNo} (${periodStr}) - ${tenantName}${noteSuffix}`;
+
 			const createdTx = await tx.transaction.create({
 				data: {
 					propertyId,
@@ -279,14 +332,43 @@ export class InvoiceRepository {
 					category: "RENT",
 					classification: "OPERATIONAL",
 					paymentMethod,
-					amount: invoice.amount,
-					description: `Pembayaran Sewa Kamar ${roomNo} (${periodStr}) - ${tenantName}`,
+					amount: payThisTime,
+					description,
 					transactionDate: paidDate,
 				},
 			});
 
-			return { invoice: updatedInvoice, transaction: createdTx };
+			return {
+				invoice: updatedInvoice,
+				transaction: createdTx,
+				isSettled,
+				paidThisTime: payThisTime,
+				totalPaid: alreadyPaid + payThisTime,
+				remainingAmount: Math.max(0, totalInvoiceAmount - (alreadyPaid + payThisTime)),
+				installmentIndex,
+			};
 		});
+	}
+
+	/**
+	 * Konfirmasi Pembayaran Lunas (Atomic Prisma Transaction Wrapper)
+	 * Memperbarui status Invoice menjadi PAID dan secara otomatis mencatat Pemasukan Kas (Transaction).
+	 */
+	async markAsPaid(
+		invoiceId: string,
+		paymentMethod: PaymentMethod,
+		paidDate: Date,
+		createdByUserId: string,
+		notes?: string,
+	) {
+		return this.recordPayment(
+			invoiceId,
+			paymentMethod,
+			paidDate,
+			createdByUserId,
+			undefined,
+			notes,
+		);
 	}
 
 	async findContractById(id: string) {

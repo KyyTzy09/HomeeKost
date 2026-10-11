@@ -52,6 +52,7 @@ export function PaymentConfirmDialog({
 }: PaymentConfirmDialogProps) {
 	const todayStr = useMemo(() => getTodayDateString(), []);
 
+	const [paymentType, setPaymentType] = useState<"FULL" | "PARTIAL">("FULL");
 	const [paidDate, setPaidDate] = useState<string>(todayStr);
 	const [paymentMethod, setPaymentMethod] = useState<{
 		label: string;
@@ -59,45 +60,82 @@ export function PaymentConfirmDialog({
 	}>(DEFAULT_PAYMENT_METHOD_OPTION);
 	const [notes, setNotes] = useState<string>("");
 	const [sendReceiptWhatsApp, setSendReceiptWhatsApp] = useState<boolean>(true);
+	const [customAmountStr, setCustomAmountStr] = useState<string>("");
+	const [amountError, setAmountError] = useState<string | null>(null);
+
+	const totalInvoice = payment?.amount ?? 0;
+	const alreadyPaid = payment?.paidAmount ?? 0;
+	const currentRemaining =
+		payment?.remainingAmount !== undefined
+			? payment.remainingAmount
+			: Math.max(0, totalInvoice - alreadyPaid);
 
 	useEffect(() => {
-		if (open) {
+		if (open && payment) {
 			setPaidDate(todayStr);
 			setPaymentMethod(DEFAULT_PAYMENT_METHOD_OPTION);
 			setNotes("");
 			setSendReceiptWhatsApp(true);
+			setPaymentType("FULL");
+			setCustomAmountStr(String(currentRemaining));
+			setAmountError(null);
 		}
-	}, [open, todayStr]);
+	}, [open, payment, todayStr, currentRemaining]);
 
 	if (!payment) return null;
 
+	const parsedCustomAmount = Number(customAmountStr.replace(/[^0-9]/g, "")) || 0;
+	const payAmount = paymentType === "FULL" ? currentRemaining : parsedCustomAmount;
+	const remainingAfter = Math.max(0, currentRemaining - payAmount);
+	const isPartial = paymentType === "PARTIAL" && remainingAfter > 0;
+
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+
+		if (paymentType === "PARTIAL") {
+			if (parsedCustomAmount <= 0) {
+				setAmountError("Nominal pembayaran cicilan harus lebih dari Rp 0.");
+				return;
+			}
+			if (parsedCustomAmount > currentRemaining) {
+				setAmountError(
+					`Nominal tidak boleh melebihi sisa tagihan (${formatRupiah(currentRemaining)}).`,
+				);
+				return;
+			}
+		}
+
 		onConfirm({
 			invoiceId: payment.id,
 			paymentMethod: paymentMethod.value,
 			paidDate,
 			notes: notes.trim() || undefined,
 			sendReceiptWhatsApp,
+			isPartial,
+			amount: paymentType === "PARTIAL" ? parsedCustomAmount : currentRemaining,
 		});
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="max-w-[480px] max-h-[85vh] overflow-y-auto p-5 sm:p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
+				className="max-w-[500px] max-h-[88vh] overflow-y-auto p-5 sm:p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]"
 				aria-describedby="confirm-payment-desc"
 			>
 				<DialogHeader className="pb-3 border-b border-[#e4e9e4]">
 					<DialogTitle className="text-base font-bold text-[#252925] flex items-center gap-2">
-						<CheckCircle2 className="w-5 h-5 text-[#4f6958]" />
-						Konfirmasi Pelunasan Sewa
+						<CheckCircle2
+							className={`w-5 h-5 ${isPartial ? "text-[#99773d]" : "text-[#4f6958]"}`}
+						/>
+						{payment.isPartial
+							? "Catat Cicilan / Pelunasan Sewa"
+							: "Konfirmasi Pembayaran Sewa"}
 					</DialogTitle>
 					<DialogDescription
 						id="confirm-payment-desc"
 						className="text-xs text-[#737873]"
 					>
-						Tandai tagihan sebagai LUNAS dan catat pemasukan kas otomatis
+						Catat penerimaan kas secara akurat untuk pelunasan penuh atau cicilan bertahap
 					</DialogDescription>
 				</DialogHeader>
 
@@ -120,13 +158,116 @@ export function PaymentConfirmDialog({
 								{payment.period}
 							</span>
 						</div>
+						<div className="flex items-center justify-between pt-1.5 border-t border-[#e4e9e4]">
+							<span className="text-[#737873]">Total Tagihan Awal</span>
+							<span className="font-semibold text-[#252925]">
+								{formatRupiah(totalInvoice)}
+							</span>
+						</div>
+						{alreadyPaid > 0 && (
+							<div className="flex items-center justify-between">
+								<span className="text-[#737873]">Sudah Terbayar Sebelumnya</span>
+								<span className="font-semibold text-[#4f6958]">
+									{formatRupiah(alreadyPaid)}
+								</span>
+							</div>
+						)}
 						<div className="flex items-center justify-between pt-2 border-t border-[#e4e9e4] text-sm">
-							<span className="font-bold text-[#252925]">Total Pelunasan</span>
-							<span className="font-bold text-[#4f6958]">
-								{formatRupiah(payment.amount)}
+							<span className="font-bold text-[#252925]">Sisa Tagihan Saat Ini</span>
+							<span className="font-bold text-[#b8382e]">
+								{formatRupiah(currentRemaining)}
 							</span>
 						</div>
 					</div>
+
+					{/* Opsi Tipe Pembayaran (Penuh vs Cicilan) */}
+					<div className="space-y-1.5">
+						<Label className="text-xs font-semibold text-[#252925] block">
+							Skema Pembayaran *
+						</Label>
+						<div className="grid grid-cols-2 gap-2">
+							<button
+								type="button"
+								onClick={() => {
+									setPaymentType("FULL");
+									setAmountError(null);
+								}}
+								className={`p-2.5 rounded-xl border text-left transition-all ${
+									paymentType === "FULL"
+										? "bg-[#e8f0ea] border-[#4f6958] text-[#252925] shadow-xs"
+										: "bg-[#fbfcfb] border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
+								}`}
+							>
+								<span className="block text-xs font-bold text-[#252925]">
+									Lunas Penuh
+								</span>
+								<span className="text-[10.5px] text-[#4f6958] font-semibold block mt-0.5">
+									{formatRupiah(currentRemaining)}
+								</span>
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setPaymentType("PARTIAL");
+									setAmountError(null);
+								}}
+								className={`p-2.5 rounded-xl border text-left transition-all ${
+									paymentType === "PARTIAL"
+										? "bg-[#fbf4ea] border-[#99773d] text-[#252925] shadow-xs"
+										: "bg-[#fbfcfb] border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3]"
+								}`}
+							>
+								<span className="block text-xs font-bold text-[#99773d]">
+									Pembayaran Bertahap / Cicil
+								</span>
+								<span className="text-[10.5px] text-[#737873] block mt-0.5">
+									Tentukan nominal bayar
+								</span>
+							</button>
+						</div>
+					</div>
+
+					{/* Field Input Nominal Cicilan jika Mode PARTIAL */}
+					{paymentType === "PARTIAL" && (
+						<div className="p-3 bg-[#fdfaf3] border border-[#ebd8bc] rounded-xl space-y-2">
+							<div className="flex items-center justify-between">
+								<Label className="text-xs font-semibold text-[#99773d]">
+									Nominal Bayar Kali Ini (Rp) *
+								</Label>
+								<span className="text-[11px] text-[#737873]">
+									Maks: <b>{formatRupiah(currentRemaining)}</b>
+								</span>
+							</div>
+							<Input
+								type="number"
+								min={1000}
+								max={currentRemaining}
+								value={customAmountStr}
+								onChange={(e) => {
+									setCustomAmountStr(e.target.value);
+									setAmountError(null);
+								}}
+								placeholder="Masukkan nominal yang diterima"
+								className="h-9.5 text-xs font-mono font-bold border-[#ebd8bc] bg-white focus-visible:ring-[#99773d]"
+							/>
+							{amountError && (
+								<p className="text-[11px] text-[#b8382e] font-medium">
+									{amountError}
+								</p>
+							)}
+							<div className="pt-2 border-t border-[#ebd8bc] flex items-center justify-between text-xs">
+								<span className="text-[#737873]">Sisa Tagihan Setelah Ini:</span>
+								<b
+									className={
+										remainingAfter === 0 ? "text-[#4f6958]" : "text-[#b8382e]"
+									}
+								>
+									{formatRupiah(remainingAfter)}{" "}
+									{remainingAfter === 0 && "✓ (LUNAS)"}
+								</b>
+							</div>
+						</div>
+					)}
 
 					{/* Payment Method & Date */}
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -160,7 +301,7 @@ export function PaymentConfirmDialog({
 
 						<div>
 							<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-								Tanggal Pelunasan *
+								Tanggal Pembayaran *
 							</Label>
 							<Input
 								type="date"
@@ -179,7 +320,7 @@ export function PaymentConfirmDialog({
 						<Input
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
-							placeholder="Contoh: Bukti transfer BCA a.n. Alya Putri"
+							placeholder="Contoh: Cicilan ke-1 transfer BCA"
 							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 					</div>
@@ -200,11 +341,14 @@ export function PaymentConfirmDialog({
 						>
 							<span className="font-semibold flex items-center gap-1.5">
 								<MessageSquare className="w-3.5 h-3.5 text-[#4f6958]" />
-								Kirim Kwitansi Resmi Otomatis via WhatsApp
+								{isPartial
+									? "Kirim Bukti Penerimaan Cicilan via WhatsApp"
+									: "Kirim Kwitansi Resmi Lunas via WhatsApp"}
 							</span>
 							<span className="text-[#737873] block mt-0.5 text-[11px]">
-								Penghuni akan menerima konfirmasi pembayaran lunas dan tautan
-								kwitansi digital resmi secara instan.
+								{isPartial
+									? "Penghuni akan menerima rincian nominal cicilan yang diterima serta sisa pelunasan tagihan."
+									: "Penghuni akan menerima konfirmasi pembayaran lunas dan tautan kwitansi digital resmi secara instan."}
 							</span>
 						</label>
 					</div>
@@ -221,11 +365,19 @@ export function PaymentConfirmDialog({
 						</Button>
 						<Button
 							type="submit"
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
+							className={`text-xs font-semibold px-5 h-9 text-white ${
+								isPartial
+									? "bg-[#99773d] hover:bg-[#856633]"
+									: "bg-[#4f6958] hover:bg-[#425949]"
+							}`}
 							disabled={isSubmitting}
 						>
 							<Save className="w-3.5 h-3.5 mr-1.5" />
-							{isSubmitting ? "Menyimpan..." : "Konfirmasi Lunas"}
+							{isSubmitting
+								? "Menyimpan..."
+								: isPartial
+									? `Catat Cicilan (${formatRupiah(payAmount)})`
+									: `Konfirmasi Lunas (${formatRupiah(payAmount)})`}
 						</Button>
 					</DialogFooter>
 				</form>
