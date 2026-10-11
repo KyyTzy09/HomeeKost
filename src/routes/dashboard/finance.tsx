@@ -50,7 +50,6 @@ import {
 	useProperties,
 } from "../../hooks/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
-import { getMonthDateRange } from "../../lib/date-utils.ts";
 
 export const Route = createFileRoute("/dashboard/finance")({
 	head: () => ({
@@ -178,15 +177,18 @@ function FinancePage() {
 	>("SELECTED_MONTH");
 
 	const activeDateRange = useMemo(() => {
-		if (periodFilterMode === "ALL")
+		if (periodFilterMode === "ALL") {
 			return { startDate: undefined, endDate: undefined };
-		const { startDate, endDate } = getMonthDateRange(
-			selectedMonth.value,
+		}
+		const padMonth = String(selectedMonth.value).padStart(2, "0");
+		const lastDay = new Date(
 			selectedYear.value,
-		);
+			selectedMonth.value,
+			0,
+		).getDate();
 		return {
-			startDate: startDate.toISOString().split("T")[0],
-			endDate: endDate.toISOString().split("T")[0],
+			startDate: `${selectedYear.value}-${padMonth}-01`,
+			endDate: `${selectedYear.value}-${padMonth}-${String(lastDay).padStart(2, "0")}`,
 		};
 	}, [periodFilterMode, selectedMonth.value, selectedYear.value]);
 
