@@ -237,6 +237,10 @@ function PropertyDetailPage() {
 		);
 	};
 
+	const sortedRooms = useMemo(() => {
+		return [...rooms].sort((a, b) => compareRoomNumbers(a.roomNo, b.roomNo));
+	}, [rooms]);
+
 	if (isPropLoading) {
 		return (
 			<div className="p-16 bg-white border border-[#e4e9e4] rounded-2xl flex flex-col items-center justify-center gap-2 shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
@@ -266,10 +270,6 @@ function PropertyDetailPage() {
 			</div>
 		);
 	}
-
-	const sortedRooms = useMemo(() => {
-		return [...rooms].sort((a, b) => compareRoomNumbers(a.roomNo, b.roomNo));
-	}, [rooms]);
 
 	const occupiedCount = sortedRooms.filter((r) => r.status === "Terisi").length;
 
