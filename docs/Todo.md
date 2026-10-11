@@ -215,6 +215,12 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
   - Aksi "Verifikasi Pembayaran" (*Confirm / Mark as Paid*) -> Otomatis mencatat pelunasan & menambah Pemasukan Kas (`INCOME` - `RENT`) secara atomik via Prisma Transaction
   - Modal Generate Tagihan Bulanan Massal (`PaymentGenerateDialog`) & Modal Buat Tagihan Manual (`PaymentFormDialog`)
   - Action button "Kirim WA (Fonnte API)" dan "Buka WhatsApp Web (Manual wa.me)"
+  - **Dukungan Pembayaran Bertahap / Cicilan Sewa**:
+    - Dialog Konfirmasi Pembayaran fleksibel: Pilihan Lunas Penuh vs Pembayaran Bertahap (Cicilan) dengan input nominal kustom & kalkulasi sisa real-time
+    - Pencatatan Pemasukan Kas multi-transaksi atomik (`INCOME` - `RENT`) sesuai nominal riil yang diterima per cicilan tanpa mutasi enum PostgreSQL (`InvoiceStatus`)
+    - Akurasi ringkasan statistik kas (`getStats`): omzet terealisasi (`paidAmount`) menghitung total transaksi cicilan yang masuk, sisa tagihan tercatat akurat sebagai `unpaidAmount`
+    - Indikator UI tabel pembayaran: Rincian `Terbayar: Rp X · Sisa: Rp Y`, badge status `🌓 Dicicil`, serta tombol aksi cepat pengingat sisa cicilan menjelang akhir bulan via WhatsApp
+    - Template WhatsApp: Bukti Penerimaan Cicilan Sewa (`partialPaymentReceipt`) & Pengingat Sisa Pelunasan Akhir Bulan (`installmentReminder`)
 
 ### 6.3 Invoice Digital & Live PDF Engine (Screen `#invoice`)
 - [x] 🔴 In-Memory PDF Generator (`src/lib/pdf-generator.ts`):
