@@ -300,11 +300,11 @@ export function PaymentTable({
 						CANCELLED: "bg-[#f0f2f0] text-[#737873] border-[#d6dfd7]",
 					};
 					const statusLabels: Record<PaymentStatus, string> = {
-						PAID: "✓ Lunas",
-						PARTIAL: "🌓 Dicicil",
-						PENDING: "⏳ Menunggu",
-						OVERDUE: "⚠️ Terlambat",
-						CANCELLED: "✕ Dibatalkan",
+						PAID: "Lunas",
+						PARTIAL: "Dicicil",
+						PENDING: "Menunggu",
+						OVERDUE: "Terlambat",
+						CANCELLED: "Dibatalkan",
 					};
 
 					return (
@@ -630,7 +630,7 @@ export function PaymentTable({
 					</div>
 				) : (
 					<div className="text-[11px] text-[#8fa594] font-medium self-center sm:self-auto">
-						{payments.length > 0 ? "✓ Seluruh tagihan telah dimuat" : ""}
+						{payments.length > 0 ? "Seluruh tagihan telah dimuat" : ""}
 					</div>
 				)}
 			</div>
