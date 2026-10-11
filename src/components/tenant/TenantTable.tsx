@@ -4,6 +4,7 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
+import { ArrowDown, ArrowDownUp, ArrowUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TenantItem } from "../../common/types/index.ts";
 import { formatShortDueDate } from "../../lib/date-utils.ts";
@@ -14,6 +15,9 @@ interface TenantTableProps {
 	onDetail: (tenant: TenantItem) => void;
 	onEdit: (tenant: TenantItem) => void;
 	onDelete: (tenant: TenantItem) => void;
+	sortBy?: string;
+	sortOrder?: "asc" | "desc";
+	onSortToggle?: (column: string) => void;
 }
 
 const columnHelper = createColumnHelper<TenantItem>();
@@ -23,6 +27,9 @@ export function TenantTable({
 	onDetail,
 	onEdit,
 	onDelete,
+	sortBy = "roomNo",
+	sortOrder = "asc",
+	onSortToggle,
 }: TenantTableProps) {
 	const [visibleCount, setVisibleCount] = useState<number>(15);
 	const observerTarget = useRef<HTMLDivElement | null>(null);
@@ -57,10 +64,37 @@ export function TenantTable({
 		return data.slice(0, visibleCount);
 	}, [data, visibleCount]);
 
+	const renderSortHeader = (title: string, columnKey: string) => {
+		if (!onSortToggle) return title;
+		const isActive = sortBy === columnKey;
+		return (
+			<button
+				type="button"
+				onClick={(e) => {
+					e.stopPropagation();
+					onSortToggle(columnKey);
+				}}
+				className="flex items-center gap-1.5 hover:text-[#252925] transition-colors cursor-pointer group uppercase tracking-wider text-[9.5px] font-semibold text-[#8b918c]"
+			>
+				<span>{title}</span>
+				{isActive ? (
+					sortOrder === "asc" ? (
+						<ArrowUp className="w-3 h-3 text-[#4f6958]" />
+					) : (
+						<ArrowDown className="w-3 h-3 text-[#4f6958]" />
+					)
+				) : (
+					<ArrowDownUp className="w-3 h-3 text-[#8fa594] opacity-50 group-hover:opacity-100 transition-opacity" />
+				)}
+			</button>
+		);
+	};
+
 	const columns = useMemo(
 		() => [
 			columnHelper.accessor("name", {
-				header: "Penghuni",
+				id: "name",
+				header: () => renderSortHeader("Penghuni", "name"),
 				cell: (info) => (
 					<b className="text-[12px] font-bold text-[#252925]">
 						{info.getValue()}
@@ -68,7 +102,8 @@ export function TenantTable({
 				),
 			}),
 			columnHelper.accessor("roomNo", {
-				header: "Kamar",
+				id: "roomNo",
+				header: () => renderSortHeader("Kamar", "roomNo"),
 				cell: (info) => (
 					<span className="text-[11.5px] font-semibold text-[#506257]">
 						{info.getValue()}
@@ -76,6 +111,7 @@ export function TenantTable({
 				),
 			}),
 			columnHelper.accessor("phone", {
+				id: "phone",
 				header: "WhatsApp",
 				cell: (info) => (
 					<span className="text-[11.5px] text-[#454b46] font-mono">
@@ -84,7 +120,8 @@ export function TenantTable({
 				),
 			}),
 			columnHelper.accessor("startDate", {
-				header: "Mulai Sewa",
+				id: "startDate",
+				header: () => renderSortHeader("Mulai Sewa", "startDate"),
 				cell: (info) => (
 					<span className="text-[11.5px] text-[#737873]">
 						{info.getValue()}
@@ -92,7 +129,8 @@ export function TenantTable({
 				),
 			}),
 			columnHelper.accessor("dueDate", {
-				header: "Jatuh Tempo",
+				id: "dueDate",
+				header: () => renderSortHeader("Jatuh Tempo", "dueDate"),
 				cell: (info) => (
 					<span className="text-[11.5px] text-[#737873]">
 						{formatShortDueDate(info.getValue())}
@@ -100,7 +138,8 @@ export function TenantTable({
 				),
 			}),
 			columnHelper.accessor("paymentStatus", {
-				header: "Pembayaran",
+				id: "paymentStatus",
+				header: () => renderSortHeader("Pembayaran", "paymentStatus"),
 				cell: (info) => {
 					const status = info.getValue();
 					const isLancar = status === "Lancar";
@@ -227,7 +266,8 @@ export function TenantTable({
 			{/* ─── Infinite Scroll Footer ───────────────────────────────────────── */}
 			<div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-[#edf1ed] text-xs text-[#737873]">
 				<div>
-					Menampilkan <b>{visibleData.length}</b> dari <b>{data.length}</b> total penghuni
+					Menampilkan <b>{visibleData.length}</b> dari <b>{data.length}</b>{" "}
+					total penghuni
 				</div>
 
 				{hasMore ? (

@@ -1,5 +1,6 @@
 import { prisma } from "../../db.ts";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
+import { getMonthDateRange } from "../../lib/date-utils.ts";
 
 export interface MonthlyFinancialSummary {
 	totalIncome: number;
@@ -69,6 +70,7 @@ export class ReportRepository {
 
 	private getCategoryLabel(category: string): string {
 		const labels: Record<string, string> = {
+			UTILITIES: "Listrik & Air",
 			ELECTRICITY: "Listrik & Daya PLN",
 			WATER: "Air Bersih PDAM",
 			INTERNET: "Abonemen WiFi Indihome",
@@ -96,8 +98,7 @@ export class ReportRepository {
 		const targetMonth = month || now.getMonth() + 1;
 		const targetYear = year || now.getFullYear();
 
-		const startDate = new Date(targetYear, targetMonth - 1, 1, 0, 0, 0);
-		const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
+		const { startDate, endDate } = getMonthDateRange(targetMonth, targetYear);
 
 		// 1. Agregasi Kamar & Okupansi
 		const roomWhere: Prisma.RoomWhereInput =

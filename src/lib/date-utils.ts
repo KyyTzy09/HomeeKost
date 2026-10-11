@@ -15,11 +15,35 @@ const MONTH_NAMES = [
 	"Desember",
 ];
 
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 /**
- * Mendapatkan representasi tanggal hari ini dalam format YYYY-MM-DD
+ * Mendapatkan representasi tanggal hari ini dalam format YYYY-MM-DD sesuai waktu lokal Indonesia (WIB UTC+7)
  */
 export function getTodayDateString(): string {
-	return new Date().toISOString().split("T")[0];
+	const now = new Date();
+	const wibDate = new Date(now.getTime() + WIB_OFFSET_MS);
+	return wibDate.toISOString().split("T")[0];
+}
+
+/**
+ * Menghitung batas awal dan akhir bulan dalam zona waktu Indonesia (WIB UTC+7)
+ * Menghasilkan objek Date yang valid untuk query PostgreSQL Prisma
+ */
+export function getMonthDateRange(
+	month: number,
+	year: number,
+): { startDate: Date; endDate: Date } {
+	// Bulan 1-12
+	// Batas awal: tanggal 1 pukul 00:00:00.000 WIB
+	const startUtcMs = Date.UTC(year, month - 1, 1, 0, 0, 0, 0) - WIB_OFFSET_MS;
+	// Batas akhir: tanggal terakhir pukul 23:59:59.999 WIB
+	const endUtcMs = Date.UTC(year, month, 0, 23, 59, 59, 999) - WIB_OFFSET_MS;
+
+	return {
+		startDate: new Date(startUtcMs),
+		endDate: new Date(endUtcMs),
+	};
 }
 
 /**
@@ -186,4 +210,47 @@ export function formatRentalPeriod(params: {
 	}
 
 	return "Periode Sewa";
+}
+
+/**
+ * Melakukan parsing string tanggal format Indonesia (contoh: "01 Okt 2026", "10 November 2026", "—")
+ * menjadi timestamp numerik (milidetik) untuk kebutuhan sorting.
+ */
+export function parseIndonesianDate(str?: string | null): number {
+	if (!str || str === "—") return 0;
+	const parts = str.trim().split(/\s+/);
+	if (parts.length === 3) {
+		const day = Number.parseInt(parts[0], 10) || 1;
+		const monthStr = parts[1].toLowerCase();
+		const year = Number.parseInt(parts[2], 10) || 2026;
+		const monthMap: Record<string, number> = {
+			jan: 0,
+			januari: 0,
+			feb: 1,
+			februari: 1,
+			mar: 2,
+			maret: 2,
+			apr: 3,
+			april: 3,
+			mei: 4,
+			jun: 5,
+			juni: 5,
+			jul: 6,
+			juli: 6,
+			agu: 7,
+			agustus: 7,
+			sep: 8,
+			september: 8,
+			okt: 9,
+			oktober: 9,
+			nov: 10,
+			november: 10,
+			des: 11,
+			desember: 11,
+		};
+		const month = monthMap[monthStr] ?? 0;
+		return new Date(year, month, day).getTime();
+	}
+	const parsed = Date.parse(str);
+	return Number.isNaN(parsed) ? 0 : parsed;
 }

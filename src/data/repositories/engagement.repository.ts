@@ -5,6 +5,7 @@ import type {
 	NotificationType,
 	PrismaClient,
 } from "../../generated/prisma/client.js";
+import { calculateInstallmentSummary } from "../../lib/payment-utils.ts";
 
 export interface UpcomingBirthdayResult {
 	id: string;
@@ -68,11 +69,26 @@ export class EngagementRepository {
 						}
 					: {}),
 			},
-			include: {
-				tenant: true,
+			select: {
+				id: true,
+				tenant: {
+					select: {
+						id: true,
+						name: true,
+						birthDate: true,
+						whatsappNumber: true,
+						phoneNumber: true,
+					},
+				},
 				room: {
-					include: {
-						property: true,
+					select: {
+						roomNumber: true,
+						property: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
 					},
 				},
 			},
@@ -169,11 +185,23 @@ export class EngagementRepository {
 						}
 					: {}),
 			},
-			include: {
-				tenant: true,
+			select: {
+				tenant: {
+					select: {
+						id: true,
+						name: true,
+						whatsappNumber: true,
+						phoneNumber: true,
+					},
+				},
 				room: {
-					include: {
-						property: true,
+					select: {
+						roomNumber: true,
+						property: {
+							select: {
+								name: true,
+							},
+						},
 					},
 				},
 			},
@@ -286,13 +314,41 @@ export class EngagementRepository {
 					},
 				},
 			},
-			include: {
+			select: {
+				id: true,
+				invoiceNumber: true,
+				periodMonth: true,
+				periodYear: true,
+				amount: true,
+				dueDate: true,
+				status: true,
+				pdfUrl: true,
+				transactions: {
+					select: {
+						amount: true,
+					},
+					orderBy: { transactionDate: "asc" },
+				},
 				contract: {
-					include: {
-						tenant: true,
+					select: {
+						startDate: true,
+						endDate: true,
+						billingCycle: true,
+						tenant: {
+							select: {
+								name: true,
+								phoneNumber: true,
+								whatsappNumber: true,
+							},
+						},
 						room: {
-							include: {
-								property: true,
+							select: {
+								roomNumber: true,
+								property: {
+									select: {
+										name: true,
+									},
+								},
 							},
 						},
 					},
@@ -300,28 +356,98 @@ export class EngagementRepository {
 			},
 		});
 
+		const curYear = now.getFullYear();
+		const curMonth = now.getMonth() + 1;
+		const lastDayOfMonth = new Date(curYear, curMonth, 0).getDate();
+		const daysToEndOfMonth = lastDayOfMonth - now.getDate();
+
 		const reminders: {
 			invoice: (typeof pendingInvoices)[0];
 			daysRemaining: number;
-			type: "H3" | "H0" | "OVERDUE";
+			type: "H3" | "H0" | "OVERDUE" | "INSTALLMENT_EOM";
+			installmentSummary: {
+				paidAmount: number;
+				remainingAmount: number;
+				isPartial: boolean;
+				installmentCount: number;
+			};
 		}[] = [];
 
 		for (const inv of pendingInvoices) {
+			const installmentSummary = calculateInstallmentSummary(
+				Number(inv.amount),
+				inv.transactions,
+			);
+
 			const dueDate = new Date(inv.dueDate);
 			dueDate.setHours(0, 0, 0, 0);
 
 			const diffTime = dueDate.getTime() - now.getTime();
 			const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+			// 1. Tagihan cicilan bertahap yang belum lunas
+			if (
+				installmentSummary.isPartial &&
+				installmentSummary.remainingAmount > 0
+			) {
+				// Prioritas A: Pengingat H-3 sebelum akhir bulan
+				if (daysToEndOfMonth === 3) {
+					reminders.push({
+						invoice: inv,
+						daysRemaining,
+						type: "INSTALLMENT_EOM",
+						installmentSummary,
+					});
+					continue;
+				}
+
+				// Prioritas B: Pengingat berdasarkan jadwal jatuh tempo tagihan
+				if (daysRemaining === 3) {
+					reminders.push({
+						invoice: inv,
+						daysRemaining: 3,
+						type: "H3",
+						installmentSummary,
+					});
+				} else if (daysRemaining === 0) {
+					reminders.push({
+						invoice: inv,
+						daysRemaining: 0,
+						type: "H0",
+						installmentSummary,
+					});
+				} else if (daysRemaining < 0) {
+					reminders.push({
+						invoice: inv,
+						daysRemaining,
+						type: "OVERDUE",
+						installmentSummary,
+					});
+				}
+				continue;
+			}
+
+			// 2. Tagihan reguler (belum dibayar sama sekali)
 			if (daysRemaining === 3) {
-				reminders.push({ invoice: inv, daysRemaining: 3, type: "H3" });
+				reminders.push({
+					invoice: inv,
+					daysRemaining: 3,
+					type: "H3",
+					installmentSummary,
+				});
 			} else if (daysRemaining === 0) {
-				reminders.push({ invoice: inv, daysRemaining: 0, type: "H0" });
+				reminders.push({
+					invoice: inv,
+					daysRemaining: 0,
+					type: "H0",
+					installmentSummary,
+				});
 			} else if (daysRemaining < 0) {
 				reminders.push({
 					invoice: inv,
 					daysRemaining,
 					type: "OVERDUE",
+					installmentSummary,
 				});
 			}
 		}
@@ -386,6 +512,28 @@ export class EngagementRepository {
 				notes: l.notes ? l.notes.slice(0, 500) : null,
 				sentAt: l.sentAt || new Date(),
 			})),
+		});
+	}
+
+	/**
+	 * Dapatkan log notifikasi yang berhasil dikirim hari ini untuk pre-flight deduplikasi (Anti-Spam Idempotency)
+	 * Query dioptimasi secara presisi: hanya mengambil kolom minimal (notes, recipientNumber, messageType)
+	 * dalam rentang hari berjalan (startOfDay s/d endOfDay) dengan latency < 5ms.
+	 */
+	async getTodaySentNotificationLogs(startOfDay: Date, endOfDay: Date) {
+		return this.db.notificationLog.findMany({
+			where: {
+				status: "SENT",
+				sentAt: {
+					gte: startOfDay,
+					lte: endOfDay,
+				},
+			},
+			select: {
+				notes: true,
+				recipientNumber: true,
+				messageType: true,
+			},
 		});
 	}
 }

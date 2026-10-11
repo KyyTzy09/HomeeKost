@@ -81,6 +81,9 @@ interface FinanceTransactionTableProps {
 	onDelete: (tx: TransactionItem) => void;
 	currentUserId?: string;
 	isSuperAdmin?: boolean;
+	periodFilterMode?: "SELECTED_MONTH" | "ALL";
+	onPeriodFilterModeChange?: (mode: "SELECTED_MONTH" | "ALL") => void;
+	selectedPeriodLabel?: string;
 }
 
 const columnHelper = createColumnHelper<TransactionItem>();
@@ -107,6 +110,9 @@ export function FinanceTransactionTable({
 	onDelete,
 	currentUserId,
 	isSuperAdmin = false,
+	periodFilterMode = "SELECTED_MONTH",
+	onPeriodFilterModeChange,
+	selectedPeriodLabel = "Bulan Terpilih",
 }: FinanceTransactionTableProps) {
 	const canModify = (tx: TransactionItem) => {
 		if (isSuperAdmin) return true;
@@ -317,6 +323,32 @@ export function FinanceTransactionTable({
 						pencarian dan filter
 					</p>
 				</div>
+				{onPeriodFilterModeChange && (
+					<div className="flex items-center gap-1.5 p-1 bg-[#f3f7f3] rounded-lg border border-[#e4e9e4] text-xs">
+						<button
+							type="button"
+							onClick={() => onPeriodFilterModeChange("SELECTED_MONTH")}
+							className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+								periodFilterMode === "SELECTED_MONTH"
+									? "bg-white text-[#4f6958] shadow-xs"
+									: "text-[#737873] hover:text-[#252925]"
+							}`}
+						>
+							{selectedPeriodLabel}
+						</button>
+						<button
+							type="button"
+							onClick={() => onPeriodFilterModeChange("ALL")}
+							className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+								periodFilterMode === "ALL"
+									? "bg-white text-[#4f6958] shadow-xs"
+									: "text-[#737873] hover:text-[#252925]"
+							}`}
+						>
+							Semua Periode
+						</button>
+					</div>
+				)}
 			</div>
 
 			{/* ─── Filters & Search Toolbar ─────────────────────────────────── */}

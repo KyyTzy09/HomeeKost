@@ -7,7 +7,7 @@ import {
 	Plus,
 	TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MONTH_NAMES_ID } from "#/common/constants/months.const.ts";
 import FinanceDeleteDialog from "#/components/finance/FinanceDeleteDialog.tsx";
 import {
@@ -105,8 +105,8 @@ function FinancePage() {
 	}>({
 		label: isSuperAdmin
 			? "Semua Cabang Kos (Konsolidasi)"
-			: (dashboardContext.activeProperty?.name || "Cabang Ditugaskan"),
-		value: isSuperAdmin ? "ALL" : (activePropertyId || ""),
+			: dashboardContext.activeProperty?.name || "Cabang Ditugaskan",
+		value: isSuperAdmin ? "ALL" : activePropertyId || "",
 	});
 
 	// Effective Property ID based on RBAC:
@@ -154,6 +154,18 @@ function FinancePage() {
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 	const [currentPage, setCurrentPage] = useState<number>(1);
 
+	// Reset pagination on filter or period changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [
+		selectedMonth,
+		selectedYear,
+		selectedProperty,
+		searchQuery,
+		typeFilter,
+		categoryFilter,
+	]);
+
 	// Modal states
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [editingTransaction, setEditingTransaction] =
@@ -171,6 +183,27 @@ function FinancePage() {
 		setTimeout(() => setToastMsg(null), 3500);
 	};
 
+	// Period filter mode for transaction table
+	const [periodFilterMode, setPeriodFilterMode] = useState<
+		"SELECTED_MONTH" | "ALL"
+	>("SELECTED_MONTH");
+
+	const activeDateRange = useMemo(() => {
+		if (periodFilterMode === "ALL") {
+			return { startDate: undefined, endDate: undefined };
+		}
+		const padMonth = String(selectedMonth.value).padStart(2, "0");
+		const lastDay = new Date(
+			selectedYear.value,
+			selectedMonth.value,
+			0,
+		).getDate();
+		return {
+			startDate: `${selectedYear.value}-${padMonth}-01`,
+			endDate: `${selectedYear.value}-${padMonth}-${String(lastDay).padStart(2, "0")}`,
+		};
+	}, [periodFilterMode, selectedMonth.value, selectedYear.value]);
+
 	// Queries
 	const { data: transactionsData, isLoading: isLoadingTransactions } =
 		useTransactions({
@@ -178,6 +211,8 @@ function FinancePage() {
 			search: searchQuery,
 			type: typeFilter.value as "ALL" | "INCOME" | "EXPENSE",
 			category: categoryFilter.value,
+			startDate: activeDateRange.startDate,
+			endDate: activeDateRange.endDate,
 			sortBy,
 			sortOrder,
 			page: currentPage,
@@ -315,7 +350,8 @@ function FinancePage() {
 								<Building2 className="w-3.5 h-3.5" />
 								{isSuperAdmin
 									? selectedProperty.label
-									: (dashboardContext.activeProperty?.name || "Cabang Ditugaskan")}
+									: dashboardContext.activeProperty?.name ||
+										"Cabang Ditugaskan"}
 							</span>
 							<span className="text-[11px] text-[#737873]">
 								· {isSuperAdmin ? "SuperAdmin View" : "Admin Cabang"}
@@ -337,6 +373,7 @@ function FinancePage() {
 								<Select
 									value={selectedProperty.value}
 									onValueChange={(val) => {
+										setCurrentPage(1);
 										if (val === "ALL") {
 											setSelectedProperty({
 												label: "Semua Cabang Kos (Konsolidasi)",
@@ -535,8 +572,14 @@ function FinancePage() {
 				<FinanceProfitLossTable
 					selectedMonth={selectedMonth}
 					selectedYear={selectedYear}
-					onMonthChange={setSelectedMonth}
-					onYearChange={setSelectedYear}
+					onMonthChange={(m) => {
+						setSelectedMonth(m);
+						setCurrentPage(1);
+					}}
+					onYearChange={(y) => {
+						setSelectedYear(y);
+						setCurrentPage(1);
+					}}
 					data={profitLossData}
 					isLoading={isLoadingProfitLoss}
 					onExportCsv={handleExportCsv}
@@ -570,6 +613,12 @@ function FinancePage() {
 						setCategoryFilter(cat);
 						setCurrentPage(1);
 					}}
+					periodFilterMode={periodFilterMode}
+					onPeriodFilterModeChange={(mode) => {
+						setPeriodFilterMode(mode);
+						setCurrentPage(1);
+					}}
+					selectedPeriodLabel={`${selectedMonth.label} ${selectedYear.value}`}
 					sortBy={sortBy}
 					sortOrder={sortOrder}
 					onSortToggle={handleSortToggle}
@@ -601,7 +650,9 @@ function FinancePage() {
 					onOpenChange={setIsFormOpen}
 					editingTransaction={editingTransaction}
 					properties={properties}
-					defaultPropertyId={effectivePropertyId || properties[0]?.id || activePropertyId}
+					defaultPropertyId={
+						effectivePropertyId || properties[0]?.id || activePropertyId
+					}
 					onSubmit={handleFormSubmit}
 					isSubmitting={
 						createTxMutation.isPending || updateTxMutation.isPending

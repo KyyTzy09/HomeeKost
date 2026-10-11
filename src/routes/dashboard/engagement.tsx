@@ -275,8 +275,14 @@ function EngagementPage() {
 	const handleTriggerCron = async () => {
 		try {
 			const res = await runCronMutation.mutateAsync();
+			const totalSkipped =
+				(res.dueRemindersSkipped || 0) + (res.birthdaysSkipped || 0);
+			const skippedNote =
+				totalSkipped > 0
+					? ` (${totalSkipped} dilewati karena sudah terkirim hari ini)`
+					: "";
 			showToast(
-				`Cron Sukses: ${res.dueRemindersSent} pengingat tagihan & ${res.birthdayWishesSent} ucapan ultah berhasil dieksekusi!`,
+				`Cron Selesai: ${res.dueRemindersSent} pengingat & ${res.birthdayWishesSent} ucapan ultah dikirim${skippedNote}`,
 			);
 		} catch (err: unknown) {
 			const error = err as Error;

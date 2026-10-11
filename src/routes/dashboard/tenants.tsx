@@ -32,6 +32,8 @@ import {
 	useUpdateTenant,
 } from "../../hooks/index.ts";
 import { parseRupiah } from "../../lib/currency.ts";
+import { parseIndonesianDate } from "../../lib/date-utils.ts";
+import { naturalCompare } from "../../lib/sort-utils.ts";
 
 export const Route = createFileRoute("/dashboard/tenants")({
 	head: () => ({
@@ -106,6 +108,8 @@ function TenantsPage() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState<string>("all");
 	const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+	const [sortBy, setSortBy] = useState<string>("roomNo");
+	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 	const [toastMessage, setToastMessage] = useState<string | null>(null);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -117,6 +121,15 @@ function TenantsPage() {
 	const showError = (msg: string) => {
 		setErrorMessage(msg);
 		setTimeout(() => setErrorMessage(null), 4000);
+	};
+
+	const handleSortToggle = (column: string) => {
+		if (sortBy === column) {
+			setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+		} else {
+			setSortBy(column);
+			setSortOrder("asc");
+		}
 	};
 
 	// Filtered tenants by search query & status filter
@@ -136,6 +149,30 @@ function TenantsPage() {
 			return matchSearch && matchStatus;
 		});
 	}, [tenants, searchQuery, statusFilter]);
+
+	// Sorted tenants according to active sort column & order (Default: roomNo Natural Sort)
+	const sortedTenants = useMemo(() => {
+		const result = [...filteredTenants];
+		result.sort((a, b) => {
+			let cmp = 0;
+			if (sortBy === "roomNo") {
+				cmp = naturalCompare(a.roomNo, b.roomNo);
+			} else if (sortBy === "name") {
+				cmp = a.name.localeCompare(b.name, "id-ID");
+			} else if (sortBy === "startDate") {
+				cmp =
+					parseIndonesianDate(a.startDate) - parseIndonesianDate(b.startDate);
+			} else if (sortBy === "dueDate") {
+				cmp = parseIndonesianDate(a.dueDate) - parseIndonesianDate(b.dueDate);
+			} else if (sortBy === "paymentStatus") {
+				cmp = a.paymentStatus.localeCompare(b.paymentStatus);
+			} else {
+				cmp = naturalCompare(a.roomNo, b.roomNo);
+			}
+			return sortOrder === "asc" ? cmp : -cmp;
+		});
+		return result;
+	}, [filteredTenants, sortBy, sortOrder]);
 
 	// Handlers
 	const handleOpenAdd = () => {
@@ -379,10 +416,13 @@ function TenantsPage() {
 					</div>
 				) : (
 					<TenantTable
-						data={filteredTenants}
+						data={sortedTenants}
 						onDetail={setSelectedDetailTenant}
 						onEdit={handleOpenEdit}
 						onDelete={setDeletingTenant}
+						sortBy={sortBy}
+						sortOrder={sortOrder}
+						onSortToggle={handleSortToggle}
 					/>
 				)}
 			</div>

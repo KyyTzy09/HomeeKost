@@ -119,6 +119,8 @@ export function useCreateTransaction(): UseMutationResult<
 			queryClient.invalidateQueries({ queryKey: PROFIT_LOSS_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ANNUAL_MATRIX_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: DASHBOARD_CONTEXT_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
 		},
 	});
 }
@@ -155,6 +157,8 @@ export function useUpdateTransaction(): UseMutationResult<
 			queryClient.invalidateQueries({ queryKey: PROFIT_LOSS_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ANNUAL_MATRIX_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: DASHBOARD_CONTEXT_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
 		},
 	});
 }
@@ -178,6 +182,8 @@ export function useDeleteTransaction(): UseMutationResult<
 			queryClient.invalidateQueries({ queryKey: PROFIT_LOSS_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ANNUAL_MATRIX_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: DASHBOARD_CONTEXT_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
 		},
 	});
 }

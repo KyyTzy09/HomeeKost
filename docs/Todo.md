@@ -193,6 +193,11 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
   - Validasi Zod & Error Handling lengkap
 - [x] 🔴 Rekap Matriks 12 Bulan & Generator Ekspor CSV (`exportAnnualFinancialCsvServerFn`):
   - Perhitungan pendapatan, biaya operasional vs investasi, dan laba bersih 12 bulan penuh dengan format CSV kompatibel Excel (UTF-8 BOM).
+- [x] 🟢 **Sinkronisasi Riwayat & Perhitungan Pengeluaran Kas**:
+  - Penyelarasan batas awal dan akhir bulan menggunakan standar WIB (UTC+7) di seluruh backend service (`getMonthDateRange`)
+  - Invalidasi cache query dashboard (`["dashboard", "overview"]`) pada mutasi transaksi kas agar kartu Dashboard langsung reaktif real-time
+  - Penyajian nominal rupiah presisi penuh di bawah Rp 10 juta (`formatRupiah`) untuk mencegah salah persepsi akibat pembulatan pemendekan
+  - Sinkronisasi filter periode tabel transaksi kas dengan selector aktif (toggle *"Bulan Terpilih"* vs *"Semua Periode"*) serta auto-reset paginasi ke halaman 1 saat filter berubah.
 
 ---
 

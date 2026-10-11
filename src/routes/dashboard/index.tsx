@@ -252,7 +252,13 @@ export function DashboardHomePage() {
 						</span>
 					</div>
 					<div className="stat-value">{stats.monthlyExpense}</div>
-					<div className="stat-sub">Bulan berjalan</div>
+					<div className="stat-sub">
+						{stats.monthlyExpenseRaw > 0 ? (
+							<span className="text-[#55695a] font-medium">Bulan berjalan</span>
+						) : (
+							<span>Belum ada pengeluaran</span>
+						)}
+					</div>
 				</Card>
 			</div>
 
