@@ -114,7 +114,8 @@ export class CashflowService {
 	}
 
 	private formatRawDate(date: Date): string {
-		return date.toISOString().split("T")[0];
+		const wibDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+		return wibDate.toISOString().split("T")[0];
 	}
 
 	async getTransactions(
@@ -141,10 +142,10 @@ export class CashflowService {
 		}
 
 		const startDate = input.startDate
-			? new Date(`${input.startDate}T00:00:00.000Z`)
+			? new Date(`${input.startDate}T00:00:00+07:00`)
 			: undefined;
 		const endDate = input.endDate
-			? new Date(`${input.endDate}T23:59:59.999Z`)
+			? new Date(`${input.endDate}T23:59:59.999+07:00`)
 			: undefined;
 
 		const page = Number(input.page) || 1;

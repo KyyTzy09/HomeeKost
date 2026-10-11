@@ -431,8 +431,10 @@ export class DashboardService {
 
 		const recentExpenses: DashboardRecentExpenseItem[] = recentExpenseTxs.map(
 			(tx) => {
-				const txDate = new Date(tx.transactionDate);
-				const dateLabel = `${txDate.getDate()} ${MONTH_NAMES_SHORT[txDate.getMonth()]} · ${tx.property?.name || "Semua Kost"}`;
+				const txDate = new Date(
+					tx.transactionDate.getTime() + 7 * 60 * 60 * 1000,
+				);
+				const dateLabel = `${txDate.getUTCDate()} ${MONTH_NAMES_SHORT[txDate.getUTCMonth()]} · ${tx.property?.name || "Semua Kost"}`;
 				return {
 					id: tx.id,
 					title: tx.description || tx.category || "Biaya Operasional",

@@ -7,7 +7,7 @@ import {
 	Plus,
 	TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MONTH_NAMES_ID } from "#/common/constants/months.const.ts";
 import FinanceDeleteDialog from "#/components/finance/FinanceDeleteDialog.tsx";
 import {
@@ -153,6 +153,18 @@ function FinancePage() {
 	);
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 	const [currentPage, setCurrentPage] = useState<number>(1);
+
+	// Reset pagination on filter or period changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [
+		selectedMonth,
+		selectedYear,
+		selectedProperty,
+		searchQuery,
+		typeFilter,
+		categoryFilter,
+	]);
 
 	// Modal states
 	const [isFormOpen, setIsFormOpen] = useState(false);
@@ -361,6 +373,7 @@ function FinancePage() {
 								<Select
 									value={selectedProperty.value}
 									onValueChange={(val) => {
+										setCurrentPage(1);
 										if (val === "ALL") {
 											setSelectedProperty({
 												label: "Semua Cabang Kos (Konsolidasi)",
@@ -559,8 +572,14 @@ function FinancePage() {
 				<FinanceProfitLossTable
 					selectedMonth={selectedMonth}
 					selectedYear={selectedYear}
-					onMonthChange={setSelectedMonth}
-					onYearChange={setSelectedYear}
+					onMonthChange={(m) => {
+						setSelectedMonth(m);
+						setCurrentPage(1);
+					}}
+					onYearChange={(y) => {
+						setSelectedYear(y);
+						setCurrentPage(1);
+					}}
 					data={profitLossData}
 					isLoading={isLoadingProfitLoss}
 					onExportCsv={handleExportCsv}
