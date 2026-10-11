@@ -12,6 +12,7 @@ import type {
 import { prisma } from "../../db.ts";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import { formatRupiah } from "../../lib/currency.ts";
+import { getMonthDateRange } from "../../lib/date-utils.ts";
 import { calculateInstallmentSummary } from "../../lib/payment-utils.ts";
 
 function formatRelativeNotificationTime(date: Date): string {
@@ -58,14 +59,15 @@ export class DashboardService {
 
 	private formatJuta(val: number): string {
 		if (val === 0) return "Rp0";
-		const jt = val / 1_000_000;
-		if (jt >= 1) {
-			return `Rp${jt.toLocaleString("id-ID", {
-				minimumFractionDigits: jt % 1 === 0 ? 0 : 1,
-				maximumFractionDigits: 1,
-			})} jt`;
+		// Jika nominal di bawah 10 juta, tampilkan nominal rupiah presisi penuh agar tidak membingungkan
+		if (val < 10_000_000) {
+			return formatRupiah(val);
 		}
-		return formatRupiah(val);
+		const jt = val / 1_000_000;
+		return `Rp${jt.toLocaleString("id-ID", {
+			minimumFractionDigits: jt % 1 === 0 ? 0 : 1,
+			maximumFractionDigits: 1,
+		})} jt`;
 	}
 
 	async getOverviewData(
@@ -89,22 +91,8 @@ export class DashboardService {
 		const currentMonth = now.getMonth() + 1;
 		const currentYear = now.getFullYear();
 
-		const startOfCurrentMonth = new Date(
-			currentYear,
-			currentMonth - 1,
-			1,
-			0,
-			0,
-			0,
-		);
-		const endOfCurrentMonth = new Date(
-			currentYear,
-			currentMonth,
-			0,
-			23,
-			59,
-			59,
-		);
+		const { startDate: startOfCurrentMonth, endDate: endOfCurrentMonth } =
+			getMonthDateRange(currentMonth, currentYear);
 
 		// 1. Agregasi Kamar & Status
 		const roomWhere: Prisma.RoomWhereInput = propertyIds
@@ -199,8 +187,8 @@ export class DashboardService {
 			}
 		}
 
-		const startOfLastMonth = new Date(lastYear, lastMonth - 1, 1, 0, 0, 0);
-		const endOfLastMonth = new Date(lastYear, lastMonth, 0, 23, 59, 59);
+		const { startDate: startOfLastMonth, endDate: endOfLastMonth } =
+			getMonthDateRange(lastMonth, lastYear);
 
 		const lastMonthTxIncome = await this.db.transaction.aggregate({
 			where: {
@@ -339,7 +327,10 @@ export class DashboardService {
 		}
 
 		// 5. Format Maksimal 6 Tagihan Mendekati Jatuh Tempo Bulan Ini
-		const upcomingPayments: UpcomingPaymentItem[] = upcomingPaymentsList.slice(0, 6);
+		const upcomingPayments: UpcomingPaymentItem[] = upcomingPaymentsList.slice(
+			0,
+			6,
+		);
 
 		// 6. Perhatian Hari Ini (Today Attention)
 		const todayAttentions: DashboardTodayAttentionItem[] = [];
@@ -425,14 +416,10 @@ export class DashboardService {
 			});
 		}
 
-		// 7. Pengeluaran Terakhir Bulan Ini (Recent Expenses)
+		// 7. Pengeluaran Terakhir (Recent Expenses)
 		const recentExpenseTxs = await this.db.transaction.findMany({
 			where: {
 				type: "EXPENSE",
-				transactionDate: {
-					gte: startOfCurrentMonth,
-					lte: endOfCurrentMonth,
-				},
 				...(propertyIds ? { propertyId: { in: propertyIds } } : {}),
 			},
 			include: {
@@ -538,8 +525,7 @@ export class DashboardService {
 			const y = d.getFullYear();
 			const lbl = `${MONTH_NAMES_SHORT[m - 1]} '${String(y).slice(2)}`;
 
-			const s = new Date(y, m - 1, 1, 0, 0, 0);
-			const e = new Date(y, m, 0, 23, 59, 59);
+			const { startDate: s, endDate: e } = getMonthDateRange(m, y);
 
 			// Invoices paid in that month
 			const mInvoices = await this.db.invoice.findMany({

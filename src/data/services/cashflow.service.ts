@@ -28,7 +28,7 @@ import type {
 	TransactionType as PrismaTransactionType,
 	TransactionCategory,
 } from "../../generated/prisma/client.js";
-import { formatShortDueDate } from "../../lib/date-utils.ts";
+import { formatShortDueDate, getMonthDateRange } from "../../lib/date-utils.ts";
 import { propertyRepository } from "../repositories/property.repository.ts";
 import {
 	type TransactionRepository,
@@ -423,21 +423,15 @@ export class CashflowService {
 		const targetMonth = input.month || now.getMonth() + 1; // 1-12
 		const targetYear = input.year || now.getFullYear();
 
-		const startOfMonth = new Date(
-			Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0),
-		);
-		const endOfMonth = new Date(
-			Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999),
+		const { startDate: startOfMonth, endDate: endOfMonth } = getMonthDateRange(
+			targetMonth,
+			targetYear,
 		);
 
 		const prevMonth = targetMonth === 1 ? 12 : targetMonth - 1;
 		const prevYear = targetMonth === 1 ? targetYear - 1 : targetYear;
-		const startOfPrevMonth = new Date(
-			Date.UTC(prevYear, prevMonth - 1, 1, 0, 0, 0),
-		);
-		const endOfPrevMonth = new Date(
-			Date.UTC(prevYear, prevMonth, 0, 23, 59, 59, 999),
-		);
+		const { startDate: startOfPrevMonth, endDate: endOfPrevMonth } =
+			getMonthDateRange(prevMonth, prevYear);
 
 		const props = propertyIds.length > 0 ? propertyIds : undefined;
 
@@ -551,11 +545,9 @@ export class CashflowService {
 		const targetMonth = input.month || now.getMonth() + 1;
 		const targetYear = input.year || now.getFullYear();
 
-		const startOfMonth = new Date(
-			Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0),
-		);
-		const endOfMonth = new Date(
-			Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999),
+		const { startDate: startOfMonth, endDate: endOfMonth } = getMonthDateRange(
+			targetMonth,
+			targetYear,
 		);
 
 		const groups = await this.transactionRepo.groupByCategory({
@@ -641,8 +633,7 @@ export class CashflowService {
 			const m = d.getMonth() + 1;
 			const y = d.getFullYear();
 
-			const start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
-			const end = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
+			const { startDate: start, endDate: end } = getMonthDateRange(m, y);
 
 			const [incomeAgg, expenseAgg] = await Promise.all([
 				this.transactionRepo.aggregateAmounts({
@@ -687,11 +678,9 @@ export class CashflowService {
 		const targetMonth = input.month || now.getMonth() + 1;
 		const targetYear = input.year || now.getFullYear();
 
-		const startOfMonth = new Date(
-			Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0),
-		);
-		const endOfMonth = new Date(
-			Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999),
+		const { startDate: startOfMonth, endDate: endOfMonth } = getMonthDateRange(
+			targetMonth,
+			targetYear,
 		);
 
 		const monthsId = [
