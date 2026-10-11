@@ -1352,7 +1352,7 @@ export function TenantFormDialog({
 																		Koreksi Salah Input
 																	</span>
 																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																		Gunakan jika salah pilih kamar saat input. Riwayat sewa dan pembayaran tetap lanjut seperti biasa.
+																		Hanya perbaiki kamar karena salah pilih di awal.
 																	</p>
 																</div>
 															</label>
@@ -1380,7 +1380,7 @@ export function TenantFormDialog({
 																		Pindah Kamar Resmi
 																	</span>
 																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																		Gunakan jika penghuni benar-benar pindah ke kamar lain. Sewa kamar baru akan dimulai per hari ini.
+																		Penghuni pindah kamar dan sewa baru dimulai hari ini.
 																	</p>
 																</div>
 															</label>
@@ -1411,13 +1411,13 @@ export function TenantFormDialog({
 																			/>
 																			<div className="text-[11px] leading-tight space-y-0.5">
 																				<span className="font-semibold block text-[#25392b]">
-																					Update tagihan bulan ini ke harga kamar baru
+																					Sesuaikan tagihan bulan ini ke harga kamar baru
 																					{priceDiffers
 																						? ` (${formatRupiah(oldRoomPrice)} ➔ ${formatRupiah(newRoomPrice)})`
 																						: ""}
 																				</span>
 																				<span className="text-[9.5px] text-[#6d7d71] block">
-																					Centang ini agar nominal tagihan dan catatan kas bulan ini otomatis disesuaikan dengan harga kamar baru, sehingga pembukuan tidak selisih.
+																					Centang agar jumlah yang harus dibayar bulan ini otomatis mengikuti harga kamar baru.
 																				</span>
 																			</div>
 																		</label>
