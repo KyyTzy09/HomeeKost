@@ -12,6 +12,7 @@ import type {
 import { prisma } from "../../db.ts";
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import { formatRupiah } from "../../lib/currency.ts";
+import { calculateInstallmentSummary } from "../../lib/payment-utils.ts";
 
 function formatRelativeNotificationTime(date: Date): string {
 	const now = new Date();
@@ -129,22 +130,35 @@ export class DashboardService {
 		const occupancyRate =
 			totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
 
-		// 2. Agregasi Pendapatan Bulan Ini & Bulan Lalu
-		const currentMonthPaidInvoices = await this.db.invoice.findMany({
+		// 2. Agregasi Pendapatan Bulan Ini & Bulan Lalu (Fokus pada periode bulan berjalan)
+		const currentMonthInvoices = await this.db.invoice.findMany({
 			where: {
 				periodMonth: currentMonth,
 				periodYear: currentYear,
-				status: "PAID",
 				...(propertyIds
 					? { contract: { room: { propertyId: { in: propertyIds } } } }
 					: {}),
 			},
-			select: { amount: true },
+			include: { transactions: true },
 		});
 
+		let currentMonthIncomeFromInvoices = 0;
+		for (const inv of currentMonthInvoices) {
+			if (inv.status === "PAID") {
+				currentMonthIncomeFromInvoices += Number(inv.amount);
+			} else {
+				const paid = inv.transactions
+					.filter((t) => t.type === "INCOME")
+					.reduce((sum, t) => sum + Number(t.amount), 0);
+				currentMonthIncomeFromInvoices += paid;
+			}
+		}
+
+		// Standalone income (tanpa invoice) yang tercatat di bulan ini
 		const currentMonthTxIncome = await this.db.transaction.aggregate({
 			where: {
 				type: "INCOME",
+				invoiceId: null,
 				transactionDate: {
 					gte: startOfCurrentMonth,
 					lte: endOfCurrentMonth,
@@ -154,30 +168,55 @@ export class DashboardService {
 			_sum: { amount: true },
 		});
 
-		const paidInvSum = currentMonthPaidInvoices.reduce(
-			(acc, i) => acc + Number(i.amount),
-			0,
-		);
-		const txIncSum = Number(currentMonthTxIncome._sum.amount ?? 0);
-		const currentMonthIncome = Math.max(paidInvSum, txIncSum);
+		const currentMonthIncome =
+			currentMonthIncomeFromInvoices +
+			Number(currentMonthTxIncome._sum.amount ?? 0);
 
 		// Bulan lalu untuk growth %
-		const lastMonthPaidInvoices = await this.db.invoice.findMany({
+		const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+		const lastYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+		const lastMonthInvoices = await this.db.invoice.findMany({
 			where: {
-				periodMonth: currentMonth === 1 ? 12 : currentMonth - 1,
-				periodYear: currentMonth === 1 ? currentYear - 1 : currentYear,
-				status: "PAID",
+				periodMonth: lastMonth,
+				periodYear: lastYear,
 				...(propertyIds
 					? { contract: { room: { propertyId: { in: propertyIds } } } }
 					: {}),
 			},
-			select: { amount: true },
+			include: { transactions: true },
 		});
 
-		const lastMonthIncome = lastMonthPaidInvoices.reduce(
-			(acc, i) => acc + Number(i.amount),
-			0,
-		);
+		let lastMonthIncomeFromInvoices = 0;
+		for (const inv of lastMonthInvoices) {
+			if (inv.status === "PAID") {
+				lastMonthIncomeFromInvoices += Number(inv.amount);
+			} else {
+				const paid = inv.transactions
+					.filter((t) => t.type === "INCOME")
+					.reduce((sum, t) => sum + Number(t.amount), 0);
+				lastMonthIncomeFromInvoices += paid;
+			}
+		}
+
+		const startOfLastMonth = new Date(lastYear, lastMonth - 1, 1, 0, 0, 0);
+		const endOfLastMonth = new Date(lastYear, lastMonth, 0, 23, 59, 59);
+
+		const lastMonthTxIncome = await this.db.transaction.aggregate({
+			where: {
+				type: "INCOME",
+				invoiceId: null,
+				transactionDate: {
+					gte: startOfLastMonth,
+					lte: endOfLastMonth,
+				},
+				...(propertyIds ? { propertyId: { in: propertyIds } } : {}),
+			},
+			_sum: { amount: true },
+		});
+
+		const lastMonthIncome =
+			lastMonthIncomeFromInvoices + Number(lastMonthTxIncome._sum.amount ?? 0);
 
 		let incomeGrowth = "0%";
 		if (lastMonthIncome > 0) {
@@ -203,15 +242,25 @@ export class DashboardService {
 
 		const currentMonthExpense = Number(currentMonthExpenseAgg._sum.amount ?? 0);
 
-		// 4. Tagihan Jatuh Tempo & Belum Lunas
+		// 4. Tagihan Jatuh Tempo & Belum Lunas BULAN INI (Hanya tagihan bulan ini / overdue, tidak mencakup bulan depan)
 		const pendingInvoices = await this.db.invoice.findMany({
 			where: {
 				status: { in: ["PENDING", "OVERDUE"] },
+				dueDate: { lte: endOfCurrentMonth },
+				OR: [
+					{ periodYear: { lt: currentYear } },
+					{
+						periodYear: currentYear,
+						periodMonth: { lte: currentMonth },
+					},
+					{ periodMonth: null },
+				],
 				...(propertyIds
 					? { contract: { room: { propertyId: { in: propertyIds } } } }
 					: {}),
 			},
 			include: {
+				transactions: true,
 				contract: {
 					include: {
 						tenant: {
@@ -234,19 +283,22 @@ export class DashboardService {
 			orderBy: { dueDate: "asc" },
 		});
 
-		const dueCount = pendingInvoices.length;
-		const dueAmountRaw = pendingInvoices.reduce(
-			(sum, inv) => sum + Number(inv.amount),
-			0,
-		);
-
-		// 5. Format 5 Upcoming Payments
 		const todayDate = new Date();
 		todayDate.setHours(0, 0, 0, 0);
 
-		const upcomingPayments: UpcomingPaymentItem[] = pendingInvoices
-			.slice(0, 6)
-			.map((inv) => {
+		let dueCount = 0;
+		let dueAmountRaw = 0;
+		const upcomingPaymentsList: UpcomingPaymentItem[] = [];
+
+		for (const inv of pendingInvoices) {
+			const installmentSummary = calculateInstallmentSummary(
+				Number(inv.amount),
+				inv.transactions,
+			);
+			if (installmentSummary.remainingAmount > 0) {
+				dueCount++;
+				dueAmountRaw += installmentSummary.remainingAmount;
+
 				const due = new Date(inv.dueDate);
 				due.setHours(0, 0, 0, 0);
 				const diffDays = Math.ceil(
@@ -268,13 +320,13 @@ export class DashboardService {
 
 				const formattedDueDate = `${due.getDate()} ${MONTH_NAMES_SHORT[due.getMonth()]} ${due.getFullYear()}`;
 
-				return {
+				upcomingPaymentsList.push({
 					id: inv.id,
 					tenant: inv.contract.tenant.name,
 					room: inv.contract.room.roomNumber,
 					dueDate: formattedDueDate,
-					amount: formatRupiah(Number(inv.amount)),
-					amountRaw: Number(inv.amount),
+					amount: formatRupiah(installmentSummary.remainingAmount),
+					amountRaw: installmentSummary.remainingAmount,
 					badgeText,
 					badgeClass,
 					actionText: "Reminder",
@@ -282,8 +334,12 @@ export class DashboardService {
 					phone:
 						inv.contract.tenant.whatsappNumber ||
 						inv.contract.tenant.phoneNumber,
-				};
-			});
+				});
+			}
+		}
+
+		// 5. Format Maksimal 6 Tagihan Mendekati Jatuh Tempo Bulan Ini
+		const upcomingPayments: UpcomingPaymentItem[] = upcomingPaymentsList.slice(0, 6);
 
 		// 6. Perhatian Hari Ini (Today Attention)
 		const todayAttentions: DashboardTodayAttentionItem[] = [];
@@ -369,10 +425,14 @@ export class DashboardService {
 			});
 		}
 
-		// 7. Pengeluaran Terakhir (Recent Expenses)
+		// 7. Pengeluaran Terakhir Bulan Ini (Recent Expenses)
 		const recentExpenseTxs = await this.db.transaction.findMany({
 			where: {
 				type: "EXPENSE",
+				transactionDate: {
+					gte: startOfCurrentMonth,
+					lte: endOfCurrentMonth,
+				},
 				...(propertyIds ? { propertyId: { in: propertyIds } } : {}),
 			},
 			include: {
@@ -395,7 +455,7 @@ export class DashboardService {
 			},
 		);
 
-		// 8. Ringkasan Per Cabang Kos (Property Summary)
+		// 8. Ringkasan Per Cabang Kos (Property Summary) - Fokus Bulan Ini
 		const allProperties = await this.db.property.findMany({
 			where: propertyFilter,
 			include: {
@@ -409,6 +469,15 @@ export class DashboardService {
 				const propDueCount = await this.db.invoice.count({
 					where: {
 						status: { in: ["PENDING", "OVERDUE"] },
+						dueDate: { lte: endOfCurrentMonth },
+						OR: [
+							{ periodYear: { lt: currentYear } },
+							{
+								periodYear: currentYear,
+								periodMonth: { lte: currentMonth },
+							},
+							{ periodMonth: null },
+						],
 						contract: { room: { propertyId: prop.id } },
 					},
 				});
