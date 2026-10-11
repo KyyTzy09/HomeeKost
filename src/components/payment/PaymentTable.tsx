@@ -18,7 +18,7 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import { Input } from "../../common/shadcn/input.tsx";
@@ -60,9 +60,6 @@ export const PAYMENT_STATUS_OPTIONS: PaymentFilterOption[] = [
 interface PaymentTableProps {
 	payments: PaymentItem[];
 	totalCount?: number;
-	currentPage?: number;
-	totalPages?: number;
-	pageSize?: number;
 	searchQuery: string;
 	onSearchChange: (q: string) => void;
 	statusFilter: PaymentFilterOption;
@@ -73,7 +70,6 @@ interface PaymentTableProps {
 	sortBy: "dueDate" | "amount" | "createdAt";
 	sortOrder: "asc" | "desc";
 	onSortToggle: (sortBy: "dueDate" | "amount" | "createdAt") => void;
-	onPageChange: (page: number) => void;
 	isLoading?: boolean;
 	onAddNew?: () => void;
 	onGenerateMonthly?: () => void;
@@ -81,6 +77,13 @@ interface PaymentTableProps {
 	onSendWhatsApp: (payment: PaymentItem) => void;
 	onDelete: (payment: PaymentItem) => void;
 	isSendingWhatsApp?: boolean;
+	hasNextPage?: boolean;
+	isFetchingNextPage?: boolean;
+	onLoadMore?: () => void;
+	currentPage?: number;
+	totalPages?: number;
+	pageSize?: number;
+	onPageChange?: (page: number) => void;
 }
 
 const columnHelper = createColumnHelper<PaymentItem>();
@@ -88,8 +91,6 @@ const columnHelper = createColumnHelper<PaymentItem>();
 export function PaymentTable({
 	payments,
 	totalCount = 0,
-	currentPage = 1,
-	totalPages = 1,
 	searchQuery,
 	onSearchChange,
 	statusFilter,
@@ -100,7 +101,6 @@ export function PaymentTable({
 	sortBy,
 	sortOrder,
 	onSortToggle,
-	onPageChange,
 	isLoading = false,
 	onAddNew,
 	onGenerateMonthly,
@@ -108,7 +108,29 @@ export function PaymentTable({
 	onSendWhatsApp,
 	onDelete,
 	isSendingWhatsApp = false,
+	hasNextPage = false,
+	isFetchingNextPage = false,
+	onLoadMore,
 }: PaymentTableProps) {
+	const observerTarget = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		if (!hasNextPage || isFetchingNextPage || !onLoadMore) return;
+		const el = observerTarget.current;
+		if (!el) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					onLoadMore();
+				}
+			},
+			{ threshold: 0.1, rootMargin: "150px" },
+		);
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [hasNextPage, isFetchingNextPage, onLoadMore]);
 	const columns = useMemo(
 		() => [
 			columnHelper.accessor("invoiceNumber", {
@@ -580,38 +602,37 @@ export function PaymentTable({
 				</Table>
 			</div>
 
-			{/* ─── Pagination Controls ──────────────────────────────────────── */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 text-xs text-[#737873]">
+			{/* ─── Infinite Scroll Footer ───────────────────────────────────────── */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 text-xs text-[#737873] border-t border-[#edf0ed]">
 				<div>
-					Menampilkan <b>{payments.length}</b> dari <b>{totalCount}</b> data
-					tagihan
+					Menampilkan <b>{payments.length}</b> dari <b>{totalCount}</b> data tagihan
 				</div>
 
-				<div className="flex items-center gap-1.5 self-end sm:self-auto">
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-						disabled={currentPage <= 1 || isLoading}
-						className="h-8 text-xs border-[#e4e9e4] hover:bg-[#f3f7f3]"
+				{hasNextPage ? (
+					<div
+						ref={observerTarget}
+						className="flex items-center gap-2 self-center sm:self-auto"
 					>
-						Sebelumnya
-					</Button>
-					<span className="px-2 font-medium">
-						{currentPage} / {totalPages || 1}
-					</span>
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-						disabled={currentPage >= totalPages || isLoading}
-						className="h-8 text-xs border-[#e4e9e4] hover:bg-[#f3f7f3]"
-					>
-						Selanjutnya
-					</Button>
-				</div>
+						{isFetchingNextPage ? (
+							<div className="flex items-center gap-2 text-[#4f6958] font-semibold text-xs py-1">
+								<div className="w-3.5 h-3.5 border-2 border-[#4f6958] border-t-transparent rounded-full animate-spin" />
+								<span>Memuat tagihan berikutnya...</span>
+							</div>
+						) : (
+							<button
+								type="button"
+								onClick={() => onLoadMore?.()}
+								className="text-[11px] font-semibold text-[#4f6958] hover:underline cursor-pointer py-1"
+							>
+								Scroll ke bawah untuk memuat data berikutnya
+							</button>
+						)}
+					</div>
+				) : (
+					<div className="text-[11px] text-[#8fa594] font-medium self-center sm:self-auto">
+						{payments.length > 0 ? "✓ Seluruh tagihan telah dimuat" : ""}
+					</div>
+				)}
 			</div>
 		</Card>
 	);

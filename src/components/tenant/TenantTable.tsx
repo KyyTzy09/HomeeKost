@@ -2,12 +2,9 @@ import {
 	createColumnHelper,
 	flexRender,
 	getCoreRowModel,
-	getPaginationRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo } from "react";
-import { Button } from "../../common/shadcn/button.tsx";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { TenantItem } from "../../common/types/index.ts";
 import { formatShortDueDate } from "../../lib/date-utils.ts";
 import { formatDisplayPhone } from "../../lib/phone-utils.ts";
@@ -27,6 +24,39 @@ export function TenantTable({
 	onEdit,
 	onDelete,
 }: TenantTableProps) {
+	const [visibleCount, setVisibleCount] = useState<number>(15);
+	const observerTarget = useRef<HTMLDivElement | null>(null);
+
+	// Reset pagination limit when dataset changes (e.g. search, filter, or property switch)
+	useEffect(() => {
+		setVisibleCount(15);
+	}, [data]);
+
+	const hasMore = visibleCount < data.length;
+
+	// Infinite scroll intersection observer
+	useEffect(() => {
+		if (!hasMore) return;
+		const el = observerTarget.current;
+		if (!el) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					setVisibleCount((prev) => Math.min(prev + 15, data.length));
+				}
+			},
+			{ threshold: 0.1, rootMargin: "150px" },
+		);
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [hasMore, data.length]);
+
+	const visibleData = useMemo(() => {
+		return data.slice(0, visibleCount);
+	}, [data, visibleCount]);
+
 	const columns = useMemo(
 		() => [
 			columnHelper.accessor("name", {
@@ -133,15 +163,9 @@ export function TenantTable({
 	);
 
 	const table = useReactTable({
-		data,
+		data: visibleData,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		initialState: {
-			pagination: {
-				pageSize: 10,
-			},
-		},
 	});
 
 	return (
@@ -200,41 +224,33 @@ export function TenantTable({
 				</table>
 			</div>
 
-			{/* Pagination */}
-			{table.getPageCount() > 1 && (
-				<div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-[#edf1ed]">
-					<span className="text-[11.5px] text-[#737873]">
-						Halaman {table.getState().pagination.pageIndex + 1} dari{" "}
-						{table.getPageCount()} ({data.length} total penghuni)
-					</span>
-
-					<div className="flex items-center gap-1.5">
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => table.previousPage()}
-							disabled={!table.getCanPreviousPage()}
-							className="h-[32px] px-2.5 text-[11px] font-semibold border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3]"
-						>
-							<ChevronLeft className="w-3.5 h-3.5 mr-1" />
-							Sebelumnya
-						</Button>
-
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => table.nextPage()}
-							disabled={!table.getCanNextPage()}
-							className="h-[32px] px-2.5 text-[11px] font-semibold border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3]"
-						>
-							Selanjutnya
-							<ChevronRight className="w-3.5 h-3.5 ml-1" />
-						</Button>
-					</div>
+			{/* ─── Infinite Scroll Footer ───────────────────────────────────────── */}
+			<div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-[#edf1ed] text-xs text-[#737873]">
+				<div>
+					Menampilkan <b>{visibleData.length}</b> dari <b>{data.length}</b> total penghuni
 				</div>
-			)}
+
+				{hasMore ? (
+					<div
+						ref={observerTarget}
+						className="flex items-center gap-2 self-center sm:self-auto py-1"
+					>
+						<button
+							type="button"
+							onClick={() =>
+								setVisibleCount((prev) => Math.min(prev + 15, data.length))
+							}
+							className="text-[11px] font-semibold text-[#4f6958] hover:underline cursor-pointer"
+						>
+							Scroll ke bawah untuk memuat data berikutnya
+						</button>
+					</div>
+				) : (
+					<div className="text-[11px] text-[#8fa594] font-medium self-center sm:self-auto">
+						{data.length > 0 ? "✓ Seluruh data penghuni telah dimuat" : ""}
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }

@@ -27,8 +27,8 @@ import {
 	useDashboardContext,
 	useDeleteInvoice,
 	useGenerateMonthlyInvoices,
+	useInfinitePayments,
 	usePaymentStats,
-	usePayments,
 	useProperties,
 	useSendWhatsAppInvoice,
 	useTenants,
@@ -128,7 +128,6 @@ function PaymentsPage() {
 		"dueDate",
 	);
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-	const [currentPage, setCurrentPage] = useState<number>(1);
 
 	// Modal states
 	const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
@@ -147,8 +146,14 @@ function PaymentsPage() {
 		setTimeout(() => setToastMsg(null), 4000);
 	};
 
-	// Queries
-	const { data: paymentsData, isLoading: isLoadingPayments } = usePayments({
+	// Queries (Infinite Scroll)
+	const {
+		data: infinitePaymentsData,
+		isLoading: isLoadingPayments,
+		isFetchingNextPage,
+		hasNextPage,
+		fetchNextPage,
+	} = useInfinitePayments({
 		propertyId: activePropertyId,
 		status: statusFilter.value as "ALL" | "PENDING" | "PAID" | "OVERDUE",
 		month: selectedMonth,
@@ -156,9 +161,15 @@ function PaymentsPage() {
 		search: searchQuery,
 		sortBy,
 		sortOrder,
-		page: currentPage,
-		limit: 10,
+		limit: 15,
 	});
+
+	const allPayments = useMemo(() => {
+		return infinitePaymentsData?.pages.flatMap((page) => page.data) || [];
+	}, [infinitePaymentsData]);
+
+	const totalPaymentsCount =
+		infinitePaymentsData?.pages[0]?.totalCount || 0;
 
 	const { data: paymentStats, isLoading: isLoadingStats } = usePaymentStats({
 		propertyId: activePropertyId,
@@ -305,32 +316,22 @@ function PaymentsPage() {
 
 			{/* ─── TanStack Table View with Filters & Real-time Search ───────── */}
 			<PaymentTable
-				payments={paymentsData?.data || []}
-				totalCount={paymentsData?.totalCount || 0}
-				currentPage={paymentsData?.currentPage || 1}
-				totalPages={paymentsData?.totalPages || 1}
-				pageSize={paymentsData?.pageSize || 10}
+				payments={allPayments}
+				totalCount={totalPaymentsCount}
 				searchQuery={searchQuery}
-				onSearchChange={(q) => {
-					setSearchQuery(q);
-					setCurrentPage(1);
-				}}
+				onSearchChange={setSearchQuery}
 				statusFilter={statusFilter}
-				onStatusFilterChange={(status) => {
-					setStatusFilter(status);
-					setCurrentPage(1);
-				}}
+				onStatusFilterChange={setStatusFilter}
 				periodFilter={periodFilter}
-				onPeriodFilterChange={(p) => {
-					setPeriodFilter(p);
-					setCurrentPage(1);
-				}}
+				onPeriodFilterChange={setPeriodFilter}
 				periodOptions={periodOptions}
 				sortBy={sortBy}
 				sortOrder={sortOrder}
 				onSortToggle={handleSortToggle}
-				onPageChange={setCurrentPage}
 				isLoading={isLoadingPayments}
+				hasNextPage={hasNextPage}
+				isFetchingNextPage={isFetchingNextPage}
+				onLoadMore={() => fetchNextPage()}
 				onAddNew={() => setIsFormOpen(true)}
 				onGenerateMonthly={() => setIsGenerateOpen(true)}
 				onConfirmPayment={(p) => {
