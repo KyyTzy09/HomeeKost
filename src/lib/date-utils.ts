@@ -15,11 +15,35 @@ const MONTH_NAMES = [
 	"Desember",
 ];
 
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 /**
- * Mendapatkan representasi tanggal hari ini dalam format YYYY-MM-DD
+ * Mendapatkan representasi tanggal hari ini dalam format YYYY-MM-DD sesuai waktu lokal Indonesia (WIB UTC+7)
  */
 export function getTodayDateString(): string {
-	return new Date().toISOString().split("T")[0];
+	const now = new Date();
+	const wibDate = new Date(now.getTime() + WIB_OFFSET_MS);
+	return wibDate.toISOString().split("T")[0];
+}
+
+/**
+ * Menghitung batas awal dan akhir bulan dalam zona waktu Indonesia (WIB UTC+7)
+ * Menghasilkan objek Date yang valid untuk query PostgreSQL Prisma
+ */
+export function getMonthDateRange(
+	month: number,
+	year: number,
+): { startDate: Date; endDate: Date } {
+	// Bulan 1-12
+	// Batas awal: tanggal 1 pukul 00:00:00.000 WIB
+	const startUtcMs = Date.UTC(year, month - 1, 1, 0, 0, 0, 0) - WIB_OFFSET_MS;
+	// Batas akhir: tanggal terakhir pukul 23:59:59.999 WIB
+	const endUtcMs = Date.UTC(year, month, 0, 23, 59, 59, 999) - WIB_OFFSET_MS;
+
+	return {
+		startDate: new Date(startUtcMs),
+		endDate: new Date(endUtcMs),
+	};
 }
 
 /**
