@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	confirmPaymentSchema,
 	roomSchema,
 	tenantSchema,
 	transactionFormSchema,
@@ -162,6 +163,70 @@ describe("Zod Validation Schemas", () => {
 			};
 			const result = transactionFormSchema.safeParse(validFinance);
 			expect(result.success).toBe(true);
+		});
+	});
+
+	describe("confirmPaymentSchema", () => {
+		it("harus meloloskan konfirmasi pelunasan penuh default tanpa amount spesifik", () => {
+			const validFull = {
+				invoiceId: "inv_123",
+				paymentMethod: "TRANSFER" as const,
+				paidDate: "2026-10-11",
+				sendReceiptWhatsApp: true,
+				isPartial: false,
+			};
+			const result = confirmPaymentSchema.safeParse(validFull);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.isPartial).toBe(false);
+			}
+		});
+
+		it("harus meloloskan konfirmasi pembayaran cicilan bertahap dengan nominal positif", () => {
+			const validPartial = {
+				invoiceId: "inv_123",
+				paymentMethod: "CASH" as const,
+				paidDate: "2026-10-11",
+				isPartial: true,
+				amount: 500000,
+				notes: "Cicilan ke-1",
+			};
+			const result = confirmPaymentSchema.safeParse(validPartial);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.isPartial).toBe(true);
+				expect(result.data.amount).toBe(500000);
+			}
+		});
+
+		it("harus menolak jika nominal cicilan bernilai 0 atau negatif", () => {
+			const invalidAmount = {
+				invoiceId: "inv_123",
+				paymentMethod: "TRANSFER" as const,
+				paidDate: "2026-10-11",
+				isPartial: true,
+				amount: 0,
+			};
+			const result = confirmPaymentSchema.safeParse(invalidAmount);
+			expect(result.success).toBe(false);
+
+			const negativeAmount = {
+				...invalidAmount,
+				amount: -100000,
+			};
+			const resultNegative = confirmPaymentSchema.safeParse(negativeAmount);
+			expect(resultNegative.success).toBe(false);
+		});
+
+		it("harus menolak jika format tanggal pembayaran tidak valid", () => {
+			const invalidDate = {
+				invoiceId: "inv_123",
+				paymentMethod: "QRIS" as const,
+				paidDate: "11-10-2026", // Format salah (harus YYYY-MM-DD)
+				isPartial: false,
+			};
+			const result = confirmPaymentSchema.safeParse(invalidDate);
+			expect(result.success).toBe(false);
 		});
 	});
 });

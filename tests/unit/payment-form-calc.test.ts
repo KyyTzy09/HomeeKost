@@ -143,4 +143,78 @@ describe("Payment Form Calculation Helpers", () => {
 			expect(res.cycleMonths).toBe(1);
 		});
 	});
+
+	describe("calculateInstallmentSummary (payment-utils.ts)", () => {
+		const {
+			calculateInstallmentSummary,
+			getEndOfMonthString,
+		} = require("../../src/lib/payment-utils.ts");
+
+		it("harus menangani invoice baru tanpa transaksi (belum dicicil)", () => {
+			const res = calculateInstallmentSummary(1500000, []);
+			expect(res.paidAmount).toBe(0);
+			expect(res.remainingAmount).toBe(1500000);
+			expect(res.isPartial).toBe(false);
+			expect(res.installmentCount).toBe(0);
+		});
+
+		it("harus menghitung pembayaran cicilan tahap 1 dengan sisa akurat", () => {
+			const res = calculateInstallmentSummary(1500000, [{ amount: 500000 }]);
+			expect(res.paidAmount).toBe(500000);
+			expect(res.remainingAmount).toBe(1000000);
+			expect(res.isPartial).toBe(true);
+			expect(res.installmentCount).toBe(1);
+		});
+
+		it("harus menghitung multi cicilan secara kumulatif", () => {
+			const transactions = [
+				{ amount: 500000 },
+				{ amount: 400000 },
+			];
+			const res = calculateInstallmentSummary(1500000, transactions);
+			expect(res.paidAmount).toBe(900000);
+			expect(res.remainingAmount).toBe(600000);
+			expect(res.isPartial).toBe(true);
+			expect(res.installmentCount).toBe(2);
+		});
+
+		it("harus mengembalikan isPartial false jika cicilan telah melunasi seluruh tagihan", () => {
+			const transactions = [
+				{ amount: 500000 },
+				{ amount: 1000000 },
+			];
+			const res = calculateInstallmentSummary(1500000, transactions);
+			expect(res.paidAmount).toBe(1500000);
+			expect(res.remainingAmount).toBe(0);
+			expect(res.isPartial).toBe(false);
+			expect(res.installmentCount).toBe(2);
+		});
+
+		it("harus mendukung objek amount dengan method toNumber() (Prisma Decimal)", () => {
+			const transactions = [
+				{ amount: { toNumber: () => 750000 } },
+			];
+			const res = calculateInstallmentSummary(1500000, transactions);
+			expect(res.paidAmount).toBe(750000);
+			expect(res.remainingAmount).toBe(750000);
+			expect(res.isPartial).toBe(true);
+		});
+
+		describe("getEndOfMonthString", () => {
+			it("harus memformat akhir bulan untuk bulan 31 hari", () => {
+				expect(getEndOfMonthString(2026, 10)).toBe("31 Oktober 2026");
+				expect(getEndOfMonthString(2026, 8)).toBe("31 Agustus 2026");
+			});
+
+			it("harus memformat akhir bulan untuk bulan 30 hari", () => {
+				expect(getEndOfMonthString(2026, 9)).toBe("30 September 2026");
+				expect(getEndOfMonthString(2026, 11)).toBe("30 November 2026");
+			});
+
+			it("harus menangani Februari pada tahun kabisat dan non-kabisat", () => {
+				expect(getEndOfMonthString(2026, 2)).toBe("28 Februari 2026");
+				expect(getEndOfMonthString(2024, 2)).toBe("29 Februari 2024");
+			});
+		});
+	});
 });
