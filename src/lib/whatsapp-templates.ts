@@ -26,6 +26,36 @@ export interface PaymentReceiptTemplateParams {
 	documentUrl?: string;
 }
 
+export interface PartialPaymentReceiptTemplateParams {
+	tenantName: string;
+	propertyName: string;
+	roomNumber: string;
+	invoiceNumber: string;
+	period: string;
+	paidDate: string;
+	paymentMethod: string;
+	paidThisTime: number;
+	totalAmount: number;
+	totalPaid: number;
+	remainingAmount: number;
+	documentUrl?: string;
+}
+
+export interface InstallmentReminderTemplateParams {
+	tenantName: string;
+	propertyName: string;
+	roomNumber: string;
+	invoiceNumber: string;
+	period: string;
+	totalAmount: number;
+	totalPaid: number;
+	remainingAmount: number;
+	endOfMonthDate: string;
+	bankAccount?: string;
+	accountHolder?: string;
+	documentUrl?: string;
+}
+
 export interface DueReminderTemplateParams {
 	tenantName: string;
 	propertyName: string;
@@ -136,6 +166,61 @@ Terima kasih, pembayaran sewa kos Anda untuk periode *${p.period}* telah kami te
 💵 *Jumlah Diterima:* *${formatRupiah(p.amount)}* (LUNAS)
 ${docSection}
 Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Semoga nyaman tinggal di *${p.propertyName}*! 🌿🏡`;
+	},
+
+	/**
+	 * Template Bukti Penerimaan Cicilan Sewa Bertahap
+	 */
+	partialPaymentReceipt(p: PartialPaymentReceiptTemplateParams): string {
+		const docSection = p.documentUrl
+			? `\n📄 *Tautan Kwitansi Digital:*\n${p.documentUrl}\n`
+			: "";
+
+		return `🧾 *BUKTI PENERIMAAN CICILAN SEWA*
+
+Halo Kak *${p.tenantName}*,
+Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima:
+
+🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+📄 *No. Invoice:* ${p.invoiceNumber}
+💳 *Metode Bayar:* ${p.paymentMethod}
+🗓️ *Tanggal Bayar:* ${p.paidDate}
+💵 *Nominal Diterima:* *${formatRupiah(p.paidThisTime)}*
+
+📊 *Rincian Status Tagihan:*
+- Total Tagihan: ${formatRupiah(p.totalAmount)}
+- Total Terbayar: ${formatRupiah(p.totalPaid)}
+- ⚠️ *Sisa Tagihan:* *${formatRupiah(p.remainingAmount)}*
+${docSection}
+Bukti pembayaran resmi ini tersimpan digital di sistem pengelola kos. Terima kasih! 🙏✨
+_— Pengelola ${p.propertyName}_`;
+	},
+
+	/**
+	 * Template Pengingat Sisa Cicilan Menjelang Akhir Bulan
+	 */
+	installmentReminder(p: InstallmentReminderTemplateParams): string {
+		const docSection = p.documentUrl
+			? `\n📄 *Tautan Invoice Digital:* ${p.documentUrl}\n`
+			: "";
+
+		return `🔔 *PENGINGAT SISA CICILAN SEWA*
+
+Halo Kak *${p.tenantName}*,
+Mengingatkan kembali perihal sisa tagihan sewa kos untuk periode *${p.period}*:
+
+🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+📄 *No. Invoice:* ${p.invoiceNumber}
+💵 *Total Tagihan:* ${formatRupiah(p.totalAmount)}
+✅ *Sudah Dibayar:* ${formatRupiah(p.totalPaid)}
+⏳ *Sisa Pelunasan:* *${formatRupiah(p.remainingAmount)}*
+📅 *Batas Waktu Pelunasan:* Sebelum akhir bulan (${p.endOfMonthDate})
+${docSection}
+Pembayaran dapat ditransfer ke rekening:
+🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+
+Mohon lakukan pelunasan sisa tagihan sebelum tanggal tersebut. Terima kasih banyak atas kerjasamanya! 🙏✨
+_— Pengelola ${p.propertyName}_`;
 	},
 
 	/**

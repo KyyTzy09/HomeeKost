@@ -16,6 +16,10 @@ import type {
 	PaymentMethod,
 } from "../../generated/prisma/client.js";
 import { formatDate, formatRentalPeriod } from "../../lib/date-utils.ts";
+import {
+	calculateInstallmentSummary,
+	getEndOfMonthString,
+} from "../../lib/payment-utils.ts";
 import { getWhatsAppDirectUrl } from "../../lib/phone-sanitizer.ts";
 import { whatsappTemplates } from "../../lib/whatsapp-templates.ts";
 import {
@@ -109,6 +113,18 @@ export class PaymentService {
 			});
 
 			const isPaid = inv.status === "PAID";
+			const installmentSummary = calculateInstallmentSummary(
+				Number(inv.amount),
+				inv.transactions,
+			);
+			const { paidAmount, remainingAmount, isPartial, installmentCount } =
+				installmentSummary;
+
+			let status: PaymentStatus = inv.status as PaymentStatus;
+			if (!isPaid && isPartial) {
+				status = "PARTIAL";
+			}
+
 			let dueStatusBadge: PaymentItem["dueStatusBadge"] = {
 				text: formatDate(dueDate),
 				variant: "gray",
@@ -116,6 +132,11 @@ export class PaymentService {
 
 			if (isPaid) {
 				dueStatusBadge = { text: "Lunas", variant: "green" };
+			} else if (isPartial) {
+				dueStatusBadge = {
+					text: `Dicicil (${installmentCount}x)`,
+					variant: "amber",
+				};
 			} else if (dueDaysRemaining < 0) {
 				const daysLate = Math.abs(dueDaysRemaining);
 				dueStatusBadge = {
@@ -142,29 +163,46 @@ export class PaymentService {
 			const documentUrl =
 				inv.pdfUrl || `${appUrl}/api/invoices/${inv.id}/document`;
 
-			const message = isPaid
-				? whatsappTemplates.paymentReceipt({
-						tenantName,
-						propertyName,
-						roomNumber,
-						invoiceNumber: inv.invoiceNumber,
-						period,
-						paidDate: inv.paidAt ? formatDate(inv.paidAt) : formatDate(now),
-						amount,
-						paymentMethod: "Transfer Bank",
-						documentUrl,
-					})
-				: whatsappTemplates.dueReminder({
-						tenantName,
-						propertyName,
-						roomNumber,
-						invoiceNumber: inv.invoiceNumber,
-						period,
-						dueDate: formatDate(dueDate),
-						daysRemaining: dueDaysRemaining,
-						amount,
-						documentUrl,
-					});
+			let message = "";
+			if (isPaid) {
+				message = whatsappTemplates.paymentReceipt({
+					tenantName,
+					propertyName,
+					roomNumber,
+					invoiceNumber: inv.invoiceNumber,
+					period,
+					paidDate: inv.paidAt ? formatDate(inv.paidAt) : formatDate(now),
+					amount,
+					paymentMethod: "Transfer Bank",
+					documentUrl,
+				});
+			} else if (isPartial) {
+				const endOfMonth = getEndOfMonthString(periodYear, periodMonth);
+				message = whatsappTemplates.installmentReminder({
+					tenantName,
+					propertyName,
+					roomNumber,
+					invoiceNumber: inv.invoiceNumber,
+					period,
+					totalAmount: amount,
+					totalPaid: paidAmount,
+					remainingAmount,
+					endOfMonthDate: endOfMonth,
+					documentUrl,
+				});
+			} else {
+				message = whatsappTemplates.dueReminder({
+					tenantName,
+					propertyName,
+					roomNumber,
+					invoiceNumber: inv.invoiceNumber,
+					period,
+					dueDate: formatDate(dueDate),
+					daysRemaining: dueDaysRemaining,
+					amount,
+					documentUrl,
+				});
+			}
 
 			const directWhatsAppUrl = tenantPhone
 				? getWhatsAppDirectUrl(tenantPhone, message)
@@ -185,13 +223,24 @@ export class PaymentService {
 				periodMonth,
 				periodYear,
 				amount,
-				status: inv.status as PaymentStatus,
+				status,
 				dueDate: formatDate(dueDate),
 				rawDueDate: inv.dueDate.toISOString().slice(0, 10),
 				paidAt: inv.paidAt ? formatDate(inv.paidAt) : null,
 				dueDaysRemaining,
 				dueStatusBadge,
 				directWhatsAppUrl,
+				paidAmount,
+				remainingAmount,
+				isPartial,
+				installmentCount,
+				transactions: (inv.transactions || []).map((t) => ({
+					id: t.id,
+					amount: Number(t.amount),
+					paymentMethod: t.paymentMethod,
+					transactionDate: t.transactionDate.toISOString().slice(0, 10),
+					description: t.description,
+				})),
 			};
 		});
 
@@ -241,11 +290,12 @@ export class PaymentService {
 		const paidDate = new Date(input.paidDate);
 		const recordedById = user?.id || "system";
 
-		const result = await this.invoiceRepo.markAsPaid(
+		const result = await this.invoiceRepo.recordPayment(
 			input.invoiceId,
 			input.paymentMethod as PaymentMethod,
 			paidDate,
 			recordedById,
+			input.isPartial ? input.amount : undefined,
 			input.notes,
 		);
 
@@ -273,33 +323,72 @@ export class PaymentService {
 			`${appUrl}/api/invoices/${result.invoice.id}/document`;
 
 		if (tenantPhone) {
-			if (input.sendReceiptWhatsApp) {
-				const waRes = await this.fonnte.sendPaymentReceipt(tenantPhone, {
-					tenantName,
-					propertyName,
-					roomNumber,
-					invoiceNumber: result.invoice.invoiceNumber,
-					period,
-					paidDate: formatDate(input.paidDate),
-					amount: Number(result.invoice.amount),
-					paymentMethod: input.paymentMethod,
-					documentUrl,
-				});
-				whatsappSent = waRes.success;
-				directWhatsAppUrl = waRes.directWhatsAppUrl;
+			if (!result.isSettled) {
+				// Bukti Cicilan Bertahap
+				if (input.sendReceiptWhatsApp) {
+					const waRes = await this.fonnte.sendPartialPaymentReceipt(tenantPhone, {
+						tenantName,
+						propertyName,
+						roomNumber,
+						invoiceNumber: result.invoice.invoiceNumber,
+						period,
+						paidDate: formatDate(input.paidDate),
+						paymentMethod: input.paymentMethod,
+						paidThisTime: result.paidThisTime,
+						totalAmount: Number(result.invoice.amount),
+						totalPaid: result.totalPaid,
+						remainingAmount: result.remainingAmount,
+						documentUrl,
+					});
+					whatsappSent = waRes.success;
+					directWhatsAppUrl = waRes.directWhatsAppUrl;
+				} else {
+					const msg = whatsappTemplates.partialPaymentReceipt({
+						tenantName,
+						propertyName,
+						roomNumber,
+						invoiceNumber: result.invoice.invoiceNumber,
+						period,
+						paidDate: formatDate(input.paidDate),
+						paymentMethod: input.paymentMethod,
+						paidThisTime: result.paidThisTime,
+						totalAmount: Number(result.invoice.amount),
+						totalPaid: result.totalPaid,
+						remainingAmount: result.remainingAmount,
+						documentUrl,
+					});
+					directWhatsAppUrl = getWhatsAppDirectUrl(tenantPhone, msg);
+				}
 			} else {
-				const msg = whatsappTemplates.paymentReceipt({
-					tenantName,
-					propertyName,
-					roomNumber,
-					invoiceNumber: result.invoice.invoiceNumber,
-					period,
-					paidDate: formatDate(input.paidDate),
-					amount: Number(result.invoice.amount),
-					paymentMethod: input.paymentMethod,
-					documentUrl,
-				});
-				directWhatsAppUrl = getWhatsAppDirectUrl(tenantPhone, msg);
+				// Kwitansi Pelunasan Penuh
+				if (input.sendReceiptWhatsApp) {
+					const waRes = await this.fonnte.sendPaymentReceipt(tenantPhone, {
+						tenantName,
+						propertyName,
+						roomNumber,
+						invoiceNumber: result.invoice.invoiceNumber,
+						period,
+						paidDate: formatDate(input.paidDate),
+						amount: Number(result.invoice.amount),
+						paymentMethod: input.paymentMethod,
+						documentUrl,
+					});
+					whatsappSent = waRes.success;
+					directWhatsAppUrl = waRes.directWhatsAppUrl;
+				} else {
+					const msg = whatsappTemplates.paymentReceipt({
+						tenantName,
+						propertyName,
+						roomNumber,
+						invoiceNumber: result.invoice.invoiceNumber,
+						period,
+						paidDate: formatDate(input.paidDate),
+						amount: Number(result.invoice.amount),
+						paymentMethod: input.paymentMethod,
+						documentUrl,
+					});
+					directWhatsAppUrl = getWhatsAppDirectUrl(tenantPhone, msg);
+				}
 			}
 		}
 
@@ -515,6 +604,30 @@ export class PaymentService {
 		}
 
 		if (type === "REMINDER") {
+			const installmentSummary = calculateInstallmentSummary(
+				amount,
+				(invoice as any).transactions,
+			);
+
+			if (installmentSummary.isPartial) {
+				const endOfMonth = getEndOfMonthString(
+					invoice.periodYear ?? undefined,
+					invoice.periodMonth ?? undefined,
+				);
+				return this.fonnte.sendInstallmentReminder(tenantPhone, {
+					tenantName,
+					propertyName,
+					roomNumber,
+					invoiceNumber: invoice.invoiceNumber,
+					period,
+					totalAmount: amount,
+					totalPaid: installmentSummary.paidAmount,
+					remainingAmount: installmentSummary.remainingAmount,
+					endOfMonthDate: endOfMonth,
+					documentUrl,
+				});
+			}
+
 			const now = new Date();
 			now.setHours(0, 0, 0, 0);
 			const dueTime = new Date(dueDate);

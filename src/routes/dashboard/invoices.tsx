@@ -105,7 +105,7 @@ function InvoicesPage() {
 			paidAt: p.paidAt,
 			description: `Biaya Sewa Kamar ${p.roomNumber}`,
 			amount: p.amount,
-			status: p.status,
+			status: p.status === "PARTIAL" ? "PENDING" : p.status,
 			facilitiesIncluded: ["Wi-Fi", "Air Bersih", "Keamanan 24 Jam"],
 		}));
 	}, [paymentsData]);

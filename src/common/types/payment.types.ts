@@ -1,4 +1,12 @@
-export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
+export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIAL";
+
+export interface PaymentTransactionItem {
+	id: string;
+	amount: number;
+	paymentMethod: string;
+	transactionDate: string;
+	description?: string | null;
+}
 
 export interface PaymentItem {
 	id: string;
@@ -27,6 +35,11 @@ export interface PaymentItem {
 	paymentMethod?: string;
 	pdfUrl?: string | null;
 	directWhatsAppUrl: string;
+	paidAmount?: number;
+	remainingAmount?: number;
+	isPartial?: boolean;
+	installmentCount?: number;
+	transactions?: PaymentTransactionItem[];
 }
 
 export interface PaymentStats {

@@ -33,6 +33,8 @@ export const confirmPaymentSchema = z.object({
 		.regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
 	notes: z.string().optional(),
 	sendReceiptWhatsApp: z.boolean().optional().default(true),
+	isPartial: z.boolean().optional().default(false),
+	amount: z.number().positive("Nominal pembayaran harus lebih dari 0").optional(),
 });
 
 export type ConfirmPaymentInput = z.infer<typeof confirmPaymentSchema>;
