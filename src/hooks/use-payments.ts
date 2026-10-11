@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import type { PaymentFilterParams } from "../common/types/index.ts";
 import type {
 	ConfirmPaymentInput,
@@ -11,6 +16,7 @@ import {
 	createManualInvoiceServerFn,
 	deleteInvoiceServerFn,
 	generateMonthlyInvoicesServerFn,
+	getPaymentsServerFn,
 	sendWhatsAppInvoiceServerFn,
 } from "../data/servers/payment.fn.ts";
 import {
@@ -24,6 +30,30 @@ export const PAYMENT_STATS_QUERY_KEY = ["payments", "stats"] as const;
 
 export function usePayments(params: PaymentFilterParams = {}) {
 	return useQuery(paymentsQueryOptions(params));
+}
+
+export function useInfinitePayments(
+	params: Omit<PaymentFilterParams, "page"> = {},
+) {
+	return useInfiniteQuery({
+		queryKey: ["payments", "infinite", params] as const,
+		queryFn: async ({ pageParam = 1 }) => {
+			return getPaymentsServerFn({
+				data: {
+					...params,
+					page: pageParam as number,
+					limit: params.limit || 15,
+				},
+			});
+		},
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) => {
+			if (lastPage.currentPage < lastPage.totalPages) {
+				return lastPage.currentPage + 1;
+			}
+			return undefined;
+		},
+	});
 }
 
 export function usePaymentStats(
