@@ -76,8 +76,8 @@ export function UpcomingPaymentsTable({
 
 	if (data.length === 0) {
 		return (
-			<div className="empty-state-box">
-				Belum ada tagihan jatuh tempo terdekat
+			<div className="empty-state-box p-6 text-center text-xs text-[#737873]">
+				Semua tagihan bulan ini telah lunas ✨
 			</div>
 		);
 	}

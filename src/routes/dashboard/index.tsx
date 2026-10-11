@@ -224,14 +224,20 @@ export function DashboardHomePage() {
 					onClick={() => navigate({ to: "/dashboard/invoices" })}
 				>
 					<div className="stat-top">
-						<span>Jatuh Tempo</span>
+						<span>Jatuh Tempo Bulan Ini</span>
 						<span className="stat-icon">
 							<Clock className="w-4 h-4" />
 						</span>
 					</div>
 					<div className="stat-value">{stats.dueCount}</div>
 					<div className="stat-sub">
-						<span className="warn">{stats.dueAmount}</span> belum lunas
+						{stats.dueCount === 0 ? (
+							<span className="up">Semua lunas</span>
+						) : (
+							<>
+								<span className="warn">{stats.dueAmount}</span> belum lunas
+							</>
+						)}
 					</div>
 				</Card>
 
@@ -240,7 +246,7 @@ export function DashboardHomePage() {
 					onClick={() => navigate({ to: "/dashboard/finance" })}
 				>
 					<div className="stat-top">
-						<span>Pengeluaran</span>
+						<span>Pengeluaran Bulan Ini</span>
 						<span className="stat-icon">
 							<ArrowDownRight className="w-4 h-4" />
 						</span>
@@ -382,7 +388,7 @@ export function DashboardHomePage() {
 					<div className="panel-head">
 						<div>
 							<h2>Pembayaran Terdekat</h2>
-							<p>Tagihan jatuh tempo yang perlu diperhatikan</p>
+							<p>Tagihan jatuh tempo bulan ini yang perlu diperhatikan</p>
 						</div>
 						<span className="mini-link flex items-center gap-1">
 							Kelola tagihan <ExternalLink className="w-3 h-3" />
