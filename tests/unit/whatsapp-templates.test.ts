@@ -87,4 +87,54 @@ describe("WhatsApp Notification Message Templates", () => {
 			expect(msg).toContain("HomeeKost Cabang Melati");
 		});
 	});
+
+	describe("partialPaymentReceipt Template", () => {
+		it("harus menyusun bukti penerimaan cicilan dengan nominal diterima dan sisa tagihan", () => {
+			const msg = (whatsappTemplates as any).partialPaymentReceipt({
+				tenantName: "Budi Santoso",
+				propertyName: "HomeeKost Melati",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202610-001",
+				period: "Oktober 2026",
+				paidDate: "11 Oktober 2026",
+				paymentMethod: "Transfer Bank",
+				paidThisTime: 500000,
+				totalAmount: 1500000,
+				totalPaid: 500000,
+				remainingAmount: 1000000,
+			});
+
+			expect(msg).toContain("BUKTI PENERIMAAN CICILAN SEWA");
+			expect(msg).toContain("Budi Santoso");
+			expect(msg).toContain("Rp500.000");
+			expect(msg).toContain("Rp1.500.000");
+			expect(msg).toContain("Rp1.000.000");
+			expect(msg).toContain("Transfer Bank");
+		});
+	});
+
+	describe("installmentReminder Template", () => {
+		it("harus menyusun pengingat sisa cicilan dengan batas akhir bulan dan rekening tujuan", () => {
+			const msg = (whatsappTemplates as any).installmentReminder({
+				tenantName: "Budi Santoso",
+				propertyName: "HomeeKost Melati",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202610-001",
+				period: "Oktober 2026",
+				totalAmount: 1500000,
+				totalPaid: 500000,
+				remainingAmount: 1000000,
+				endOfMonthDate: "31 Oktober 2026",
+				bankAccount: "BCA 1234567890",
+				accountHolder: "Bude Frisda",
+			});
+
+			expect(msg).toContain("PENGINGAT SISA CICILAN SEWA");
+			expect(msg).toContain("Budi Santoso");
+			expect(msg).toContain("31 Oktober 2026");
+			expect(msg).toContain("Rp1.000.000");
+			expect(msg).toContain("BCA 1234567890");
+			expect(msg).toContain("Bude Frisda");
+		});
+	});
 });
