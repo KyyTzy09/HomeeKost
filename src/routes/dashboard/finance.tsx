@@ -50,6 +50,7 @@ import {
 	useProperties,
 } from "../../hooks/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
+import { getMonthDateRange } from "../../lib/date-utils.ts";
 
 export const Route = createFileRoute("/dashboard/finance")({
 	head: () => ({
@@ -105,8 +106,8 @@ function FinancePage() {
 	}>({
 		label: isSuperAdmin
 			? "Semua Cabang Kos (Konsolidasi)"
-			: (dashboardContext.activeProperty?.name || "Cabang Ditugaskan"),
-		value: isSuperAdmin ? "ALL" : (activePropertyId || ""),
+			: dashboardContext.activeProperty?.name || "Cabang Ditugaskan",
+		value: isSuperAdmin ? "ALL" : activePropertyId || "",
 	});
 
 	// Effective Property ID based on RBAC:
@@ -171,6 +172,24 @@ function FinancePage() {
 		setTimeout(() => setToastMsg(null), 3500);
 	};
 
+	// Period filter mode for transaction table
+	const [periodFilterMode, setPeriodFilterMode] = useState<
+		"SELECTED_MONTH" | "ALL"
+	>("SELECTED_MONTH");
+
+	const activeDateRange = useMemo(() => {
+		if (periodFilterMode === "ALL")
+			return { startDate: undefined, endDate: undefined };
+		const { startDate, endDate } = getMonthDateRange(
+			selectedMonth.value,
+			selectedYear.value,
+		);
+		return {
+			startDate: startDate.toISOString().split("T")[0],
+			endDate: endDate.toISOString().split("T")[0],
+		};
+	}, [periodFilterMode, selectedMonth.value, selectedYear.value]);
+
 	// Queries
 	const { data: transactionsData, isLoading: isLoadingTransactions } =
 		useTransactions({
@@ -178,6 +197,8 @@ function FinancePage() {
 			search: searchQuery,
 			type: typeFilter.value as "ALL" | "INCOME" | "EXPENSE",
 			category: categoryFilter.value,
+			startDate: activeDateRange.startDate,
+			endDate: activeDateRange.endDate,
 			sortBy,
 			sortOrder,
 			page: currentPage,
@@ -315,7 +336,8 @@ function FinancePage() {
 								<Building2 className="w-3.5 h-3.5" />
 								{isSuperAdmin
 									? selectedProperty.label
-									: (dashboardContext.activeProperty?.name || "Cabang Ditugaskan")}
+									: dashboardContext.activeProperty?.name ||
+										"Cabang Ditugaskan"}
 							</span>
 							<span className="text-[11px] text-[#737873]">
 								· {isSuperAdmin ? "SuperAdmin View" : "Admin Cabang"}
@@ -570,6 +592,12 @@ function FinancePage() {
 						setCategoryFilter(cat);
 						setCurrentPage(1);
 					}}
+					periodFilterMode={periodFilterMode}
+					onPeriodFilterModeChange={(mode) => {
+						setPeriodFilterMode(mode);
+						setCurrentPage(1);
+					}}
+					selectedPeriodLabel={`${selectedMonth.label} ${selectedYear.value}`}
 					sortBy={sortBy}
 					sortOrder={sortOrder}
 					onSortToggle={handleSortToggle}
@@ -601,7 +629,9 @@ function FinancePage() {
 					onOpenChange={setIsFormOpen}
 					editingTransaction={editingTransaction}
 					properties={properties}
-					defaultPropertyId={effectivePropertyId || properties[0]?.id || activePropertyId}
+					defaultPropertyId={
+						effectivePropertyId || properties[0]?.id || activePropertyId
+					}
 					onSubmit={handleFormSubmit}
 					isSubmitting={
 						createTxMutation.isPending || updateTxMutation.isPending
