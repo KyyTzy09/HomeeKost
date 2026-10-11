@@ -263,7 +263,7 @@ export function PaymentConfirmDialog({
 									}
 								>
 									{formatRupiah(remainingAfter)}{" "}
-									{remainingAfter === 0 && "✓ (LUNAS)"}
+									{remainingAfter === 0 && "(LUNAS)"}
 								</b>
 							</div>
 						</div>
