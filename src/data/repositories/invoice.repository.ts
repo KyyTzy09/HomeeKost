@@ -289,10 +289,10 @@ export class InvoiceRepository {
 						? {
 								status: "PAID",
 								paidAt: paidDate,
-						  }
+							}
 						: {
 								status: "PENDING",
-						  }),
+							}),
 					updatedAt: new Date(),
 				},
 				include: {
@@ -344,7 +344,10 @@ export class InvoiceRepository {
 				isSettled,
 				paidThisTime: payThisTime,
 				totalPaid: alreadyPaid + payThisTime,
-				remainingAmount: Math.max(0, totalInvoiceAmount - (alreadyPaid + payThisTime)),
+				remainingAmount: Math.max(
+					0,
+					totalInvoiceAmount - (alreadyPaid + payThisTime),
+				),
 				installmentIndex,
 			};
 		});
@@ -472,9 +475,13 @@ export class InvoiceRepository {
 					propertyId,
 				},
 			},
-			include: {
-				room: true,
-				tenant: true,
+			select: {
+				id: true,
+				room: {
+					select: {
+						price: true,
+					},
+				},
 				invoices: {
 					where: {
 						periodMonth,
@@ -523,17 +530,8 @@ export class InvoiceRepository {
 				periodMonth,
 				periodYear,
 			},
-			include: {
-				contract: {
-					include: {
-						tenant: true,
-						room: {
-							include: {
-								property: true,
-							},
-						},
-					},
-				},
+			select: {
+				id: true,
 			},
 		});
 	}

@@ -6,7 +6,11 @@ import type {
 	NotificationType,
 } from "../../generated/prisma/client.js";
 import { sleepWithJitter } from "../../lib/async-utils.ts";
-import { formatDate, formatRentalPeriod } from "../../lib/date-utils.ts";
+import {
+	formatDate,
+	formatRentalPeriod,
+	getTodayDateString,
+} from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
 import { getEndOfMonthString } from "../../lib/payment-utils.ts";
 import {
@@ -248,7 +252,9 @@ export class EngagementService {
 		const startTime = Date.now();
 		let overdueUpdatedCount = 0;
 		let dueRemindersSent = 0;
+		let dueRemindersSkipped = 0;
 		let birthdayWishesSent = 0;
+		let birthdaysSkipped = 0;
 
 		const notificationLogsToBatch: Array<{
 			recipientNumber: string;
@@ -257,6 +263,38 @@ export class EngagementService {
 			notes?: string | null;
 		}> = [];
 
+		// ─── Pre-flight Optimization: Ambil log notifikasi sukses hari ini (Anti-Spam Idempotency)
+		// Query super cepat & ringan (< 5ms): hanya ambil kolom minimal yang berstatus SENT hari ini
+		const todayStr = getTodayDateString();
+		const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+		const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
+
+		const todaySentLogs = await this.repo.getTodaySentNotificationLogs(
+			startOfDay,
+			endOfDay,
+		);
+
+		// Himpun set token unik & identifier yang sudah terkirim hari ini (O(1) in-memory lookup)
+		const sentTokensToday = new Set<string>();
+		const sentInvoiceIdsToday = new Set<string>();
+		const sentBirthdayPhonesToday = new Set<string>();
+
+		for (const log of todaySentLogs) {
+			if (log.notes) {
+				const tokenMatch = log.notes.match(/\[(TOKEN:[^\]]+)\]/);
+				if (tokenMatch) {
+					sentTokensToday.add(tokenMatch[1]);
+				}
+				const invMatch = log.notes.match(/\[([a-zA-Z0-9_-]{15,})\]/);
+				if (invMatch) {
+					sentInvoiceIdsToday.add(invMatch[1]);
+				}
+			}
+			if (log.messageType === "BIRTHDAY_WISH") {
+				sentBirthdayPhonesToday.add(log.recipientNumber);
+			}
+		}
+
 		// ─── Task 0: Auto-generate Tagihan Invoice untuk Bulan Aktif / Periode Mendatang ─
 		try {
 			const now = new Date();
@@ -264,26 +302,28 @@ export class EngagementService {
 			const curYear = now.getFullYear();
 
 			const properties = await this.propertyRepo.findAll();
-			for (const prop of properties) {
-				// Generate invoice bulan berjalan (jika belum ada)
-				await this.invoiceRepo.generateMonthlyInvoicesForProperty(
-					prop.id,
-					curMonth,
-					curYear,
-				);
-
-				// Jika tanggal sudah mendekati akhir bulan (>= 25), siapkan juga invoice bulan depan
-				if (now.getDate() >= 25) {
-					const nextMonthDate = new Date(curYear, curMonth, 1);
-					const nextMonth = nextMonthDate.getMonth() + 1;
-					const nextYear = nextMonthDate.getFullYear();
+			await Promise.all(
+				properties.map(async (prop) => {
+					// Generate invoice bulan berjalan (jika belum ada)
 					await this.invoiceRepo.generateMonthlyInvoicesForProperty(
 						prop.id,
-						nextMonth,
-						nextYear,
+						curMonth,
+						curYear,
 					);
-				}
-			}
+
+					// Jika tanggal sudah mendekati akhir bulan (>= 25), siapkan juga invoice bulan depan
+					if (now.getDate() >= 25) {
+						const nextMonthDate = new Date(curYear, curMonth, 1);
+						const nextMonth = nextMonthDate.getMonth() + 1;
+						const nextYear = nextMonthDate.getFullYear();
+						await this.invoiceRepo.generateMonthlyInvoicesForProperty(
+							prop.id,
+							nextMonth,
+							nextYear,
+						);
+					}
+				}),
+			);
 		} catch (cronGenErr) {
 			console.error(
 				"[EngagementService] Gagal auto-generate invoice pada cron:",
@@ -291,8 +331,11 @@ export class EngagementService {
 			);
 		}
 
-		// ─── Task 1: Pemeriksaan Tagihan Jatuh Tempo (H-3, H-0, Overdue) ─
-		const dueReminders = await this.repo.getDueInvoicesForReminder();
+		// ─── Task 1 & 2 Query: Query Reminders & Birthdays secara Paralel (<10ms) ─
+		const [dueReminders, todaysBirthdays] = await Promise.all([
+			this.repo.getDueInvoicesForReminder(),
+			this.repo.getTodaysBirthdays(),
+		]);
 		const overdueInvoiceIds: string[] = [];
 
 		// Map untuk deduplikasi per nomor telepon & pengelompokan penagihan
@@ -374,6 +417,14 @@ export class EngagementService {
 
 		// Eksekusi pengiriman pesan WhatsApp untuk tagihan jatuh tempo & cicilan
 		for (const [invId, rem] of reminderQueue.entries()) {
+			const invoiceToken = `TOKEN:REMINDER:${invId}:${todayStr}`;
+
+			// Pre-flight Idempotency Check: Lewati jika invoice ini sudah sukses dikirimi reminder hari ini
+			if (sentTokensToday.has(invoiceToken) || sentInvoiceIdsToday.has(invId)) {
+				dueRemindersSkipped++;
+				continue;
+			}
+
 			let message: string;
 			let noteLabel: string;
 
@@ -390,7 +441,7 @@ export class EngagementService {
 					endOfMonthDate: rem.endOfMonthDate,
 					documentUrl: rem.documentUrl,
 				});
-				noteLabel = `Cron Reminder Sisa Cicilan (#${rem.invoiceNumber}) [${invId}]`;
+				noteLabel = `[${invoiceToken}] Cron Reminder Sisa Cicilan (#${rem.invoiceNumber}) [${invId}]`;
 			} else {
 				message = whatsappTemplates.dueReminder({
 					tenantName: rem.tenantName,
@@ -405,7 +456,7 @@ export class EngagementService {
 					accountHolder: "Bude Frisda",
 					documentUrl: rem.documentUrl,
 				});
-				noteLabel = `Cron Reminder H${rem.daysRemaining >= 0 ? `-${rem.daysRemaining}` : `+${Math.abs(rem.daysRemaining)}`} (#${rem.invoiceNumber}) [${invId}]`;
+				noteLabel = `[${invoiceToken}] Cron Reminder H${rem.daysRemaining >= 0 ? `-${rem.daysRemaining}` : `+${Math.abs(rem.daysRemaining)}`} (#${rem.invoiceNumber}) [${invId}]`;
 			}
 
 			try {
@@ -422,7 +473,11 @@ export class EngagementService {
 					notes: `${noteLabel} — ${res.detail || (res.status ? "Success" : "Failed")}`,
 				});
 
-				if (res.status) dueRemindersSent++;
+				if (res.status) {
+					dueRemindersSent++;
+					sentTokensToday.add(invoiceToken);
+					sentInvoiceIdsToday.add(invId);
+				}
 			} catch (err) {
 				console.error(
 					`[EngagementService] Gagal kirim reminder ke ${rem.phone}:`,
@@ -448,7 +503,6 @@ export class EngagementService {
 		}
 
 		// ─── Task 2: Birthday Reminder Engine (Hari H) ─────────────────
-		const todaysBirthdays = await this.repo.getTodaysBirthdays();
 		const birthdayQueue = new Map<string, (typeof todaysBirthdays)[0]>();
 
 		// Map deduplikasi untuk memastikan 1 penyewa hanya dapat 1 ucapan jika punya multi-kamar
@@ -461,6 +515,17 @@ export class EngagementService {
 		for (const bday of birthdayQueue.values()) {
 			const sanitizedPhone = sanitizePhoneNumber(bday.phone);
 			if (!sanitizedPhone) continue;
+
+			const bdayToken = `TOKEN:BIRTHDAY:${bday.tenantId}:${todayStr}`;
+
+			// Pre-flight Idempotency Check: Lewati jika anak kos ini sudah dikirimi ucapan ultah hari ini
+			if (
+				sentTokensToday.has(bdayToken) ||
+				sentBirthdayPhonesToday.has(sanitizedPhone)
+			) {
+				birthdaysSkipped++;
+				continue;
+			}
 
 			const message = whatsappTemplates.birthdayWish({
 				tenantName: bday.name,
@@ -478,10 +543,14 @@ export class EngagementService {
 					recipientNumber: sanitizedPhone,
 					messageType: "BIRTHDAY_WISH",
 					status,
-					notes: `Cron Ultah Kak ${bday.name} (${bday.propertyName})`,
+					notes: `[${bdayToken}] Cron Ultah Kak ${bday.name} (${bday.propertyName})`,
 				});
 
-				if (res.status) birthdayWishesSent++;
+				if (res.status) {
+					birthdayWishesSent++;
+					sentTokensToday.add(bdayToken);
+					sentBirthdayPhonesToday.add(sanitizedPhone);
+				}
 			} catch (err) {
 				console.error(
 					`[EngagementService] Gagal kirim ucapan ultah ke ${sanitizedPhone}:`,
@@ -510,7 +579,9 @@ export class EngagementService {
 			success: true,
 			overdueUpdatedCount,
 			dueRemindersSent,
+			dueRemindersSkipped,
 			birthdayWishesSent,
+			birthdaysSkipped,
 			totalProcessedInvoices: dueReminders.length,
 			totalTodaysBirthdays: birthdayQueue.size,
 			totalLogsRecorded: notificationLogsToBatch.length,

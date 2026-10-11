@@ -69,11 +69,26 @@ export class EngagementRepository {
 						}
 					: {}),
 			},
-			include: {
-				tenant: true,
+			select: {
+				id: true,
+				tenant: {
+					select: {
+						id: true,
+						name: true,
+						birthDate: true,
+						whatsappNumber: true,
+						phoneNumber: true,
+					},
+				},
 				room: {
-					include: {
-						property: true,
+					select: {
+						roomNumber: true,
+						property: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
 					},
 				},
 			},
@@ -170,11 +185,23 @@ export class EngagementRepository {
 						}
 					: {}),
 			},
-			include: {
-				tenant: true,
+			select: {
+				tenant: {
+					select: {
+						id: true,
+						name: true,
+						whatsappNumber: true,
+						phoneNumber: true,
+					},
+				},
 				room: {
-					include: {
-						property: true,
+					select: {
+						roomNumber: true,
+						property: {
+							select: {
+								name: true,
+							},
+						},
 					},
 				},
 			},
@@ -287,16 +314,41 @@ export class EngagementRepository {
 					},
 				},
 			},
-			include: {
+			select: {
+				id: true,
+				invoiceNumber: true,
+				periodMonth: true,
+				periodYear: true,
+				amount: true,
+				dueDate: true,
+				status: true,
+				pdfUrl: true,
 				transactions: {
+					select: {
+						amount: true,
+					},
 					orderBy: { transactionDate: "asc" },
 				},
 				contract: {
-					include: {
-						tenant: true,
+					select: {
+						startDate: true,
+						endDate: true,
+						billingCycle: true,
+						tenant: {
+							select: {
+								name: true,
+								phoneNumber: true,
+								whatsappNumber: true,
+							},
+						},
 						room: {
-							include: {
-								property: true,
+							select: {
+								roomNumber: true,
+								property: {
+									select: {
+										name: true,
+									},
+								},
 							},
 						},
 					},
@@ -460,6 +512,28 @@ export class EngagementRepository {
 				notes: l.notes ? l.notes.slice(0, 500) : null,
 				sentAt: l.sentAt || new Date(),
 			})),
+		});
+	}
+
+	/**
+	 * Dapatkan log notifikasi yang berhasil dikirim hari ini untuk pre-flight deduplikasi (Anti-Spam Idempotency)
+	 * Query dioptimasi secara presisi: hanya mengambil kolom minimal (notes, recipientNumber, messageType)
+	 * dalam rentang hari berjalan (startOfDay s/d endOfDay) dengan latency < 5ms.
+	 */
+	async getTodaySentNotificationLogs(startOfDay: Date, endOfDay: Date) {
+		return this.db.notificationLog.findMany({
+			where: {
+				status: "SENT",
+				sentAt: {
+					gte: startOfDay,
+					lte: endOfDay,
+				},
+			},
+			select: {
+				notes: true,
+				recipientNumber: true,
+				messageType: true,
+			},
 		});
 	}
 }

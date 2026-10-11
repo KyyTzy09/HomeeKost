@@ -91,7 +91,7 @@ export const runDailyCronTasksServerFn = createServerFn({
 		{
 			method: "POST",
 			summary: (res) =>
-				`Cron Selesai: ${res.dueRemindersSent} reminder tagihan, ${res.birthdayWishesSent} ucapan ultah, ${res.overdueUpdatedCount} overdue updated`,
+				`Cron Selesai: ${res.dueRemindersSent} reminder tagihan (${res.dueRemindersSkipped || 0} skipped), ${res.birthdayWishesSent} ucapan ultah (${res.birthdaysSkipped || 0} skipped), ${res.overdueUpdatedCount} overdue updated`,
 		},
 	);
 });
