@@ -1322,7 +1322,7 @@ export function TenantFormDialog({
 											</div>
 
 											<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
-												Pilih mode penanganan mutasi kamar untuk penghuni ini. Tagihan periode berikutnya akan otomatis menggunakan tarif kamar baru.
+												Pilih alasan perubahan kamar. Tagihan periode berikutnya akan otomatis menggunakan tarif kamar baru.
 											</p>
 
 											<form.Field name="roomChangeMode">
@@ -1349,10 +1349,10 @@ export function TenantFormDialog({
 																/>
 																<div className="space-y-0.5">
 																	<span className="text-[11.5px] font-bold block text-[#24342b]">
-																		Koreksi Salah Input (Default)
+																		Koreksi Salah Input
 																	</span>
 																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																		Gunakan jika salah pilih saat input awal. Nomor kamar di kontrak aktif diubah tanpa memutus kontrak atau mengubah riwayat invoice.
+																		Gunakan jika salah pilih kamar saat input. Riwayat sewa dan pembayaran tetap lanjut seperti biasa.
 																	</p>
 																</div>
 															</label>
@@ -1380,7 +1380,7 @@ export function TenantFormDialog({
 																		Pindah Kamar Resmi
 																	</span>
 																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																		Gunakan jika penghuni mutasi fisik ke kamar baru. Kontrak lama ditutup (TERMINATED) dan kontrak baru diterbitkan per hari ini.
+																		Gunakan jika penghuni benar-benar pindah ke kamar lain. Sewa kamar baru akan dimulai per hari ini.
 																	</p>
 																</div>
 															</label>
@@ -1411,13 +1411,13 @@ export function TenantFormDialog({
 																			/>
 																			<div className="text-[11px] leading-tight space-y-0.5">
 																				<span className="font-semibold block text-[#25392b]">
-																					Sesuaikan nominal tagihan &amp; catatan kas bulan ini ke tarif baru
+																					Update tagihan bulan ini ke harga kamar baru
 																					{priceDiffers
 																						? ` (${formatRupiah(oldRoomPrice)} ➔ ${formatRupiah(newRoomPrice)})`
 																						: ""}
 																				</span>
 																				<span className="text-[9.5px] text-[#6d7d71] block">
-																					Otomatis mengoreksi nominal tagihan dan pembukuan kas masuk periode berjalan agar laporan keuangan tidak selisih. Tagihan bulan-bulan lampau tidak akan diubah.
+																					Centang ini agar nominal tagihan dan catatan kas bulan ini otomatis disesuaikan dengan harga kamar baru, sehingga pembukuan tidak selisih.
 																				</span>
 																			</div>
 																		</label>
@@ -1469,7 +1469,7 @@ export function TenantFormDialog({
 																						</span>
 																					</div>
 																					<span className="text-[9.5px] text-[#55695a] block">
-																						Sistem akan menerbitkan 1 invoice tagihan penyesuaian (Belum Lunas) untuk melunasi kekurangan harga sewa kamar baru bulan ini. Tagihan bulan depan otomatis tarif penuh.
+																						Sistem akan membuat 1 tagihan tambahan untuk melunasi kekurangan harga kamar baru bulan ini. Tagihan bulan depan otomatis mengikuti tarif penuh.
 																					</span>
 																				</div>
 																			</label>
