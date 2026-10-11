@@ -301,6 +301,7 @@ export class TenantRepository {
 			dueDateDay?: number;
 			roomChangeMode?: "CORRECTION" | "TRANSFER" | null;
 			updatePendingInvoiceAmount?: boolean;
+			createDifferenceInvoice?: boolean;
 			newRentAmount?: number;
 		},
 	) {
@@ -432,6 +433,30 @@ export class TenantRepository {
 									...(effectivePrice > 0 && { amount: effectivePrice }),
 								},
 							});
+
+							// Hitung selisih harga sewa (Harga Kamar Baru - Harga Kamar Lama)
+							const oldPrice = Number(activeContract.room.price);
+							const newPrice = effectivePrice;
+							const priceDiff = newPrice - oldPrice;
+
+							// Jika harga naik dan flag createDifferenceInvoice !== false, terbitkan invoice selisih bulan ini
+							if (priceDiff > 0 && data.createDifferenceInvoice !== false) {
+								const currentMonth = now.getMonth() + 1;
+								const currentYear = now.getFullYear();
+								const invNumber = `INV-DIFF-${currentYear}${currentMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+								await tx.invoice.create({
+									data: {
+										contractId: newContract.id,
+										invoiceNumber: invNumber,
+										periodMonth: currentMonth,
+										periodYear: currentYear,
+										amount: priceDiff,
+										dueDate: now,
+										status: "PENDING",
+									},
+								});
+							}
 						} else {
 							// Mode Koreksi Data (Default): perbarui kamar pada kontrak berjalan
 							await tx.rentalContract.update({
