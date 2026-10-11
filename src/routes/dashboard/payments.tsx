@@ -108,8 +108,7 @@ function PaymentsPage() {
 		const [yStr, mStr] = periodFilter.split("-");
 		const m = Number(mStr);
 		const y = Number(yStr);
-		const isCurrent =
-			m === now.getMonth() + 1 && y === now.getFullYear();
+		const isCurrent = m === now.getMonth() + 1 && y === now.getFullYear();
 		return {
 			selectedMonth: m,
 			selectedYear: y,
@@ -168,8 +167,7 @@ function PaymentsPage() {
 		return infinitePaymentsData?.pages.flatMap((page) => page.data) || [];
 	}, [infinitePaymentsData]);
 
-	const totalPaymentsCount =
-		infinitePaymentsData?.pages[0]?.totalCount || 0;
+	const totalPaymentsCount = infinitePaymentsData?.pages[0]?.totalCount || 0;
 
 	const { data: paymentStats, isLoading: isLoadingStats } = usePaymentStats({
 		propertyId: activePropertyId,
@@ -247,7 +245,7 @@ function PaymentsPage() {
 			const type =
 				payment.status === "PAID"
 					? "RECEIPT"
-					: payment.dueDaysRemaining <= 3
+					: payment.isPartial || payment.dueDaysRemaining <= 3
 						? "REMINDER"
 						: "NEW_INVOICE";
 
