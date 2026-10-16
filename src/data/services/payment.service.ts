@@ -165,6 +165,10 @@ export class PaymentService {
 
 			let message = "";
 			if (isPaid) {
+				const isPaidOnTime = inv.paidAt
+					? new Date(inv.paidAt).getTime() <= dueDate.getTime()
+					: true;
+
 				message = whatsappTemplates.paymentReceipt({
 					tenantName,
 					propertyName,
@@ -175,6 +179,7 @@ export class PaymentService {
 					amount,
 					paymentMethod: "Transfer Bank",
 					documentUrl,
+					isOnTime: isPaidOnTime,
 				});
 			} else if (isPartial) {
 				const endOfMonth = getEndOfMonthString(periodYear, periodMonth);
@@ -361,6 +366,10 @@ export class PaymentService {
 				}
 			} else {
 				// Kwitansi Pelunasan Penuh
+				const isPaidOnTime =
+					new Date(input.paidDate).getTime() <=
+					new Date(result.invoice.dueDate).getTime();
+
 				if (input.sendReceiptWhatsApp) {
 					const waRes = await this.fonnte.sendPaymentReceipt(tenantPhone, {
 						tenantName,
@@ -372,6 +381,7 @@ export class PaymentService {
 						amount: Number(result.invoice.amount),
 						paymentMethod: input.paymentMethod,
 						documentUrl,
+						isOnTime: isPaidOnTime,
 					});
 					whatsappSent = waRes.success;
 					directWhatsAppUrl = waRes.directWhatsAppUrl;
@@ -386,6 +396,7 @@ export class PaymentService {
 						amount: Number(result.invoice.amount),
 						paymentMethod: input.paymentMethod,
 						documentUrl,
+						isOnTime: isPaidOnTime,
 					});
 					directWhatsAppUrl = getWhatsAppDirectUrl(tenantPhone, msg);
 				}
@@ -588,6 +599,11 @@ export class PaymentService {
 		const isPaid = type === "RECEIPT" || invoice.status === "PAID";
 
 		if (isPaid) {
+			const isPaidOnTime = invoice.paidAt
+				? new Date(invoice.paidAt).getTime() <=
+					new Date(invoice.dueDate).getTime()
+				: true;
+
 			return this.fonnte.sendPaymentReceipt(tenantPhone, {
 				tenantName,
 				propertyName,
@@ -600,6 +616,7 @@ export class PaymentService {
 				amount,
 				paymentMethod: "Transfer Bank",
 				documentUrl,
+				isOnTime: isPaidOnTime,
 			});
 		}
 
