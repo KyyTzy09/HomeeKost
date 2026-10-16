@@ -439,15 +439,18 @@ export class PaymentService {
 			}
 		}
 
-		// 2. Cek apakah tagihan untuk periode ini sudah pernah dibuat
-		const existingInvoice = await this.invoiceRepo.findExistingInvoice(
-			targetContractId,
+		// 2. Cek apakah tagihan untuk periode ini sudah pernah dibuat untuk penghuni ini (lintas seluruh kontrak)
+		const existingInvoice = await this.invoiceRepo.findExistingInvoiceForTenant(
+			contract.tenantId,
 			input.periodMonth,
 			input.periodYear,
 		);
 		if (existingInvoice) {
+			const roomInfo = existingInvoice.contract?.room?.roomNumber
+				? `Kamar ${existingInvoice.contract.room.roomNumber} - `
+				: "";
 			throw new Error(
-				`Tagihan untuk periode ${input.periodMonth}/${input.periodYear} sudah pernah dibuat (${existingInvoice.invoiceNumber} - status: ${existingInvoice.status}).`,
+				`Tagihan untuk periode ${input.periodMonth}/${input.periodYear} sudah pernah dibuat untuk penghuni ini (${roomInfo}${existingInvoice.invoiceNumber} - status: ${existingInvoice.status}).`,
 			);
 		}
 

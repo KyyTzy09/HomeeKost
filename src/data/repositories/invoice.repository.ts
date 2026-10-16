@@ -423,6 +423,34 @@ export class InvoiceRepository {
 	}
 
 	/**
+	 * Cari invoice aktif/lunas milik penghuni pada bulan & tahun tertentu (lintas seluruh kontrak lama/baru)
+	 */
+	async findExistingInvoiceForTenant(
+		tenantId: string,
+		periodMonth: number,
+		periodYear: number,
+	) {
+		return this.db.invoice.findFirst({
+			where: {
+				contract: {
+					tenantId,
+				},
+				periodMonth,
+				periodYear,
+				status: { not: "CANCELLED" },
+			},
+			include: {
+				contract: {
+					include: {
+						room: true,
+						tenant: true,
+					},
+				},
+			},
+		});
+	}
+
+	/**
 	 * Buat Invoice Tagihan Manual
 	 */
 	async createInvoice(data: {
@@ -460,7 +488,8 @@ export class InvoiceRepository {
 	}
 
 	/**
-	 * Generate Tagihan Bulanan Massal untuk semua kontrak aktif di properti tertentu
+	 * Generate Tagihan Bulanan Massal untuk semua kontrak aktif di properti tertentu.
+	 * Menghindari duplikasi tagihan jika penghuni sudah memiliki invoice bulan ini (misal di kamar lama sebelum pindah).
 	 */
 	async generateMonthlyInvoicesForProperty(
 		propertyId: string,
@@ -477,6 +506,7 @@ export class InvoiceRepository {
 			},
 			select: {
 				id: true,
+				tenantId: true,
 				room: {
 					select: {
 						price: true,
@@ -492,13 +522,40 @@ export class InvoiceRepository {
 			},
 		});
 
+		const tenantIds = contracts.map((c) => c.tenantId);
+		const existingInvoicesAcrossContracts =
+			tenantIds.length > 0
+				? await this.db.invoice.findMany({
+						where: {
+							periodMonth,
+							periodYear,
+							status: { not: "CANCELLED" },
+							contract: {
+								tenantId: { in: tenantIds },
+							},
+						},
+						select: {
+							contract: {
+								select: { tenantId: true },
+							},
+						},
+					})
+				: [];
+
+		const tenantWithInvoiceSet = new Set(
+			existingInvoicesAcrossContracts.map((inv) => inv.contract.tenantId),
+		);
+
 		const timestamp = Date.now().toString().slice(-4);
 		const toCreate = [];
 
 		for (let i = 0; i < contracts.length; i++) {
 			const contract = contracts[i];
-			// Lewati jika sudah ada invoice untuk periode ini
-			if (contract.invoices.length > 0) {
+			// Lewati jika sudah ada invoice untuk periode ini (di kontrak ini maupun kontrak sebelumnya)
+			if (
+				contract.invoices.length > 0 ||
+				tenantWithInvoiceSet.has(contract.tenantId)
+			) {
 				continue;
 			}
 
