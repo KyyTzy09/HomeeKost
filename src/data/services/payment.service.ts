@@ -331,20 +331,23 @@ export class PaymentService {
 			if (!result.isSettled) {
 				// Bukti Cicilan Bertahap
 				if (input.sendReceiptWhatsApp) {
-					const waRes = await this.fonnte.sendPartialPaymentReceipt(tenantPhone, {
-						tenantName,
-						propertyName,
-						roomNumber,
-						invoiceNumber: result.invoice.invoiceNumber,
-						period,
-						paidDate: formatDate(input.paidDate),
-						paymentMethod: input.paymentMethod,
-						paidThisTime: result.paidThisTime,
-						totalAmount: Number(result.invoice.amount),
-						totalPaid: result.totalPaid,
-						remainingAmount: result.remainingAmount,
-						documentUrl,
-					});
+					const waRes = await this.fonnte.sendPartialPaymentReceipt(
+						tenantPhone,
+						{
+							tenantName,
+							propertyName,
+							roomNumber,
+							invoiceNumber: result.invoice.invoiceNumber,
+							period,
+							paidDate: formatDate(input.paidDate),
+							paymentMethod: input.paymentMethod,
+							paidThisTime: result.paidThisTime,
+							totalAmount: Number(result.invoice.amount),
+							totalPaid: result.totalPaid,
+							remainingAmount: result.remainingAmount,
+							documentUrl,
+						},
+					);
 					whatsappSent = waRes.success;
 					directWhatsAppUrl = waRes.directWhatsAppUrl;
 				} else {
@@ -456,7 +459,8 @@ export class PaymentService {
 			attempts++;
 			const uniqueCode = `${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 			const candidateNumber = `INV-${input.periodYear}${monthPadded}-${uniqueCode}`;
-			const existing = await this.invoiceRepo.findByInvoiceNumber(candidateNumber);
+			const existing =
+				await this.invoiceRepo.findByInvoiceNumber(candidateNumber);
 			if (!existing) {
 				invoiceNumber = candidateNumber;
 			}

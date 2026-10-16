@@ -541,7 +541,6 @@ export class EngagementRepository {
 		return validItems;
 	}
 
-
 	/**
 	 * Update status invoice menjadi OVERDUE jika sudah lewat jatuh tempo
 	 */
@@ -551,6 +550,21 @@ export class EngagementRepository {
 			where: {
 				id: { in: invoiceIds },
 				status: "PENDING",
+			},
+			data: {
+				status: "OVERDUE",
+			},
+		});
+	}
+
+	/**
+	 * Update status semua invoice PENDING yang telah melewati jatuh tempo menjadi OVERDUE dalam 1 query
+	 */
+	async updateAllOverdueInvoices(cutoffDate: Date = new Date()) {
+		return this.db.invoice.updateMany({
+			where: {
+				status: "PENDING",
+				dueDate: { lt: cutoffDate },
 			},
 			data: {
 				status: "OVERDUE",
