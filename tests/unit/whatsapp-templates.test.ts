@@ -137,4 +137,70 @@ describe("WhatsApp Notification Message Templates", () => {
 			expect(msg).toContain("Bude Frisda");
 		});
 	});
+
+	describe("monthlyFirstReminder Template", () => {
+		it("harus menyusun pengingat tagihan tanggal 1 tanpa kata 'Kak', menyebut masa bayar tanggal 1 s/d 5, dan klausul denda", () => {
+			const msg = (whatsappTemplates as any).monthlyFirstReminder({
+				tenantName: "Ahmad Priyadi",
+				propertyName: "Kost Harmoni",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202611-001",
+				period: "November 2026",
+				amount: 1500000,
+				bankAccount: "8735081290",
+				accountHolder: "Bude Frisda",
+				documentUrl: "http://localhost:3000/api/invoices/123/document",
+			});
+
+			expect(msg).toContain("Halo *Ahmad Priyadi*");
+			expect(msg).not.toContain("Halo Kak");
+			expect(msg).toContain("Hari ini sudah tanggal 1 November 2026");
+			expect(msg).toContain("Tanggal 1 s/d 5 November 2026");
+			expect(msg).toContain("dikenakan denda keterlambatan");
+			expect(msg).toContain("Rp1.500.000");
+			expect(msg).toContain("8735081290");
+			expect(msg).toContain("Bude Frisda");
+		});
+	});
+
+	describe("paymentReceipt Template on-time variation", () => {
+		it("harus menyertakan apresiasi kedisiplinan dan tanpa kata 'Kak' jika pembayaran tepat waktu", () => {
+			const msg = whatsappTemplates.paymentReceipt({
+				tenantName: "Ahmad Priyadi",
+				propertyName: "Kost Harmoni",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202611-001",
+				period: "November 2026",
+				paidDate: "01 Nov 2026",
+				amount: 1500000,
+				paymentMethod: "Transfer Bank",
+				isOnTime: true,
+			});
+
+			expect(msg).toContain("Halo *Ahmad Priyadi*");
+			expect(msg).not.toContain("Halo Kak");
+			expect(msg).toContain("tepat waktu");
+			expect(msg).toContain("mengapresiasi kedisiplinan");
+		});
+
+		it("harus menggunakan konfirmasi formal standar jika pembayaran terlambat", () => {
+			const msg = whatsappTemplates.paymentReceipt({
+				tenantName: "Ahmad Priyadi",
+				propertyName: "Kost Harmoni",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202611-001",
+				period: "November 2026",
+				paidDate: "08 Nov 2026",
+				amount: 1500000,
+				paymentMethod: "Transfer Bank",
+				isOnTime: false,
+			});
+
+			expect(msg).toContain("Halo *Ahmad Priyadi*");
+			expect(msg).not.toContain("Halo Kak");
+			expect(msg).not.toContain("tepat waktu");
+			expect(msg).toContain("telah kami terima dan diverifikasi");
+		});
+	});
 });
+

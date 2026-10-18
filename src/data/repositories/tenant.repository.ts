@@ -3,6 +3,10 @@ import type {
 	BillingCycle,
 	PrismaClient,
 } from "../../generated/prisma/client.js";
+import {
+	updateDescriptionRoom,
+	updateDescriptionTenantName,
+} from "../../lib/transaction-desc-utils.ts";
 
 export interface CreateTenantContractParams {
 	tenantPayload: {
@@ -155,8 +159,7 @@ export class TenantRepository {
 					name: params.tenantPayload.name,
 					phoneNumber: params.tenantPayload.phone,
 					whatsappNumber:
-						params.tenantPayload.whatsappNumber ||
-						params.tenantPayload.phone,
+						params.tenantPayload.whatsappNumber || params.tenantPayload.phone,
 					email: params.tenantPayload.email || null,
 					birthDate: params.tenantPayload.birthDate ?? null,
 					occupation: params.tenantPayload.occupation ?? null,
@@ -323,6 +326,12 @@ export class TenantRepository {
 					}
 				}
 
+				// Ambil data profil penghuni sebelum diupdate untuk mengecek perubahan nama
+				const existingTenant = await tx.tenant.findUnique({
+					where: { id: tenantId },
+					select: { name: true },
+				});
+
 				// 2. Update Tenant profile
 				const updatedTenant = await tx.tenant.update({
 					where: { id: tenantId },
@@ -345,6 +354,71 @@ export class TenantRepository {
 						...(data.ktpUrl !== undefined && { ktpUrl: data.ktpUrl }),
 					},
 				});
+
+				// Jika nama tenant berubah, sinkronkan nama pada riwayat transaksi kas sewa
+				if (
+					existingTenant &&
+					data.name &&
+					existingTenant.name.trim() !== data.name.trim()
+				) {
+					const oldName = existingTenant.name.trim();
+					const newName = data.name.trim();
+
+					// 1. Cari invoice milik tenant ini dan update transaksi yang tertaut
+					const tenantInvoices = await tx.invoice.findMany({
+						where: { contract: { tenantId } },
+						select: { id: true },
+					});
+					const invoiceIds = tenantInvoices.map((inv) => inv.id);
+
+					if (invoiceIds.length > 0) {
+						const linkedTxs = await tx.transaction.findMany({
+							where: { invoiceId: { in: invoiceIds } },
+						});
+						for (const trans of linkedTxs) {
+							if (trans.description) {
+								const updatedDesc = updateDescriptionTenantName(
+									trans.description,
+									oldName,
+									newName,
+								);
+								if (updatedDesc !== trans.description) {
+									await tx.transaction.update({
+										where: { id: trans.id },
+										data: { description: updatedDesc },
+									});
+								}
+							}
+						}
+					}
+
+					// 2. Cari transaksi sewa yang mungkin belum berelasi ke invoiceId tapi memuat nama lama
+					const unlinkedTxs = await tx.transaction.findMany({
+						where: {
+							type: "INCOME",
+							category: "RENT",
+							description: {
+								contains: oldName,
+								mode: "insensitive",
+							},
+						},
+					});
+					for (const trans of unlinkedTxs) {
+						if (trans.description) {
+							const updatedDesc = updateDescriptionTenantName(
+								trans.description,
+								oldName,
+								newName,
+							);
+							if (updatedDesc !== trans.description) {
+								await tx.transaction.update({
+									where: { id: trans.id },
+									data: { description: updatedDesc },
+								});
+							}
+						}
+					}
+				}
 
 				// 3. Find active rental contract
 				const activeContract = await tx.rentalContract.findFirst({
@@ -397,6 +471,9 @@ export class TenantRepository {
 						if (data.roomChangeMode === "TRANSFER") {
 							// Mode Pindah Kamar Resmi: akhiri kontrak lama, buat kontrak baru
 							const now = new Date();
+							const currentMonth = now.getMonth() + 1;
+							const currentYear = now.getFullYear();
+
 							await tx.rentalContract.update({
 								where: { id: activeContract.id },
 								data: {
@@ -434,6 +511,48 @@ export class TenantRepository {
 								},
 							});
 
+							// Periksa apakah invoice bulan berjalan pada kontrak lama sudah berstatus PAID
+							const currentPaidInvoice = await tx.invoice.findFirst({
+								where: {
+									contractId: activeContract.id,
+									periodMonth: currentMonth,
+									periodYear: currentYear,
+									status: "PAID",
+								},
+								include: { transactions: true },
+							});
+
+							if (currentPaidInvoice) {
+								// Alihkan invoice bulan berjalan ke kontrak baru agar riwayat pembayarannya tercatat pada kamar baru
+								await tx.invoice.update({
+									where: { id: currentPaidInvoice.id },
+									data: { contractId: newContract.id },
+								});
+
+								// Sinkronkan kamar dan properti pada transaksi terkait
+								if (
+									currentPaidInvoice.transactions &&
+									currentPaidInvoice.transactions.length > 0
+								) {
+									for (const trans of currentPaidInvoice.transactions) {
+										const updatedDesc = updateDescriptionRoom(
+											trans.description,
+											activeContract.room.roomNumber,
+											targetRoom.roomNumber,
+										);
+										await tx.transaction.update({
+											where: { id: trans.id },
+											data: {
+												propertyId: targetRoom.propertyId,
+												...(updatedDesc !== trans.description && {
+													description: updatedDesc,
+												}),
+											},
+										});
+									}
+								}
+							}
+
 							// Hitung selisih harga sewa (Harga Kamar Baru - Harga Kamar Lama)
 							const oldPrice = Number(activeContract.room.price);
 							const newPrice = effectivePrice;
@@ -441,8 +560,6 @@ export class TenantRepository {
 
 							// Jika harga naik dan flag createDifferenceInvoice !== false, terbitkan invoice selisih bulan ini
 							if (priceDiff > 0 && data.createDifferenceInvoice !== false) {
-								const currentMonth = now.getMonth() + 1;
-								const currentYear = now.getFullYear();
 								const invNumber = `INV-DIFF-${currentYear}${currentMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
 								await tx.invoice.create({
@@ -499,6 +616,9 @@ export class TenantRepository {
 								? targetRoom.roomNumber
 								: activeContract.room.roomNumber;
 							const oldRoomNumber = activeContract.room.roomNumber;
+							const targetPropertyId = targetRoom
+								? targetRoom.propertyId
+								: activeContract.room.propertyId;
 
 							// 1. Selalu perbarui SELURUH tagihan PENDING pada kontrak aktif ke tarif baru
 							await tx.invoice.updateMany({
@@ -531,10 +651,7 @@ export class TenantRepository {
 								currentInvoice = await tx.invoice.findFirst({
 									where: { contractId: activeContract.id },
 									include: { transactions: true },
-									orderBy: [
-										{ dueDate: "desc" },
-										{ createdAt: "desc" },
-									],
+									orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
 								});
 							}
 
@@ -552,17 +669,19 @@ export class TenantRepository {
 										currentInvoice.transactions.length > 0
 									) {
 										for (const trans of currentInvoice.transactions) {
-											const updatedDesc = trans.description
-												? trans.description.replace(
-														`Kamar ${oldRoomNumber}`,
-														`Kamar ${targetRoomNumber}`,
-													)
-												: undefined;
+											const updatedDesc = updateDescriptionRoom(
+												trans.description,
+												oldRoomNumber,
+												targetRoomNumber,
+											);
 											await tx.transaction.update({
 												where: { id: trans.id },
 												data: {
 													amount: effectiveRentAmount,
-													...(updatedDesc && { description: updatedDesc }),
+													propertyId: targetPropertyId,
+													...(updatedDesc !== trans.description && {
+														description: updatedDesc,
+													}),
 												},
 											});
 										}
@@ -573,23 +692,28 @@ export class TenantRepository {
 												propertyId: activeContract.room.propertyId,
 												type: "INCOME",
 												category: "RENT",
-												description: { contains: activeContract.tenant.name },
+												description: {
+													contains: activeContract.tenant.name,
+													mode: "insensitive",
+												},
 											},
 											orderBy: { createdAt: "desc" },
 										});
 
 										if (relatedTx) {
-											const updatedDesc = relatedTx.description
-												? relatedTx.description.replace(
-														`Kamar ${oldRoomNumber}`,
-														`Kamar ${targetRoomNumber}`,
-													)
-												: `Pembayaran Sewa Kamar ${targetRoomNumber} - ${activeContract.tenant.name}`;
+											const updatedDesc =
+												updateDescriptionRoom(
+													relatedTx.description,
+													oldRoomNumber,
+													targetRoomNumber,
+												) ||
+												`Pembayaran Sewa Kamar ${targetRoomNumber} - ${data.name || activeContract.tenant.name}`;
 											await tx.transaction.update({
 												where: { id: relatedTx.id },
 												data: {
 													amount: effectiveRentAmount,
 													invoiceId: currentInvoice.id,
+													propertyId: targetPropertyId,
 													description: updatedDesc,
 												},
 											});

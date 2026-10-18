@@ -7,12 +7,10 @@ import type {
 } from "../../generated/prisma/client.js";
 import { sleepWithJitter } from "../../lib/async-utils.ts";
 import {
-	formatDate,
 	formatRentalPeriod,
 	getTodayDateString,
 } from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
-import { getEndOfMonthString } from "../../lib/payment-utils.ts";
 import {
 	getWhatsAppDirectUrl,
 	sanitizePhoneNumber,
@@ -296,11 +294,11 @@ export class EngagementService {
 		}
 
 		// ─── Task 0: Auto-generate Tagihan Invoice untuk Bulan Aktif / Periode Mendatang ─
-		try {
-			const now = new Date();
-			const curMonth = now.getMonth() + 1;
-			const curYear = now.getFullYear();
+		const now = new Date();
+		const curMonth = now.getMonth() + 1;
+		const curYear = now.getFullYear();
 
+		try {
 			const properties = await this.propertyRepo.findAll();
 			await Promise.all(
 				properties.map(async (prop) => {
@@ -331,12 +329,15 @@ export class EngagementService {
 			);
 		}
 
-		// ─── Task 1 & 2 Query: Query Reminders & Birthdays secara Paralel (<10ms) ─
+		// ─── Task 1 & 2 Query: Query Reminders (Hanya Tgl 1) & Birthdays secara Paralel (<10ms) ─
+		const isFirstDayOfMonth = now.getDate() === 1;
+
 		const [dueReminders, todaysBirthdays] = await Promise.all([
-			this.repo.getDueInvoicesForReminder(),
+			isFirstDayOfMonth
+				? this.repo.getFirstOfMonthInvoicesForReminder(curMonth, curYear)
+				: Promise.resolve([]),
 			this.repo.getTodaysBirthdays(),
 		]);
-		const overdueInvoiceIds: string[] = [];
 
 		// Map untuk deduplikasi per nomor telepon & pengelompokan penagihan
 		const reminderQueue = new Map<
@@ -348,15 +349,8 @@ export class EngagementService {
 				roomNumber: string;
 				invoiceNumber: string;
 				period: string;
-				dueDateStr: string;
-				daysRemaining: number;
 				amount: number;
 				documentUrl: string;
-				isPartial: boolean;
-				paidAmount: number;
-				remainingAmount: number;
-				endOfMonthDate: string;
-				reminderType: "H3" | "H0" | "OVERDUE" | "INSTALLMENT_EOM";
 			}
 		>();
 
@@ -367,15 +361,10 @@ export class EngagementService {
 			const tenant = inv.contract.tenant;
 			const phone = tenant.whatsappNumber || tenant.phoneNumber;
 
-			if (item.type === "OVERDUE" && inv.status === "PENDING") {
-				overdueInvoiceIds.push(inv.id);
-			}
-
 			if (phone) {
 				const sanitizedPhone = sanitizePhoneNumber(phone);
 				if (!sanitizedPhone) continue;
 
-				const dueDate = new Date(inv.dueDate);
 				const period = formatRentalPeriod({
 					periodMonth: inv.periodMonth,
 					periodYear: inv.periodYear,
@@ -388,11 +377,6 @@ export class EngagementService {
 				const documentUrl =
 					inv.pdfUrl || `${appUrl}/api/invoices/${inv.id}/document`;
 
-				const endOfMonthDate = getEndOfMonthString(
-					inv.periodYear ?? undefined,
-					inv.periodMonth ?? undefined,
-				);
-
 				// Simpan ke antrean reminder Map keyed by invoice ID
 				reminderQueue.set(inv.id, {
 					phone: sanitizedPhone,
@@ -401,21 +385,13 @@ export class EngagementService {
 					roomNumber: inv.contract.room.roomNumber,
 					invoiceNumber: inv.invoiceNumber,
 					period,
-					dueDateStr: formatDate(dueDate),
-					daysRemaining: item.daysRemaining,
 					amount: Number(inv.amount),
 					documentUrl,
-					isPartial: item.installmentSummary?.isPartial ?? false,
-					paidAmount: item.installmentSummary?.paidAmount ?? 0,
-					remainingAmount:
-						item.installmentSummary?.remainingAmount ?? Number(inv.amount),
-					endOfMonthDate,
-					reminderType: item.type,
 				});
 			}
 		}
 
-		// Eksekusi pengiriman pesan WhatsApp untuk tagihan jatuh tempo & cicilan
+		// Eksekusi pengiriman pesan WhatsApp untuk tagihan tanggal 1 awal bulan
 		for (const [invId, rem] of reminderQueue.entries()) {
 			const invoiceToken = `TOKEN:REMINDER:${invId}:${todayStr}`;
 
@@ -425,39 +401,19 @@ export class EngagementService {
 				continue;
 			}
 
-			let message: string;
-			let noteLabel: string;
-
-			if (rem.isPartial && rem.remainingAmount > 0) {
-				message = whatsappTemplates.installmentReminder({
-					tenantName: rem.tenantName,
-					propertyName: rem.propertyName,
-					roomNumber: rem.roomNumber,
-					invoiceNumber: rem.invoiceNumber,
-					period: rem.period,
-					totalAmount: rem.amount,
-					totalPaid: rem.paidAmount,
-					remainingAmount: rem.remainingAmount,
-					endOfMonthDate: rem.endOfMonthDate,
-					documentUrl: rem.documentUrl,
-				});
-				noteLabel = `[${invoiceToken}] Cron Reminder Sisa Cicilan (#${rem.invoiceNumber}) [${invId}]`;
-			} else {
-				message = whatsappTemplates.dueReminder({
-					tenantName: rem.tenantName,
-					propertyName: rem.propertyName,
-					roomNumber: rem.roomNumber,
-					invoiceNumber: rem.invoiceNumber,
-					period: rem.period,
-					dueDate: rem.dueDateStr,
-					daysRemaining: rem.daysRemaining,
-					amount: rem.amount,
-					bankAccount: "8735081290",
-					accountHolder: "Bude Frisda",
-					documentUrl: rem.documentUrl,
-				});
-				noteLabel = `[${invoiceToken}] Cron Reminder H${rem.daysRemaining >= 0 ? `-${rem.daysRemaining}` : `+${Math.abs(rem.daysRemaining)}`} (#${rem.invoiceNumber}) [${invId}]`;
-			}
+			const message = whatsappTemplates.monthlyFirstReminder({
+				tenantName: rem.tenantName,
+				propertyName: rem.propertyName,
+				roomNumber: rem.roomNumber,
+				invoiceNumber: rem.invoiceNumber,
+				period: rem.period,
+				amount: rem.amount,
+				bankName: "BCA",
+				bankAccount: "8735081290",
+				accountHolder: "Bude Frisda",
+				documentUrl: rem.documentUrl,
+			});
+			const noteLabel = `[${invoiceToken}] Cron Tagihan Tgl 1 (#${rem.invoiceNumber}) [${invId}]`;
 
 			try {
 				const res = await this.fonnte.sendText({
@@ -487,7 +443,7 @@ export class EngagementService {
 					recipientNumber: rem.phone,
 					messageType: "DUE_DATE_REMINDER",
 					status: "FAILED",
-					notes: `Error Cron Reminder (#${rem.invoiceNumber})`,
+					notes: `Error Cron Tagihan Tgl 1 (#${rem.invoiceNumber})`,
 				});
 			}
 
@@ -495,12 +451,9 @@ export class EngagementService {
 			await sleepWithJitter(800, 400);
 		}
 
-		// Update massal status invoice OVERDUE dalam 1 query
-		if (overdueInvoiceIds.length > 0) {
-			const updateRes =
-				await this.repo.updateOverdueInvoices(overdueInvoiceIds);
-			overdueUpdatedCount = updateRes.count;
-		}
+		// Update massal status invoice yang telah melewati batas jatuh tempo menjadi OVERDUE dalam 1 query
+		const overdueRes = await this.repo.updateAllOverdueInvoices(now);
+		overdueUpdatedCount = overdueRes.count;
 
 		// ─── Task 2: Birthday Reminder Engine (Hari H) ─────────────────
 		const birthdayQueue = new Map<string, (typeof todaysBirthdays)[0]>();

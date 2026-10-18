@@ -456,6 +456,92 @@ export class EngagementRepository {
 	}
 
 	/**
+	 * Dapatkan tagihan sewa reguler PENDING untuk tanggal 1 bulan berjalan (Anti-Spam & Exclude Cicilan)
+	 * Query teroptimasi (< 5ms): hanya mengambil kolom minimal yang dibutuhkan.
+	 */
+	async getFirstOfMonthInvoicesForReminder(
+		targetMonth: number,
+		targetYear: number,
+	) {
+		const pendingInvoices = await this.db.invoice.findMany({
+			where: {
+				status: "PENDING",
+				periodMonth: targetMonth,
+				periodYear: targetYear,
+				contract: {
+					status: "ACTIVE",
+					tenant: {
+						status: "ACTIVE",
+					},
+				},
+			},
+			select: {
+				id: true,
+				invoiceNumber: true,
+				periodMonth: true,
+				periodYear: true,
+				amount: true,
+				dueDate: true,
+				status: true,
+				pdfUrl: true,
+				transactions: {
+					select: {
+						amount: true,
+					},
+					orderBy: { transactionDate: "asc" },
+				},
+				contract: {
+					select: {
+						startDate: true,
+						endDate: true,
+						billingCycle: true,
+						tenant: {
+							select: {
+								id: true,
+								name: true,
+								phoneNumber: true,
+								whatsappNumber: true,
+							},
+						},
+						room: {
+							select: {
+								roomNumber: true,
+								property: {
+									select: {
+										name: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		});
+
+		const validItems: {
+			invoice: (typeof pendingInvoices)[0];
+			installmentSummary: ReturnType<typeof calculateInstallmentSummary>;
+		}[] = [];
+
+		for (const inv of pendingInvoices) {
+			const installmentSummary = calculateInstallmentSummary(
+				Number(inv.amount),
+				inv.transactions,
+			);
+			// Lewati tagihan yang sedang dicicil bertahap (cicilan hanya ditagih manual)
+			if (installmentSummary.isPartial) {
+				continue;
+			}
+			validItems.push({
+				invoice: inv,
+				installmentSummary,
+			});
+		}
+
+		return validItems;
+	}
+
+	/**
 	 * Update status invoice menjadi OVERDUE jika sudah lewat jatuh tempo
 	 */
 	async updateOverdueInvoices(invoiceIds: string[]) {
@@ -464,6 +550,21 @@ export class EngagementRepository {
 			where: {
 				id: { in: invoiceIds },
 				status: "PENDING",
+			},
+			data: {
+				status: "OVERDUE",
+			},
+		});
+	}
+
+	/**
+	 * Update status semua invoice PENDING yang telah melewati jatuh tempo menjadi OVERDUE dalam 1 query
+	 */
+	async updateAllOverdueInvoices(cutoffDate: Date = new Date()) {
+		return this.db.invoice.updateMany({
+			where: {
+				status: "PENDING",
+				dueDate: { lt: cutoffDate },
 			},
 			data: {
 				status: "OVERDUE",

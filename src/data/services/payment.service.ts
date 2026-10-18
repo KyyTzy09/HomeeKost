@@ -165,6 +165,10 @@ export class PaymentService {
 
 			let message = "";
 			if (isPaid) {
+				const isPaidOnTime = inv.paidAt
+					? new Date(inv.paidAt).getTime() <= dueDate.getTime()
+					: true;
+
 				message = whatsappTemplates.paymentReceipt({
 					tenantName,
 					propertyName,
@@ -175,6 +179,7 @@ export class PaymentService {
 					amount,
 					paymentMethod: "Transfer Bank",
 					documentUrl,
+					isOnTime: isPaidOnTime,
 				});
 			} else if (isPartial) {
 				const endOfMonth = getEndOfMonthString(periodYear, periodMonth);
@@ -326,20 +331,23 @@ export class PaymentService {
 			if (!result.isSettled) {
 				// Bukti Cicilan Bertahap
 				if (input.sendReceiptWhatsApp) {
-					const waRes = await this.fonnte.sendPartialPaymentReceipt(tenantPhone, {
-						tenantName,
-						propertyName,
-						roomNumber,
-						invoiceNumber: result.invoice.invoiceNumber,
-						period,
-						paidDate: formatDate(input.paidDate),
-						paymentMethod: input.paymentMethod,
-						paidThisTime: result.paidThisTime,
-						totalAmount: Number(result.invoice.amount),
-						totalPaid: result.totalPaid,
-						remainingAmount: result.remainingAmount,
-						documentUrl,
-					});
+					const waRes = await this.fonnte.sendPartialPaymentReceipt(
+						tenantPhone,
+						{
+							tenantName,
+							propertyName,
+							roomNumber,
+							invoiceNumber: result.invoice.invoiceNumber,
+							period,
+							paidDate: formatDate(input.paidDate),
+							paymentMethod: input.paymentMethod,
+							paidThisTime: result.paidThisTime,
+							totalAmount: Number(result.invoice.amount),
+							totalPaid: result.totalPaid,
+							remainingAmount: result.remainingAmount,
+							documentUrl,
+						},
+					);
 					whatsappSent = waRes.success;
 					directWhatsAppUrl = waRes.directWhatsAppUrl;
 				} else {
@@ -361,6 +369,10 @@ export class PaymentService {
 				}
 			} else {
 				// Kwitansi Pelunasan Penuh
+				const isPaidOnTime =
+					new Date(input.paidDate).getTime() <=
+					new Date(result.invoice.dueDate).getTime();
+
 				if (input.sendReceiptWhatsApp) {
 					const waRes = await this.fonnte.sendPaymentReceipt(tenantPhone, {
 						tenantName,
@@ -372,6 +384,7 @@ export class PaymentService {
 						amount: Number(result.invoice.amount),
 						paymentMethod: input.paymentMethod,
 						documentUrl,
+						isOnTime: isPaidOnTime,
 					});
 					whatsappSent = waRes.success;
 					directWhatsAppUrl = waRes.directWhatsAppUrl;
@@ -386,6 +399,7 @@ export class PaymentService {
 						amount: Number(result.invoice.amount),
 						paymentMethod: input.paymentMethod,
 						documentUrl,
+						isOnTime: isPaidOnTime,
 					});
 					directWhatsAppUrl = getWhatsAppDirectUrl(tenantPhone, msg);
 				}
@@ -425,15 +439,18 @@ export class PaymentService {
 			}
 		}
 
-		// 2. Cek apakah tagihan untuk periode ini sudah pernah dibuat
-		const existingInvoice = await this.invoiceRepo.findExistingInvoice(
-			targetContractId,
+		// 2. Cek apakah tagihan untuk periode ini sudah pernah dibuat untuk penghuni ini (lintas seluruh kontrak)
+		const existingInvoice = await this.invoiceRepo.findExistingInvoiceForTenant(
+			contract.tenantId,
 			input.periodMonth,
 			input.periodYear,
 		);
 		if (existingInvoice) {
+			const roomInfo = existingInvoice.contract?.room?.roomNumber
+				? `Kamar ${existingInvoice.contract.room.roomNumber} - `
+				: "";
 			throw new Error(
-				`Tagihan untuk periode ${input.periodMonth}/${input.periodYear} sudah pernah dibuat (${existingInvoice.invoiceNumber} - status: ${existingInvoice.status}).`,
+				`Tagihan untuk periode ${input.periodMonth}/${input.periodYear} sudah pernah dibuat untuk penghuni ini (${roomInfo}${existingInvoice.invoiceNumber} - status: ${existingInvoice.status}).`,
 			);
 		}
 
@@ -445,7 +462,8 @@ export class PaymentService {
 			attempts++;
 			const uniqueCode = `${Date.now().toString().slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
 			const candidateNumber = `INV-${input.periodYear}${monthPadded}-${uniqueCode}`;
-			const existing = await this.invoiceRepo.findByInvoiceNumber(candidateNumber);
+			const existing =
+				await this.invoiceRepo.findByInvoiceNumber(candidateNumber);
 			if (!existing) {
 				invoiceNumber = candidateNumber;
 			}
@@ -588,6 +606,11 @@ export class PaymentService {
 		const isPaid = type === "RECEIPT" || invoice.status === "PAID";
 
 		if (isPaid) {
+			const isPaidOnTime = invoice.paidAt
+				? new Date(invoice.paidAt).getTime() <=
+					new Date(invoice.dueDate).getTime()
+				: true;
+
 			return this.fonnte.sendPaymentReceipt(tenantPhone, {
 				tenantName,
 				propertyName,
@@ -600,6 +623,7 @@ export class PaymentService {
 				amount,
 				paymentMethod: "Transfer Bank",
 				documentUrl,
+				isOnTime: isPaidOnTime,
 			});
 		}
 

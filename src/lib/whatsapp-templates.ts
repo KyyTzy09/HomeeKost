@@ -24,6 +24,20 @@ export interface PaymentReceiptTemplateParams {
 	amount: number;
 	paymentMethod: string;
 	documentUrl?: string;
+	isOnTime?: boolean;
+}
+
+export interface MonthlyFirstReminderTemplateParams {
+	tenantName: string;
+	propertyName: string;
+	roomNumber: string;
+	invoiceNumber: string;
+	period: string;
+	amount: number;
+	bankName?: string;
+	bankAccount?: string;
+	accountHolder?: string;
+	documentUrl?: string;
 }
 
 export interface PartialPaymentReceiptTemplateParams {
@@ -147,6 +161,32 @@ Jika sudah melakukan transfer, abaikan pesan ini atau kirimkan bukti pembayaran 
 	},
 
 	/**
+	 * Template Pengingat Tagihan Tanggal 1 Awal Bulan (Masa Bayar 1-5 & Peringatan Denda)
+	 */
+	monthlyFirstReminder(p: MonthlyFirstReminderTemplateParams): string {
+		const docSection = p.documentUrl
+			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
+			: "";
+
+		return `Halo *${p.tenantName}*,
+
+Hari ini sudah tanggal 1 ${p.period}. Jangan lupa untuk melakukan pembayaran tagihan sewa kos Anda:
+
+🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+📄 *No. Invoice:* ${p.invoiceNumber}
+💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
+
+📅 *Masa Pembayaran:* Tanggal 1 s/d 5 ${p.period}
+⚠️ *Penting:* Batas waktu pembayaran adalah tanggal 5. Pembayaran yang melewati tanggal 5 akan dikenakan denda keterlambatan sesuai kebijakan kos.
+
+💳 *Pembayaran dapat ditransfer ke rekening:*
+🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${docSection}
+Jika Anda sudah melakukan transfer, silakan kirimkan bukti pembayaran ke nomor ini. Terima kasih! 🙏✨
+— Pengelola ${p.propertyName}`;
+	},
+
+	/**
 	 * Template Konfirmasi Pembayaran Lunas (Kwitansi Digital Lengkap + Link Dokumen)
 	 */
 	paymentReceipt(p: PaymentReceiptTemplateParams): string {
@@ -154,10 +194,20 @@ Jika sudah melakukan transfer, abaikan pesan ini atau kirimkan bukti pembayaran 
 			? `\n📄 *Tautan Kwitansi Lunas Resmi:*\n${p.documentUrl}\n`
 			: "";
 
+		const appreciationText =
+			p.isOnTime === true
+				? `Terima kasih banyak! Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi tepat waktu. Kami sangat mengapresiasi kedisiplinan dan kerja sama Anda! 🙏✨`
+				: `Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi.`;
+
+		const closingText =
+			p.isOnTime === true
+				? `Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Semoga nyaman tinggal di *${p.propertyName}*! 🌿🏡`
+				: `Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Terima kasih atas kerja samanya. 🙏`;
+
 		return `🎉 *PEMBAYARAN DITERIMA & LUNAS* 🎉
 
-Halo Kak *${p.tenantName}*,
-Terima kasih, pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi.
+Halo *${p.tenantName}*,
+${appreciationText}
 
 📄 *No. Kwitansi:* ${p.invoiceNumber}
 🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
@@ -165,7 +215,7 @@ Terima kasih, pembayaran sewa kos Anda untuk periode *${p.period}* telah kami te
 🗓️ *Tanggal Bayar:* ${p.paidDate}
 💵 *Jumlah Diterima:* *${formatRupiah(p.amount)}* (LUNAS)
 ${docSection}
-Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Semoga nyaman tinggal di *${p.propertyName}*! 🌿🏡`;
+${closingText}`;
 	},
 
 	/**
