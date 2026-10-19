@@ -287,6 +287,7 @@ function ReportsPage() {
 				sendWhatsApp: activeSettings.autoSendWhatsApp,
 				month: selectedMonth.value,
 				year: selectedYear.value,
+				forceSend: true,
 			});
 
 			const skippedNote =

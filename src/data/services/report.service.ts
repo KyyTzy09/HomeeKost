@@ -157,7 +157,7 @@ export class ReportService {
 			targetYear,
 		);
 
-		const todayStr = new Date().toISOString().slice(0, 10);
+		const todayStr = getTodayDateString();
 		let aiData: AiFinancialInsightData;
 		let aiProviderUsed = "HomeeKost Rule Engine (Instan)";
 		let isAutomated = false;
@@ -317,7 +317,7 @@ export class ReportService {
 			targetYear,
 		);
 
-		const todayStr = new Date().toISOString().slice(0, 10);
+		const todayStr = getTodayDateString();
 		let currentRefreshCount = 0;
 
 		if (
@@ -525,6 +525,7 @@ export class ReportService {
 		month?: number;
 		year?: number;
 		idempotencyKey?: string;
+		forceSend?: boolean;
 	}) {
 		const now = new Date();
 		// Default: Laporan untuk bulan sebelumnya (Tutup Buku) atau bulan berjalan jika dispesifikasi
@@ -545,10 +546,8 @@ export class ReportService {
 			: properties;
 
 		const todayStr = getTodayDateString();
-		const startOfDay = new Date(now);
-		startOfDay.setHours(0, 0, 0, 0);
-		const endOfDay = new Date(now);
-		endOfDay.setHours(23, 59, 59, 999);
+		const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+		const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
 
 		const sentReportTokensToday = new Set<string>();
 		try {
@@ -584,11 +583,16 @@ export class ReportService {
 
 		for (const prop of targetProperties) {
 			try {
-				const report = await this.generateOrRefreshAiReport(
-					prop.id,
-					month,
-					year,
-				);
+				let report: AiMonthlyReportData;
+				try {
+					report = await this.generateOrRefreshAiReport(prop.id, month, year);
+				} catch (aiErr) {
+					console.warn(
+						`[Cron Report] Kuota refresh AI tercapai atau regenerasi dilewati untuk properti ${prop.name}, mengambil laporan eksisting:`,
+						aiErr instanceof Error ? aiErr.message : aiErr,
+					);
+					report = await this.getMonthlyReport(prop.id, month, year);
+				}
 				results.push(report);
 
 				// Kirim pengingat WhatsApp jika diaktifkan (Hanya Teks - Hemat Biaya Fonnte)
@@ -605,8 +609,8 @@ export class ReportService {
 						options.idempotencyKey ||
 						`TOKEN:REPORT:${prop.id}:${year}-${month}:${todayStr}`;
 
-					// Anti-Spam Idempotency Check: cegah spam berulang jika cron ditembak berkali-kali hari ini
-					if (sentReportTokensToday.has(reportToken)) {
+					// Anti-Spam Idempotency Check: cegah spam berulang jika cron ditembak berkali-kali hari ini (dapat di-bypass dengan forceSend)
+					if (!options?.forceSend && sentReportTokensToday.has(reportToken)) {
 						console.log(
 							`[Cron Report] Lewati kirim WhatsApp untuk ${prop.name} karena sudah terkirim hari ini (${reportToken})`,
 						);

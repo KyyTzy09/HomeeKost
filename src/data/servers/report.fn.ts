@@ -80,6 +80,7 @@ export const triggerMonthlyReportCronServerFn = createServerFn({
 			sendWhatsApp?: boolean;
 			month?: number;
 			year?: number;
+			forceSend?: boolean;
 		}) => {
 			return z
 				.object({
@@ -88,6 +89,7 @@ export const triggerMonthlyReportCronServerFn = createServerFn({
 					sendWhatsApp: z.boolean().optional(),
 					month: z.number().int().min(1).max(12).optional(),
 					year: z.number().int().min(2020).max(2050).optional(),
+					forceSend: z.boolean().optional(),
 				})
 				.optional()
 				.parse(input);

@@ -51,6 +51,8 @@ async function handleMonthlyCronRequest(request: Request): Promise<Response> {
 		const yearParam = url.searchParams.get("year");
 		const sendWhatsAppParam = url.searchParams.get("sendWhatsApp");
 		const idempotencyKey = url.searchParams.get("idempotencyKey") || undefined;
+		const forceSendParam = url.searchParams.get("forceSend");
+		const forceSend = forceSendParam === "true";
 
 		const month = monthParam ? Number.parseInt(monthParam, 10) : undefined;
 		const year = yearParam ? Number.parseInt(yearParam, 10) : undefined;
@@ -64,6 +66,7 @@ async function handleMonthlyCronRequest(request: Request): Promise<Response> {
 			month,
 			year,
 			idempotencyKey,
+			forceSend,
 		});
 
 		return new Response(JSON.stringify(result), {
