@@ -1,4 +1,4 @@
-import { defineConfig, env } from 'prisma/config'
+import { defineConfig } from 'prisma/config'
 import 'dotenv/config'
 
 export default defineConfig({
@@ -8,6 +8,6 @@ export default defineConfig({
     seed: 'bun prisma/seed.ts',
   },
   datasource: {
-    url: env('DATABASE_URL'),
+    url: process.env.DATABASE_URL || 'postgresql://postgres:secret@localhost:5432/homeekost?schema=public',
   },
 })

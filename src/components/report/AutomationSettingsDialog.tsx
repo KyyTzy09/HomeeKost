@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Clock, Loader2, Play, SlidersHorizontal } from "lucide-react";
+import { Clock, SlidersHorizontal } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
@@ -23,8 +23,6 @@ interface AutomationSettingsDialogProps {
 	onOpenChange: (open: boolean) => void;
 	initialValues: AutomationSettingsFormValues;
 	onSubmit: (values: AutomationSettingsFormValues) => void;
-	onTestTrigger?: (values: AutomationSettingsFormValues) => void;
-	isTestingTrigger?: boolean;
 }
 
 export function AutomationSettingsDialog({
@@ -32,8 +30,6 @@ export function AutomationSettingsDialog({
 	onOpenChange,
 	initialValues,
 	onSubmit,
-	onTestTrigger,
-	isTestingTrigger = false,
 }: AutomationSettingsDialogProps) {
 	const form = useForm({
 		defaultValues: {
@@ -61,20 +57,6 @@ export function AutomationSettingsDialog({
 			onOpenChange(false);
 		},
 	});
-
-	const handleTestTriggerClick = () => {
-		const testValues = {
-			...form.state.values,
-			autoSendWhatsApp: true,
-		};
-		const res = automationSettingsSchema.safeParse(testValues);
-		if (!res.success) {
-			form.handleSubmit();
-			return;
-		}
-		onSubmit(res.data as AutomationSettingsFormValues);
-		onTestTrigger?.(res.data as AutomationSettingsFormValues);
-	};
 
 	useEffect(() => {
 		if (open) {
@@ -229,46 +211,21 @@ export function AutomationSettingsDialog({
 						)}
 					</form.Field>
 
-					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-between gap-2">
-						{onTestTrigger ? (
-							<Button
-								type="button"
-								variant="outline"
-								className="border-[#cfdfd1] text-[#4f6958] hover:bg-[#e8f2ea] text-xs font-semibold px-3 h-9 flex items-center gap-1.5 cursor-pointer"
-								onClick={handleTestTriggerClick}
-								disabled={isTestingTrigger}
-							>
-								{isTestingTrigger ? (
-									<>
-										<Loader2 className="w-3.5 h-3.5 animate-spin" />
-										Menjalankan...
-									</>
-								) : (
-									<>
-										<Play className="w-3.5 h-3.5" />
-										Test Trigger Cron
-									</>
-								)}
-							</Button>
-						) : (
-							<div />
-						)}
-						<div className="flex items-center gap-2">
-							<Button
-								type="button"
-								variant="outline"
-								className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 cursor-pointer"
-								onClick={() => onOpenChange(false)}
-							>
-								Batal
-							</Button>
-							<Button
-								type="submit"
-								className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9 cursor-pointer"
-							>
-								Simpan Pengaturan
-							</Button>
-						</div>
+					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-end gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 cursor-pointer"
+							onClick={() => onOpenChange(false)}
+						>
+							Batal
+						</Button>
+						<Button
+							type="submit"
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9 cursor-pointer"
+						>
+							Simpan Pengaturan
+						</Button>
 					</DialogFooter>
 				</form>
 			</DialogContent>
