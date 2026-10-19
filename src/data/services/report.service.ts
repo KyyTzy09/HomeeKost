@@ -600,13 +600,25 @@ export class ReportService {
 					? sanitizePhoneNumber(options.targetPhone)
 					: "";
 
-				if (
-					options?.sendWhatsApp &&
-					targetNumber &&
-					targetNumber !== "6281234567890"
-				) {
+				const shouldSendWhatsApp =
+					options?.sendWhatsApp !== undefined
+						? options.sendWhatsApp
+						: Boolean(targetNumber);
+
+				if (targetNumber === "6281234567890") {
+					console.warn(
+						"[Cron Report] Nomor target adalah dummy contoh (081234567890), pengiriman WhatsApp dilewati.",
+					);
+					notificationLogs.push({
+						recipientNumber: targetNumber,
+						messageType: "ANNOUNCEMENT",
+						status: "FAILED",
+						notes:
+							"Nomor tujuan adalah nomor dummy contoh (081234567890). Harap gunakan nomor WhatsApp asli Anda.",
+					});
+				} else if (shouldSendWhatsApp && targetNumber) {
 					const reportToken =
-						options.idempotencyKey ||
+						options?.idempotencyKey ||
 						`TOKEN:REPORT:${prop.id}:${year}-${month}:${todayStr}`;
 
 					// Anti-Spam Idempotency Check: cegah spam berulang jika cron ditembak berkali-kali hari ini (dapat di-bypass dengan forceSend)
@@ -617,6 +629,10 @@ export class ReportService {
 						skippedCount++;
 						continue;
 					}
+
+					console.log(
+						`[Cron Report] Mengirim ringkasan laporan ke WhatsApp ${targetNumber}...`,
+					);
 
 					const message = whatsappTemplates.executiveReportReminder({
 						propertyName: report.propertyName,
@@ -635,8 +651,16 @@ export class ReportService {
 						message,
 					});
 
+					console.log(
+						`[Cron Report] Respon pengiriman WhatsApp (${targetNumber}): status=${sendRes.status}, detail=${sendRes.detail || sendRes.reason || "Success"}`,
+					);
+
 					const status = sendRes.status ? "SENT" : "FAILED";
-					const noteLabel = `[${reportToken}] Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${sendRes.detail || (sendRes.status ? "Success" : "Failed")}`;
+					const errorReason =
+						sendRes.reason ||
+						sendRes.detail ||
+						(sendRes.status ? "Success" : "Failed");
+					const noteLabel = `[${reportToken}] Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${errorReason}`;
 
 					notificationLogs.push({
 						recipientNumber: targetNumber,
@@ -648,6 +672,10 @@ export class ReportService {
 					if (sendRes.status) {
 						sentReportTokensToday.add(reportToken);
 					}
+				} else if (options?.sendWhatsApp && !targetNumber) {
+					console.warn(
+						"[Cron Report] Opsi kirim WhatsApp aktif tetapi nomor target pengelola belum diisi.",
+					);
 				}
 			} catch (err) {
 				console.error(
@@ -661,11 +689,36 @@ export class ReportService {
 			await this.engagementRepo.recordNotificationLogsBatch(notificationLogs);
 		}
 
+		const sentLogs = notificationLogs.filter((l) => l.status === "SENT");
+		const failedLogs = notificationLogs.filter((l) => l.status === "FAILED");
+
 		return {
 			success: true,
 			processedCount: results.length,
 			skippedCount,
 			period: { month, year },
+			whatsApp: {
+				attempted: notificationLogs.length > 0,
+				targetPhone: options?.targetPhone || null,
+				sentCount: sentLogs.length,
+				failedCount: failedLogs.length,
+				status:
+					notificationLogs.length === 0
+						? ("NOT_ATTEMPTED" as const)
+						: failedLogs.length === 0
+							? ("SENT" as const)
+							: sentLogs.length > 0
+								? ("PARTIAL" as const)
+								: ("FAILED" as const),
+				detail:
+					notificationLogs.length === 0
+						? options?.sendWhatsApp === false
+							? "Pengiriman WhatsApp dinonaktifkan."
+							: !options?.targetPhone
+								? "Nomor WhatsApp belum diisi."
+								: "WhatsApp tidak dikirim."
+						: notificationLogs[0]?.notes || null,
+			},
 		};
 	}
 

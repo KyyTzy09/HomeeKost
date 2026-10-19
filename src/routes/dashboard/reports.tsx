@@ -271,9 +271,10 @@ function ReportsPage() {
 	) => {
 		const activeSettings = { ...automationSettings, ...overrideSettings };
 
-		if (activeSettings.autoSendWhatsApp && !activeSettings.targetPhone) {
+		// Validasi: jika nomor WhatsApp belum diatur, arahkan user untuk memasukkan nomornya
+		if (!activeSettings.targetPhone || !activeSettings.targetPhone.trim()) {
 			showToast(
-				"Nomor WhatsApp penerima belum diisi. Silakan masukkan nomor WhatsApp pada pengaturan automasi.",
+				"Nomor WhatsApp pengelola belum diatur. Silakan masukkan nomor WhatsApp Anda pada Pengaturan Jadwal Automasi terlebih dahulu.",
 				"error",
 			);
 			setIsSettingsOpen(true);
@@ -283,27 +284,36 @@ function ReportsPage() {
 		try {
 			const res = await triggerCronMutation.mutateAsync({
 				propertyId: effectivePropertyId,
-				targetPhone: activeSettings.targetPhone || undefined,
-				sendWhatsApp: activeSettings.autoSendWhatsApp,
+				targetPhone: activeSettings.targetPhone,
+				sendWhatsApp: true,
 				month: selectedMonth.value,
 				year: selectedYear.value,
 				forceSend: true,
 			});
 
-			const skippedNote =
-				res.skippedCount && res.skippedCount > 0
-					? ` (${res.skippedCount} dilewati karena sudah terkirim hari ini)`
-					: "";
+			const wa = res.whatsApp;
 
-			const waNote =
-				activeSettings.autoSendWhatsApp && activeSettings.targetPhone
-					? ` & terkirim ke WhatsApp (${activeSettings.targetPhone})`
-					: "";
-
-			showToast(
-				`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}${skippedNote}${waNote}`,
-				"success",
-			);
+			if (wa?.status === "FAILED") {
+				showToast(
+					`Laporan berhasil diproses, namun WhatsApp GAGAL terkirim ke ${activeSettings.targetPhone}: ${wa.detail || "Cek token atau koneksi perangkat Fonnte"}.`,
+					"error",
+				);
+			} else if (wa?.status === "SENT") {
+				showToast(
+					`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses & ringkasan terkirim ke WhatsApp (${activeSettings.targetPhone})!`,
+					"success",
+				);
+			} else if (wa?.status === "PARTIAL") {
+				showToast(
+					`Cron Laporan Selesai: Sebagian laporan terkirim (${wa.sentCount} terkirim, ${wa.failedCount} gagal).`,
+					"error",
+				);
+			} else {
+				showToast(
+					`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}.`,
+					"success",
+				);
+			}
 		} catch (err: unknown) {
 			const error = err as Error;
 			showToast(error.message || "Gagal menjalankan cron laporan.", "error");

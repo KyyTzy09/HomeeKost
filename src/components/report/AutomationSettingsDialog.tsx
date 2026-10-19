@@ -63,7 +63,11 @@ export function AutomationSettingsDialog({
 	});
 
 	const handleTestTriggerClick = () => {
-		const res = automationSettingsSchema.safeParse(form.state.values);
+		const testValues = {
+			...form.state.values,
+			autoSendWhatsApp: true,
+		};
+		const res = automationSettingsSchema.safeParse(testValues);
 		if (!res.success) {
 			form.handleSubmit();
 			return;
@@ -180,6 +184,12 @@ export function AutomationSettingsDialog({
 									onChange={(e) => {
 										const cleaned = e.target.value.replace(/[^0-9+]/g, "");
 										field.handleChange(cleaned);
+										if (
+											cleaned.length >= 10 &&
+											!form.getFieldValue("autoSendWhatsApp")
+										) {
+											form.setFieldValue("autoSendWhatsApp", true);
+										}
 									}}
 									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
 								/>
