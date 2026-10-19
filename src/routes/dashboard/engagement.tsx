@@ -5,8 +5,8 @@ import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import type {
 	AnnouncementItem,
+	EngagementRecipient,
 	EngagementTemplateItem,
-	UpcomingBirthdayItem,
 } from "../../common/types/index.ts";
 import type {
 	BroadcastAnnouncementInput,
@@ -14,7 +14,7 @@ import type {
 } from "../../common/validations/index.ts";
 import {
 	EngagementAnnouncementSection,
-	EngagementBirthdayPanel,
+	EngagementDynamicRecipientPanel,
 	EngagementEventDialog,
 	EngagementNotificationLogSection,
 	EngagementTemplateDetailDialog,
@@ -25,12 +25,13 @@ import {
 	engagementDashboardQueryOptions,
 	propertiesQueryOptions,
 	useBroadcastAnnouncement,
+	useBroadcastToSelectedRecipients,
 	useDashboardContext,
 	useDeleteAnnouncement,
 	useEngagementDashboard,
 	useProperties,
 	useRunDailyCronTasks,
-	useSendBirthdayWish,
+	useSendSingleTemplateMessage,
 } from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/engagement")({
@@ -106,7 +107,11 @@ const loadStoredTemplates = (): EngagementTemplateItem[] => {
 	if (typeof window === "undefined") return DEFAULT_TEMPLATES;
 	try {
 		const stored = localStorage.getItem(TEMPLATE_STORAGE_KEY);
-		return stored ? JSON.parse(stored) : DEFAULT_TEMPLATES;
+		if (!stored) return DEFAULT_TEMPLATES;
+		const parsed = JSON.parse(stored);
+		return Array.isArray(parsed) && parsed.length > 0
+			? parsed
+			: DEFAULT_TEMPLATES;
 	} catch {
 		return DEFAULT_TEMPLATES;
 	}
@@ -124,10 +129,11 @@ function EngagementPage() {
 	const { data: engagementData } = useEngagementDashboard();
 
 	// Mutations
-	const sendBirthdayWishMutation = useSendBirthdayWish();
 	const broadcastAnnouncementMutation = useBroadcastAnnouncement();
 	const deleteAnnouncementMutation = useDeleteAnnouncement();
 	const runCronMutation = useRunDailyCronTasks();
+	const sendSingleTemplateMutation = useSendSingleTemplateMessage();
+	const broadcastSelectedMutation = useBroadcastToSelectedRecipients();
 
 	// State
 	const [templates, setTemplates] =
@@ -165,22 +171,6 @@ function EngagementPage() {
 		}, 4000);
 	};
 
-	// Map backend upcoming birthdays to UI format
-	const birthdays: UpcomingBirthdayItem[] = useMemo(() => {
-		if (!engagementData?.upcomingBirthdays) return [];
-		return engagementData.upcomingBirthdays.map((b) => ({
-			id: b.id,
-			tenantId: b.tenantId,
-			name: b.name,
-			room: b.roomNumber,
-			property: b.propertyName,
-			birthDate: b.birthDate,
-			daysRemaining: b.daysRemaining,
-			relativeLabel: b.relativeLabel,
-			phone: b.phone,
-		}));
-	}, [engagementData]);
-
 	// Map backend announcements to UI format
 	const announcements: AnnouncementItem[] = useMemo(() => {
 		if (!engagementData?.recentAnnouncements) return [];
@@ -196,37 +186,63 @@ function EngagementPage() {
 		}));
 	}, [engagementData]);
 
-	// Birthday Action Handlers
-	const handleSendWish = async (item: UpcomingBirthdayItem) => {
-		if (!item.tenantId) {
-			showToast("ID Penyewa tidak ditemukan.");
+	// Single Template Send Handler
+	const handleSendSingleTemplate = async (recipient: EngagementRecipient) => {
+		if (!selectedTemplate) {
+			showToast("Silakan pilih template pesan terlebih dahulu.");
 			return;
 		}
 
 		try {
-			const res = await sendBirthdayWishMutation.mutateAsync({
-				tenantId: item.tenantId,
+			const res = await sendSingleTemplateMutation.mutateAsync({
+				tenantId: recipient.tenantId,
+				templateContent: selectedTemplate.content,
 			});
 
-			if (res?.success) {
+			if (res.success) {
 				showToast(
-					`Ucapan selamat ulang tahun berhasil dikirimkan ke WhatsApp ${item.name} (${item.phone})! 🎂🎉`,
+					`Pesan "${selectedTemplate.name}" berhasil dikirim ke WhatsApp ${recipient.name} (${recipient.phone})!`,
 				);
 			} else {
 				showToast(
-					`Fonnte: ${res?.detail || "Gagal mengirim via API. Silakan gunakan tautan WhatsApp manual."}`,
+					`Fonnte: ${res.detail || "Gagal mengirim via WhatsApp API."}`,
 				);
 			}
 		} catch (err: unknown) {
 			const error = err as Error;
-			showToast(error.message || "Gagal mengirimkan ucapan ulang tahun.");
+			showToast(error.message || "Gagal mengirimkan pesan template.");
 		}
 	};
 
-	const handleSetReminder = (_item: UpcomingBirthdayItem) => {
-		showToast(
-			"Sistem otomatis akan mengirimkan ucapan WA pada hari-H pukul 08:00 WIB via Cron Scheduler.",
-		);
+	// Multi-Select Batch Broadcast Handler
+	const handleBroadcastSelectedRecipients = async (
+		selectedRecipients: EngagementRecipient[],
+	) => {
+		if (!selectedTemplate) {
+			showToast("Silakan pilih template pesan terlebih dahulu.");
+			return;
+		}
+		if (selectedRecipients.length === 0) {
+			showToast("Pilih minimal satu penghuni untuk broadcast.");
+			return;
+		}
+
+		try {
+			const res = await broadcastSelectedMutation.mutateAsync({
+				tenantIds: selectedRecipients.map((r) => r.tenantId),
+				templateContent: selectedTemplate.content,
+				title: selectedTemplate.name,
+			});
+
+			showToast(
+				`Broadcast selesai: ${res.sentCount} pesan berhasil dikirim${res.failedCount > 0 ? `, ${res.failedCount} gagal` : ""}.`,
+			);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(
+				error.message || "Gagal melakukan broadcast ke penghuni terpilih.",
+			);
+		}
 	};
 
 	// Template Action Handlers
@@ -434,12 +450,20 @@ function EngagementPage() {
 				</div>
 			</div>
 
-			{/* Top Grid (2 Columns: Upcoming Birthdays & Message Templates) */}
+			{/* Top Grid (2 Columns: Dynamic Recipients & Message Templates) */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<EngagementBirthdayPanel
-					birthdays={birthdays}
-					onSendWish={handleSendWish}
-					onSetReminder={handleSetReminder}
+				<EngagementDynamicRecipientPanel
+					recipients={engagementData?.recipients || []}
+					selectedTemplate={selectedTemplate}
+					selectedPropertyId={
+						userRole === "ADMIN" && userPropertyId ? userPropertyId : undefined
+					}
+					onSendSingle={handleSendSingleTemplate}
+					onBroadcastSelected={handleBroadcastSelectedRecipients}
+					isSending={
+						sendSingleTemplateMutation.isPending ||
+						broadcastSelectedMutation.isPending
+					}
 				/>
 
 				<EngagementTemplatePanel

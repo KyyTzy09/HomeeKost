@@ -101,7 +101,7 @@ export function personalizeMessage(
 	if (!templateContent) return "";
 
 	return templateContent
-		.replace(/\{nama\}/gi, recipient.name || "")
-		.replace(/\{kamar\}/gi, recipient.roomNumber || "")
-		.replace(/\{kost?\}/gi, recipient.propertyName || "");
+		.replace(/\{nama\}/gi, () => recipient.name || "")
+		.replace(/\{kamar\}/gi, () => recipient.roomNumber || "")
+		.replace(/\{kost?\}/gi, () => recipient.propertyName || "");
 }

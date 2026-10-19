@@ -168,9 +168,11 @@ export function EngagementDynamicRecipientPanel({
 
 		const hasSentToday = selectedRecipients.some((r) => r.isSentToday);
 		if (hasSentToday) {
-			const confirmed = window.confirm(
-				"Sebagian penghuni yang dipilih sudah menerima apresiasi sebelumnya. Ingin tetap mengirim apresiasi lagi ke seluruh penghuni terpilih?",
-			);
+			const isPayment = selectedTemplate?.category === "Pembayaran";
+			const confirmMsg = isPayment
+				? "Sebagian penghuni yang dipilih sudah menerima apresiasi sebelumnya. Ingin tetap mengirim apresiasi lagi ke seluruh penghuni terpilih?"
+				: "Sebagian penghuni yang dipilih sudah menerima pesan hari ini. Ingin tetap mengirimkan pesan ke seluruh penghuni terpilih?";
+			const confirmed = window.confirm(confirmMsg);
 			if (!confirmed) return;
 		}
 
