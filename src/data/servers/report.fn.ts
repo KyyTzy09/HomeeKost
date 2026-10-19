@@ -78,12 +78,16 @@ export const triggerMonthlyReportCronServerFn = createServerFn({
 			propertyId?: string;
 			targetPhone?: string;
 			sendWhatsApp?: boolean;
+			month?: number;
+			year?: number;
 		}) => {
 			return z
 				.object({
 					propertyId: z.string().optional(),
 					targetPhone: z.string().optional(),
 					sendWhatsApp: z.boolean().optional(),
+					month: z.number().int().min(1).max(12).optional(),
+					year: z.number().int().min(2020).max(2050).optional(),
 				})
 				.optional()
 				.parse(input);

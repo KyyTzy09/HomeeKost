@@ -5,11 +5,12 @@ import {
 	Calendar,
 	CheckCircle2,
 	Loader2,
+	Play,
 	Printer,
 	RefreshCw,
 	Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Select,
@@ -37,6 +38,7 @@ import {
 	useMonthlyReport,
 	useProperties,
 	useRegenerateAiInsight,
+	useTriggerMonthlyReportCron,
 } from "../../hooks/index.ts";
 import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
@@ -99,6 +101,30 @@ const YEARS: SelectOption<number>[] = [
 const DEFAULT_MONTH_OPTION = MONTHS[0];
 const DEFAULT_YEAR_OPTION = YEARS[2];
 
+const AUTOMATION_STORAGE_KEY = "homeekost_report_automation_settings";
+
+const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
+	scheduleDay: 1,
+	scheduleTime: "08:00",
+	aiModel: "gemini-1.5-flash",
+	autoSendWhatsApp: true,
+	targetPhone: "081234567890",
+};
+
+const loadStoredAutomationSettings = (): AutomationSettingsFormValues => {
+	if (typeof window === "undefined") return DEFAULT_AUTOMATION_SETTINGS;
+	try {
+		const stored = localStorage.getItem(AUTOMATION_STORAGE_KEY);
+		if (!stored) return DEFAULT_AUTOMATION_SETTINGS;
+		const parsed = JSON.parse(stored);
+		return parsed && typeof parsed === "object"
+			? { ...DEFAULT_AUTOMATION_SETTINGS, ...parsed }
+			: DEFAULT_AUTOMATION_SETTINGS;
+	} catch {
+		return DEFAULT_AUTOMATION_SETTINGS;
+	}
+};
+
 function ReportsPage() {
 	const { user, userRole, isSuperAdmin, activeProperty } =
 		useDashboardContext();
@@ -125,13 +151,12 @@ function ReportsPage() {
 	// Automation settings state
 	const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 	const [automationSettings, setAutomationSettings] =
-		useState<AutomationSettingsFormValues>({
-			scheduleDay: 1,
-			scheduleTime: "08:00",
-			aiModel: "gemini-1.5-flash",
-			autoSendWhatsApp: true,
-			targetPhone: "081234567890",
-		});
+		useState<AutomationSettingsFormValues>(DEFAULT_AUTOMATION_SETTINGS);
+
+	useEffect(() => {
+		const loaded = loadStoredAutomationSettings();
+		setAutomationSettings(loaded);
+	}, []);
 
 	// Toast state
 	const [toastMessage, setToastMessage] = useState<{
@@ -232,10 +257,45 @@ function ReportsPage() {
 		window.print();
 	};
 
+	// Cron Trigger Mutation
+	const triggerCronMutation = useTriggerMonthlyReportCron();
+
+	const handleTriggerCron = async () => {
+		try {
+			const res = await triggerCronMutation.mutateAsync({
+				propertyId: effectivePropertyId,
+				targetPhone: automationSettings.targetPhone,
+				sendWhatsApp: automationSettings.autoSendWhatsApp,
+				month: selectedMonth.value,
+				year: selectedYear.value,
+			});
+
+			const skippedNote =
+				res.skippedCount && res.skippedCount > 0
+					? ` (${res.skippedCount} dilewati karena sudah terkirim hari ini)`
+					: "";
+
+			showToast(
+				`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}${skippedNote}`,
+				"success",
+			);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menjalankan cron laporan.", "error");
+		}
+	};
+
 	const handleSaveAutomationSettings = (
 		values: AutomationSettingsFormValues,
 	) => {
 		setAutomationSettings(values);
+		if (typeof window !== "undefined") {
+			try {
+				localStorage.setItem(AUTOMATION_STORAGE_KEY, JSON.stringify(values));
+			} catch {
+				// Ignore write error
+			}
+		}
 		showToast(
 			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay} pukul ${values.scheduleTime || "08:00"} WIB)`,
 		);
@@ -407,10 +467,25 @@ function ReportsPage() {
 							: `Refresh AI (${monthlyReport?.remainingRefreshesToday ?? 2}/2)`}
 					</Button>
 
+					{/* Tombol Jalankan Cron Laporan (Testing & Operasional) */}
+					<Button
+						type="button"
+						variant="outline"
+						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#f3f7f3] text-xs font-semibold px-3 h-9 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+						onClick={handleTriggerCron}
+						disabled={triggerCronMutation.isPending}
+						title="Jalankan trigger cron laporan bulanan secara manual untuk pengujian dan otomasi"
+					>
+						<Play className="w-3.5 h-3.5 text-[#4f6958]" />
+						{triggerCronMutation.isPending
+							? "Menjalankan..."
+							: "Jalankan Cron Laporan"}
+					</Button>
+
 					{/* Cetak / Download PDF Button */}
 					<Button
 						type="button"
-						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-9 shadow-2xs flex items-center gap-1.5"
+						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-9 shadow-2xs flex items-center gap-1.5 cursor-pointer"
 						onClick={handlePrintPdf}
 					>
 						<Printer className="w-3.5 h-3.5" />
@@ -499,6 +574,8 @@ function ReportsPage() {
 							scheduleDay={automationSettings.scheduleDay}
 							scheduleTime={automationSettings.scheduleTime}
 							onOpenSettings={() => setIsSettingsOpen(true)}
+							onTriggerCron={handleTriggerCron}
+							isTriggeringCron={triggerCronMutation.isPending}
 						/>
 					</div>
 				</>
@@ -510,6 +587,8 @@ function ReportsPage() {
 				onOpenChange={setIsSettingsOpen}
 				initialValues={automationSettings}
 				onSubmit={handleSaveAutomationSettings}
+				onTestTrigger={handleTriggerCron}
+				isTestingTrigger={triggerCronMutation.isPending}
 			/>
 		</div>
 	);
