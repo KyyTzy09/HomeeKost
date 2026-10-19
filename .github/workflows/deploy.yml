@@ -10,6 +10,8 @@ jobs:
   test:
     name: Run TypeCheck & Unit Tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgresql://postgres:secret@localhost:5432/homeekost?schema=public"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

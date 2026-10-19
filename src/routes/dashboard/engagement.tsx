@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, MessageSquare, Play, Plus, Send } from "lucide-react";
+import { CheckCircle2, MessageSquare, Plus, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
@@ -30,7 +30,6 @@ import {
 	useDeleteAnnouncement,
 	useEngagementDashboard,
 	useProperties,
-	useRunDailyCronTasks,
 	useSendSingleTemplateMessage,
 } from "../../hooks/index.ts";
 
@@ -131,7 +130,6 @@ function EngagementPage() {
 	// Mutations
 	const broadcastAnnouncementMutation = useBroadcastAnnouncement();
 	const deleteAnnouncementMutation = useDeleteAnnouncement();
-	const runCronMutation = useRunDailyCronTasks();
 	const sendSingleTemplateMutation = useSendSingleTemplateMessage();
 	const broadcastSelectedMutation = useBroadcastToSelectedRecipients();
 
@@ -368,25 +366,6 @@ function EngagementPage() {
 		}
 	};
 
-	// Manual Trigger Cron Task
-	const handleTriggerCron = async () => {
-		try {
-			const res = await runCronMutation.mutateAsync();
-			const totalSkipped =
-				(res.dueRemindersSkipped || 0) + (res.birthdaysSkipped || 0);
-			const skippedNote =
-				totalSkipped > 0
-					? ` (${totalSkipped} dilewati karena sudah terkirim hari ini)`
-					: "";
-			showToast(
-				`Cron Selesai: ${res.dueRemindersSent} pengingat & ${res.birthdayWishesSent} ucapan ultah dikirim${skippedNote}`,
-			);
-		} catch (err: unknown) {
-			const error = err as Error;
-			showToast(error.message || "Gagal menjalankan cron harian.");
-		}
-	};
-
 	return (
 		<div className="space-y-6 pb-12">
 			{/* Toast Notification */}
@@ -411,20 +390,6 @@ function EngagementPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2.5 flex-wrap">
-					{/* Tombol Run Cron Manual (Berguna untuk Testing & Operasional) */}
-					<Button
-						type="button"
-						variant="outline"
-						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#f3f7f3] text-xs font-semibold px-3 h-9 shadow-sm"
-						onClick={handleTriggerCron}
-						disabled={runCronMutation.isPending}
-					>
-						<Play className="w-3.5 h-3.5 mr-1 text-[#4f6958]" />
-						{runCronMutation.isPending
-							? "Menjalankan..."
-							: "Jalankan Cron Pagi"}
-					</Button>
-
 					{isSuperAdmin && (
 						<Button
 							type="button"

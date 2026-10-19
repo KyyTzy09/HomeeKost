@@ -5,7 +5,6 @@ import {
 	Calendar,
 	CheckCircle2,
 	Loader2,
-	Play,
 	Printer,
 	RefreshCw,
 	Sparkles,
@@ -38,7 +37,6 @@ import {
 	useMonthlyReport,
 	useProperties,
 	useRegenerateAiInsight,
-	useTriggerMonthlyReportCron,
 } from "../../hooks/index.ts";
 import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
@@ -263,63 +261,6 @@ function ReportsPage() {
 		window.print();
 	};
 
-	// Cron Trigger Mutation
-	const triggerCronMutation = useTriggerMonthlyReportCron();
-
-	const handleTriggerCron = async (
-		overrideSettings?: Partial<AutomationSettingsFormValues>,
-	) => {
-		const activeSettings = { ...automationSettings, ...overrideSettings };
-
-		// Validasi: jika nomor WhatsApp belum diatur, arahkan user untuk memasukkan nomornya
-		if (!activeSettings.targetPhone || !activeSettings.targetPhone.trim()) {
-			showToast(
-				"Nomor WhatsApp pengelola belum diatur. Silakan masukkan nomor WhatsApp Anda pada Pengaturan Jadwal Automasi terlebih dahulu.",
-				"error",
-			);
-			setIsSettingsOpen(true);
-			return;
-		}
-
-		try {
-			const res = await triggerCronMutation.mutateAsync({
-				propertyId: effectivePropertyId,
-				targetPhone: activeSettings.targetPhone,
-				sendWhatsApp: true,
-				month: selectedMonth.value,
-				year: selectedYear.value,
-				forceSend: true,
-			});
-
-			const wa = res.whatsApp;
-
-			if (wa?.status === "FAILED") {
-				showToast(
-					`Laporan berhasil diproses, namun WhatsApp GAGAL terkirim ke ${activeSettings.targetPhone}: ${wa.detail || "Cek token atau koneksi perangkat Fonnte"}.`,
-					"error",
-				);
-			} else if (wa?.status === "SENT") {
-				showToast(
-					`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses & ringkasan terkirim ke WhatsApp (${activeSettings.targetPhone})!`,
-					"success",
-				);
-			} else if (wa?.status === "PARTIAL") {
-				showToast(
-					`Cron Laporan Selesai: Sebagian laporan terkirim (${wa.sentCount} terkirim, ${wa.failedCount} gagal).`,
-					"error",
-				);
-			} else {
-				showToast(
-					`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}.`,
-					"success",
-				);
-			}
-		} catch (err: unknown) {
-			const error = err as Error;
-			showToast(error.message || "Gagal menjalankan cron laporan.", "error");
-		}
-	};
-
 	const handleSaveAutomationSettings = (
 		values: AutomationSettingsFormValues,
 	) => {
@@ -502,21 +443,6 @@ function ReportsPage() {
 							: `Refresh AI (${monthlyReport?.remainingRefreshesToday ?? 2}/2)`}
 					</Button>
 
-					{/* Tombol Jalankan Cron Laporan (Testing & Operasional) */}
-					<Button
-						type="button"
-						variant="outline"
-						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#f3f7f3] text-xs font-semibold px-3 h-9 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-						onClick={() => handleTriggerCron()}
-						disabled={triggerCronMutation.isPending}
-						title="Jalankan trigger cron laporan bulanan secara manual untuk pengujian dan otomasi"
-					>
-						<Play className="w-3.5 h-3.5 text-[#4f6958]" />
-						{triggerCronMutation.isPending
-							? "Menjalankan..."
-							: "Jalankan Cron Laporan"}
-					</Button>
-
 					{/* Cetak / Download PDF Button */}
 					<Button
 						type="button"
@@ -609,8 +535,6 @@ function ReportsPage() {
 							scheduleDay={automationSettings.scheduleDay}
 							scheduleTime={automationSettings.scheduleTime}
 							onOpenSettings={() => setIsSettingsOpen(true)}
-							onTriggerCron={() => handleTriggerCron()}
-							isTriggeringCron={triggerCronMutation.isPending}
 						/>
 					</div>
 				</>
@@ -622,11 +546,6 @@ function ReportsPage() {
 				onOpenChange={setIsSettingsOpen}
 				initialValues={automationSettings}
 				onSubmit={handleSaveAutomationSettings}
-				onTestTrigger={(values) => {
-					handleSaveAutomationSettings(values);
-					handleTriggerCron(values);
-				}}
-				isTestingTrigger={triggerCronMutation.isPending}
 			/>
 		</div>
 	);
