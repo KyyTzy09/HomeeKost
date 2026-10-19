@@ -7,6 +7,7 @@ import {
 	CheckCircle2,
 	ChevronsUpDown,
 	History,
+	Info,
 	Loader2,
 	Search,
 	UploadCloud,
@@ -32,8 +33,8 @@ import type {
 } from "../../common/types/index.ts";
 import {
 	type TenantFormValues,
-	type UpdateTenantFormValues,
 	tenantSchema,
+	type UpdateTenantFormValues,
 	updateTenantSchema,
 } from "../../common/validations/index.ts";
 import { useScanKtp } from "../../hooks/use-tenants.ts";
@@ -316,9 +317,7 @@ export function TenantFormDialog({
 			roomNo: editingTenant?.roomNo ?? (defaultInitialRoom?.roomNo || ""),
 			rent:
 				editingTenant?.rent ??
-				(defaultInitialRoom
-					? formatRupiah(defaultInitialRoom.price)
-					: ""),
+				(defaultInitialRoom ? formatRupiah(defaultInitialRoom.price) : ""),
 			duration: initialDuration,
 			startDate: initialStartDate,
 			dueDate: initialDueDate,
@@ -427,9 +426,7 @@ export function TenantFormDialog({
 				form.setFieldValue(
 					"rent",
 					editingTenant.rent ||
-					(roomOptions[0]
-						? formatRupiah(roomOptions[0].price)
-						: ""),
+						(roomOptions[0] ? formatRupiah(roomOptions[0].price) : ""),
 				);
 				form.setFieldValue("duration", duration);
 				form.setFieldValue("startDate", startDate);
@@ -644,7 +641,7 @@ export function TenantFormDialog({
 		const basePrice = matchedRoom
 			? matchedRoom.price
 			: parseRupiah(form.getFieldValue("rent")) /
-			getDurationMonths(form.getFieldValue("duration"));
+				getDurationMonths(form.getFieldValue("duration"));
 
 		const months = getDurationMonths(newDuration);
 		const newTotalRent = (basePrice || 850000) * months;
@@ -715,7 +712,9 @@ export function TenantFormDialog({
 						<div className="bg-[#fdf0ee] border border-[#f5cfcc] rounded-[14px] p-3.5 mb-2 text-[#b66b68] shadow-sm animate-in fade-in duration-200">
 							<div className="flex items-center gap-2 font-bold text-[12px] mb-1.5 text-[#a84d4a]">
 								<AlertCircle className="w-4 h-4 shrink-0 text-[#b66b68]" />
-								<span>Mohon periksa dan perbaiki isian berikut sebelum menyimpan:</span>
+								<span>
+									Mohon periksa dan perbaiki isian berikut sebelum menyimpan:
+								</span>
 							</div>
 							<ul className="list-disc list-inside text-[11px] space-y-1 pl-1 font-medium text-[#7a3835]">
 								{Object.entries(formErrors).map(([key, msg]) => (
@@ -780,9 +779,7 @@ export function TenantFormDialog({
 											}
 										>
 											{ktpFileName ||
-												(ktpPreview
-													? "Ganti foto KTP"
-													: "Pilih foto KTP")}
+												(ktpPreview ? "Ganti foto KTP" : "Pilih foto KTP")}
 										</p>
 										<span className="text-[10px] text-[#78857b] block truncate">
 											Format JPG, PNG, atau WebP (Maks 5MB)
@@ -869,10 +866,11 @@ export function TenantFormDialog({
 													field.handleChange(e.target.value);
 												}}
 												placeholder="Nama lengkap penghuni"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -913,10 +911,11 @@ export function TenantFormDialog({
 													clearFieldError("birthDate");
 													field.handleChange(e.target.value);
 												}}
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -942,8 +941,7 @@ export function TenantFormDialog({
 								}}
 							>
 								{(field) => {
-									const errorMsg =
-										field.state.meta.errors[0] || formErrors.nik;
+									const errorMsg = field.state.meta.errors[0] || formErrors.nik;
 									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
@@ -963,10 +961,11 @@ export function TenantFormDialog({
 													field.handleChange(digitsOnly);
 												}}
 												placeholder="Contoh: 3201011234567890"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											<span className="text-[9.5px] text-[#737873] block">
 												{field.state.value.length}/16 digit
@@ -1015,10 +1014,11 @@ export function TenantFormDialog({
 													field.handleChange(cleaned);
 												}}
 												placeholder="08xxxxxxxxxx"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-mono bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1080,10 +1080,11 @@ export function TenantFormDialog({
 													field.handleChange(e.target.value);
 												}}
 												placeholder="nama@email.com"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1196,10 +1197,11 @@ export function TenantFormDialog({
 											<button
 												type="button"
 												onClick={() => setIsComboboxOpen((prev) => !prev)}
-												className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${hasError
-													? "border-[#b66b68]"
-													: "border-[#dfe7e0] hover:border-[#8fa594]"
-													}`}
+												className={`w-full h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] flex items-center justify-between transition-colors cursor-pointer text-left ${
+													hasError
+														? "border-[#b66b68]"
+														: "border-[#dfe7e0] hover:border-[#8fa594]"
+												}`}
 											>
 												<span>
 													{field.state.value ? (
@@ -1207,9 +1209,7 @@ export function TenantFormDialog({
 															Kamar {field.state.value}
 														</span>
 													) : (
-														<span className="text-[#8a958d]">
-															Pilih Kamar
-														</span>
+														<span className="text-[#8a958d]">Pilih Kamar</span>
 													)}
 												</span>
 												<ChevronsUpDown className="w-4 h-4 text-[#8a958d] shrink-0" />
@@ -1251,10 +1251,11 @@ export function TenantFormDialog({
 																			clearFieldError("roomNo");
 																			handleSelectRoom(room);
 																		}}
-																		className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${isSelected
-																			? "bg-[#edf4ee] text-[#3e5646] font-bold"
-																			: "hover:bg-[#f6faf6] text-[#37443c]"
-																			}`}
+																		className={`w-full flex items-center justify-between p-2 rounded-[8px] text-[11.5px] transition-colors cursor-pointer text-left ${
+																			isSelected
+																				? "bg-[#edf4ee] text-[#3e5646] font-bold"
+																				: "hover:bg-[#f6faf6] text-[#37443c]"
+																		}`}
 																	>
 																		<div className="flex items-center gap-2">
 																			<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
@@ -1322,7 +1323,8 @@ export function TenantFormDialog({
 											</div>
 
 											<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
-												Pilih alasan perubahan kamar. Tagihan periode berikutnya akan otomatis menggunakan tarif kamar baru.
+												Pilih alasan perubahan kamar. Tagihan periode berikutnya
+												akan otomatis menggunakan tarif kamar baru.
 											</p>
 
 											<form.Field name="roomChangeMode">
@@ -1341,7 +1343,9 @@ export function TenantFormDialog({
 																	type="radio"
 																	name="roomChangeMode"
 																	value="CORRECTION"
-																	checked={modeField.state.value === "CORRECTION"}
+																	checked={
+																		modeField.state.value === "CORRECTION"
+																	}
 																	onChange={() =>
 																		modeField.handleChange("CORRECTION")
 																	}
@@ -1352,7 +1356,8 @@ export function TenantFormDialog({
 																		Koreksi Salah Input
 																	</span>
 																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																		Hanya perbaiki kamar karena salah pilih di awal.
+																		Hanya perbaiki kamar karena salah pilih di
+																		awal.
 																	</p>
 																</div>
 															</label>
@@ -1380,7 +1385,8 @@ export function TenantFormDialog({
 																		Pindah Kamar Resmi
 																	</span>
 																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
-																		Penghuni pindah kamar dan sewa baru dimulai hari ini.
+																		Penghuni pindah kamar dan sewa baru dimulai
+																		hari ini.
 																	</p>
 																</div>
 															</label>
@@ -1389,38 +1395,53 @@ export function TenantFormDialog({
 														{/* Penyesuaian Tagihan Belum Lunas Periode Berjalan */}
 														{modeField.state.value === "CORRECTION" && (
 															<form.Field name="updatePendingInvoiceAmount">
-																{(invField) => {
-																	const oldRoomPrice = roomOptions.find(
-																		(r) => r.roomNo === editingTenant?.roomNo,
-																	)?.price;
-																	const newRoomPrice = targetRoom?.price;
+																{() => {
+																	const oldRoomPrice =
+																		roomOptions.find(
+																			(r) => r.roomNo === editingTenant?.roomNo,
+																		)?.price ?? 0;
+																	const newRoomPrice = targetRoom?.price ?? 0;
 																	const priceDiffers =
-																		oldRoomPrice != null &&
-																		newRoomPrice != null &&
+																		oldRoomPrice > 0 &&
+																		newRoomPrice > 0 &&
 																		oldRoomPrice !== newRoomPrice;
 
-																	return (
-																		<label className="flex items-start gap-2 p-2 bg-white/80 rounded-[8px] border border-[#dbe6de] cursor-pointer text-[#324536]">
-																			<input
-																				type="checkbox"
-																				checked={Boolean(invField.state.value)}
-																				onChange={(e) =>
-																					invField.handleChange(e.target.checked)
-																				}
-																				className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer mt-0.5 shrink-0"
-																			/>
-																			<div className="text-[11px] leading-tight space-y-0.5">
-																				<span className="font-semibold block text-[#25392b]">
-																					Sesuaikan tagihan bulan ini ke harga kamar baru
-																					{priceDiffers
-																						? ` (${formatRupiah(oldRoomPrice)} ➔ ${formatRupiah(newRoomPrice)})`
-																						: ""}
-																				</span>
-																				<span className="text-[9.5px] text-[#6d7d71] block">
-																					Centang agar jumlah yang harus dibayar bulan ini otomatis mengikuti harga kamar baru.
-																				</span>
+																	if (priceDiffers) {
+																		return (
+																			<div className="flex items-start gap-2.5 p-3 bg-[#edf4ee] rounded-[8px] border border-[#cfdfd1] text-[#324536]">
+																				<Info className="w-4 h-4 text-[#4f6958] shrink-0 mt-0.5" />
+																				<div className="text-xs leading-relaxed space-y-0.5">
+																					<span className="font-semibold block text-[#25392b]">
+																						Penyesuaian Tarif Tagihan Bulan Ini
+																					</span>
+																					<p className="text-[11px] text-[#55695a]">
+																						Tagihan bulan ini akan otomatis
+																						disesuaikan mengikuti harga kamar
+																						yang benar (
+																						{formatRupiah(oldRoomPrice)} ➔{" "}
+																						{formatRupiah(newRoomPrice)}).
+																					</p>
+																				</div>
 																			</div>
-																		</label>
+																		);
+																	}
+
+																	return (
+																		<div className="flex items-start gap-2.5 p-3 bg-[#f5f8f5] rounded-[8px] border border-[#dbe6de] text-xs text-[#4f6354] leading-relaxed">
+																			<Info className="w-4 h-4 text-[#607765] shrink-0 mt-0.5" />
+																			<div className="space-y-0.5">
+																				<span className="font-semibold block text-[#2c3d31]">
+																					Tarif kamar sama (
+																					{formatRupiah(targetRoom?.price ?? 0)}
+																					)
+																				</span>
+																				<p className="text-[11px] text-[#55695a]">
+																					Kamar diperbaiki tanpa perubahan harga
+																					sewa. Tagihan bulan ini tetap berjalan
+																					normal.
+																				</p>
+																			</div>
+																		</div>
 																	);
 																}}
 															</form.Field>
@@ -1429,59 +1450,60 @@ export function TenantFormDialog({
 														{/* Penanganan Selisih Harga untuk Mode TRANSFER */}
 														{modeField.state.value === "TRANSFER" && (
 															<form.Field name="createDifferenceInvoice">
-																{(diffField) => {
+																{() => {
 																	const oldRoomPrice =
 																		roomOptions.find(
-																			(r) =>
-																				r.roomNo ===
-																				editingTenant?.roomNo,
+																			(r) => r.roomNo === editingTenant?.roomNo,
 																		)?.price ?? 0;
-																	const newRoomPrice =
-																		targetRoom?.price ?? 0;
-																	const priceDiff =
-																		newRoomPrice - oldRoomPrice;
+																	const newRoomPrice = targetRoom?.price ?? 0;
+																	const priceDiff = newRoomPrice - oldRoomPrice;
 
 																	if (priceDiff > 0) {
 																		return (
-																			<label className="flex items-start gap-2 p-2.5 bg-[#edf4ee]/70 rounded-[8px] border border-[#cfdfd1] cursor-pointer text-[#324536] transition-colors hover:bg-[#edf4ee]">
-																				<input
-																					type="checkbox"
-																					checked={Boolean(
-																						diffField.state.value,
-																					)}
-																					onChange={(e) =>
-																						diffField.handleChange(
-																							e.target.checked,
-																						)
-																					}
-																					className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer mt-0.5 shrink-0"
-																				/>
-																				<div className="text-[11px] leading-tight space-y-1">
+																			<div className="flex items-start gap-2.5 p-3 bg-[#edf4ee] rounded-[8px] border border-[#cfdfd1] text-[#324536]">
+																				<Info className="w-4 h-4 text-[#4f6958] shrink-0 mt-0.5" />
+																				<div className="text-xs leading-relaxed space-y-1">
 																					<div className="flex items-center gap-1.5 flex-wrap">
 																						<span className="font-bold text-[#25392b]">
-																							Otomatis buat tagihan selisih bulan ini:
+																							Informasi Selisih Biaya Kamar:
 																						</span>
 																						<span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#4f6958] text-white">
 																							+{formatRupiah(priceDiff)}
 																						</span>
 																						<span className="text-[10px] text-[#6d7d71]">
-																							({formatRupiah(oldRoomPrice)} ➔ {formatRupiah(newRoomPrice)})
+																							({formatRupiah(oldRoomPrice)} ➔{" "}
+																							{formatRupiah(newRoomPrice)})
 																						</span>
 																					</div>
-																					<span className="text-[9.5px] text-[#55695a] block">
-																						Sistem akan membuat 1 tagihan tambahan untuk melunasi kekurangan harga kamar baru bulan ini. Tagihan bulan depan otomatis mengikuti tarif penuh.
-																					</span>
+																					<p className="text-[11px] text-[#55695a]">
+																						Tagihan selisih harga kamar sebesar{" "}
+																						{formatRupiah(priceDiff)} akan
+																						otomatis dibuat untuk bulan ini.
+																						Tagihan bulan depan otomatis
+																						mengikuti tarif kamar baru.
+																					</p>
 																				</div>
-																			</label>
+																			</div>
 																		);
 																	}
 
 																	return (
-																		<div className="p-2.5 bg-[#f5f8f5] rounded-[8px] border border-[#dbe6de] text-[10.5px] text-[#4f6354] leading-relaxed">
-																			<span className="font-semibold block text-[#2c3d31] mb-0.5">
-																				ℹ️ Tidak ada tagihan selisih biaya
-																			</span>
-																			Tarif kamar baru sama atau lebih murah ({formatRupiah(oldRoomPrice)} ➔ {formatRupiah(newRoomPrice)}). Tidak ada tambahan tagihan bulan ini, dan tarif baru otomatis berlaku penuh mulai periode sewa berikutnya.
+																		<div className="flex items-start gap-2.5 p-3 bg-[#f5f8f5] rounded-[8px] border border-[#dbe6de] text-xs text-[#4f6354] leading-relaxed">
+																			<Info className="w-4 h-4 text-[#607765] shrink-0 mt-0.5" />
+																			<div className="space-y-0.5">
+																				<span className="font-semibold block text-[#2c3d31]">
+																					Tidak ada tagihan selisih biaya
+																				</span>
+																				<p className="text-[11px] text-[#55695a]">
+																					Tarif kamar baru sama atau lebih
+																					terjangkau (
+																					{formatRupiah(oldRoomPrice)} ➔{" "}
+																					{formatRupiah(newRoomPrice)}). Tidak
+																					ada tambahan tagihan bulan ini, dan
+																					tarif baru otomatis berlaku mulai
+																					periode sewa berikutnya.
+																				</p>
+																			</div>
 																		</div>
 																	);
 																}}
@@ -1575,19 +1597,17 @@ export function TenantFormDialog({
 												inputMode="numeric"
 												onChange={(e) => {
 													clearFieldError("rent");
-													const digits = e.target.value.replace(
-														/[^0-9]/g,
-														"",
-													);
+													const digits = e.target.value.replace(/[^0-9]/g, "");
 													field.handleChange(
 														digits ? formatRupiah(Number(digits)) : "",
 													);
 												}}
 												placeholder="Rp850.000"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1626,10 +1646,11 @@ export function TenantFormDialog({
 															clearFieldError("startDate");
 															handleChangeStartDate(e.target.value);
 														}}
-														className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-															}`}
+														className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+															hasError
+																? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+																: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+														}`}
 													/>
 													{hasError && (
 														<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1646,7 +1667,7 @@ export function TenantFormDialog({
 										{(startDateValue) => {
 											const isPast = Boolean(
 												startDateValue &&
-												new Date(startDateValue) < new Date(todayStr),
+													new Date(startDateValue) < new Date(todayStr),
 											);
 
 											return (
@@ -1732,7 +1753,8 @@ export function TenantFormDialog({
 														</span>
 													</div>
 													<p className="text-[9.5px] text-[#718276] leading-tight m-0">
-														Dihitung otomatis dari tanggal mulai sewa &amp; durasi.
+														Dihitung otomatis dari tanggal mulai sewa &amp;
+														durasi.
 													</p>
 												</div>
 											);
@@ -1810,10 +1832,11 @@ export function TenantFormDialog({
 													field.handleChange(e.target.value);
 												}}
 												placeholder="Nama kontak darurat"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1842,10 +1865,11 @@ export function TenantFormDialog({
 													field.handleChange(e.target.value);
 												}}
 												placeholder="Orang tua / saudara / lainnya"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1885,14 +1909,18 @@ export function TenantFormDialog({
 												inputMode="tel"
 												onChange={(e) => {
 													clearFieldError("emergencyPhone");
-													const cleaned = e.target.value.replace(/[^0-9+]/g, "");
+													const cleaned = e.target.value.replace(
+														/[^0-9+]/g,
+														"",
+													);
 													field.handleChange(cleaned);
 												}}
 												placeholder="08xxxxxxxxxx"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-													: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-													}`}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
 											/>
 											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1966,10 +1994,11 @@ export function TenantFormDialog({
 														clearFieldError("registrationDate");
 														field.handleChange(e.target.value);
 													}}
-													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-														}`}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+														hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
 												/>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -2057,9 +2086,7 @@ export function TenantFormDialog({
 						>
 							Batal
 						</Button>
-						<form.Subscribe
-							selector={(state) => [state.isSubmitting]}
-						>
+						<form.Subscribe selector={(state) => [state.isSubmitting]}>
 							{([isSubmitting]) => (
 								<Button
 									type="submit"
