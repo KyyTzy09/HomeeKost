@@ -251,11 +251,17 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 
 ### 7.2 Modul Engagement & Pengumuman Kos (Screen `#engagement`)
 - [x] 🔴 Halaman `src/routes/dashboard/engagement.tsx`:
-  - Widget **"Ulang Tahun Terdekat"**: Menampilkan daftar anak kos yang berulang tahun dalam 30 hari ke depan (terkalkulasi otomatis dari `birthDate`) + tombol instan **"Kirim Ucapan WA"**
+  - Panel Dinamis **"Hub Penerima Pesan & Seleksi Broadcast"** (`EngagementDynamicRecipientPanel`): Menampilkan daftar penerima yang otomatis terfilter sesuai template pesan aktif di kolom kanan (Sambutan: penghuni baru 30 hari; Ulang Tahun: rentang H-5 hingga Hari-H; Pembayaran: penyewa tepat waktu 14 hari terakhir; Kerja Bakti/Umum: seluruh penghuni aktif)
+  - **Optimalisasi Single-Fetch & Client Caching**: Query backend tunggal (`getEngagementDashboard`) dengan TanStack Query `staleTime: 60s` & `refetchInterval: 60s` + in-memory filtering (0ms latency perpindahan template)
+  - **Mode Multi-Select & Broadcast Selektif**: Checkbox per baris + "Pilih Semua", penghitung `(N) dari (M) dipilih`, dan tombol `Broadcast ke (N) Terpilih` dengan Meta anti-ban pacing jitter (800ms - 1200ms)
+  - **Badge Status Murni & Anti-Spam Confirmation**: Badge teks murni (`Terkirim Hari Ini` dan `Belum Dikirim`), dengan modal konfirmasi anti-spam saat mengirim ulang apresiasi pembayaran yang sudah pernah terkirim hari ini
+  - **Persistensi Template & Kategori**: Kategori selector (`Sambutan`, `Pembayaran`, `Ulang Tahun`, `Kerja Bakti`, `Umum`) dan persistensi `localStorage`
   - Widget **"Agenda & Pengumuman Kos"**: Daftar pengumuman kegiatan (Kerja Bakti, Maintenance, Acara, Umum) + tombol **"Broadcast WA"**
   - Widget **"Riwayat Log Notifikasi WhatsApp"**: Audit 15 log pengiriman notifikasi terakhir dari database
-  - Modal Form Buat Pengumuman & Broadcast Massal (`EngagementEventDialog`) dengan **Isolasi RBAC Ketat** (SuperAdmin bisa broadcast ke semua cabang atau pilih cabang mana pun; Admin cabang terkunci hanya untuk cabang miliknya)
+  - Modal Form Buat Pengumuman & Broadcast Massal (`EngagementEventDialog`) dengan ikon Lucide bersih, label "Semua Cabang", dan pembatasan pembuatan pengumuman khusus `SuperAdmin`
   - Tombol manual **"Jalankan Cron Pagi"** untuk testing dan eksekusi instan pengingat harian
+- [x] 🟢 Halaman `src/routes/dashboard/tenants.tsx` (`TenantFormDialog.tsx`):
+  - Banner informasi non-teknis ("Info Penyesuaian Tagihan") yang ramah dan mudah dipahami pengguna awam untuk mode Koreksi Salah Input dan Pindah Kamar Resmi, menggantikan opsi checkbox manual rumit.
 
 ---
 
@@ -301,7 +307,7 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 - [x] 🟢 Halaman User Management (`SUPER_ADMIN` Only Guard):
   - Tabel Daftar Pengguna: Nama, Email, Role Badge (`SUPER_ADMIN` / `ADMIN` / `STAFF`), Cabang Kos yang Dikelola, Tanggal Terdaftar, Status Akun
   - Segmented Filter Role (`Semua`, `SuperAdmin`, `Admin`, `Staff`) dengan live counter badge & Search
-  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) terintegrasi dinamis dengan data real database cabang properti (`useProperties`)
+  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) terintegrasi dinamis dengan data real database cabang properti (`useProperties`), dilengkapi input Password (wajib min. 8 karakter saat buat akun baru, opsional saat edit) dengan toggle show/hide mata dan sinkronisasi otomatis ke akun Better-Auth (`Account` credential)
   - Modal Konfirmasi Hapus Pengguna (`UserDeleteDialog`)
   - Tabel Riwayat Perubahan & Audit Trail Log terintegrasi live dari database PostgreSQL
   - Integrasi End-to-End dengan TanStack Query Hooks (`useUsers`, `useUserAuditLogs`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`) & Server Functions (`user.fn.ts`)

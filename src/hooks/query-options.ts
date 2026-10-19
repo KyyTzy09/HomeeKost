@@ -248,6 +248,8 @@ export const engagementDashboardQueryOptions = () =>
 	queryOptions({
 		queryKey: ["engagement", "dashboard"] as const,
 		queryFn: () => getEngagementDashboardServerFn(),
+		staleTime: 60 * 1000,
+		refetchInterval: 60 * 1000,
 	});
 
 /**

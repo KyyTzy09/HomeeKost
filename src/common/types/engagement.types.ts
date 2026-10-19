@@ -4,11 +4,18 @@ export type AnnouncementCategory =
 	| "ACARA"
 	| "UMUM";
 
+export type EngagementTemplateCategory =
+	| "Sambutan"
+	| "Pembayaran"
+	| "Ulang Tahun"
+	| "Kerja Bakti"
+	| "Umum";
+
 export interface EngagementTemplateItem {
 	id: string | number;
 	name: string;
 	content: string;
-	category?: string;
+	category?: EngagementTemplateCategory | string;
 	icon?: string;
 }
 
@@ -34,4 +41,28 @@ export interface AnnouncementItem {
 	isBroadcast: boolean;
 	sentAt?: string | null;
 	createdAt?: string;
+}
+
+export interface EngagementRecipient {
+	tenantId: string;
+	name: string;
+	phone: string;
+	roomNumber: string;
+	propertyId: string;
+	propertyName: string;
+	startDate: string; // ISO date string mulai sewa
+	birthDate?: string | null;
+	daysRemaining?: number | null;
+	relativeBirthdayLabel?: string | null;
+	lastPaymentDate?: string | null;
+	isOnTimePayment?: boolean;
+	isSentToday?: boolean;
+}
+
+export interface EngagementDashboardData {
+	recipients: EngagementRecipient[];
+	upcomingBirthdays: UpcomingBirthdayItem[];
+	recentAnnouncements: AnnouncementItem[];
+	recentLogs: unknown[];
+	totalUpcomingBirthdays: number;
 }

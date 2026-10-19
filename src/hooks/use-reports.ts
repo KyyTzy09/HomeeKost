@@ -96,6 +96,9 @@ export function useTriggerMonthlyReportCron() {
 			propertyId?: string;
 			targetPhone?: string;
 			sendWhatsApp?: boolean;
+			month?: number;
+			year?: number;
+			forceSend?: boolean;
 		}) => triggerMonthlyReportCronServerFn({ data: input }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: REPORT_KEYS.all });

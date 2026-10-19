@@ -124,11 +124,20 @@ export class UserManagementService {
 			}
 		}
 
+		if (!input.password || input.password.trim().length < 8) {
+			throw new Error(
+				"Password wajib diisi minimal 8 karakter untuk akun pengguna baru.",
+			);
+		}
+
+		const passwordHash = await hashPassword(input.password.trim());
+
 		const created = await this.userRepo.createUser({
 			name: input.name,
 			email: input.email,
 			roleId: role.id,
 			assignedPropertyId: propertyId,
+			passwordHash,
 		});
 
 		return {
@@ -228,11 +237,20 @@ export class UserManagementService {
 			}
 		}
 
+		let passwordHash: string | undefined;
+		if (input.password && input.password.trim().length > 0) {
+			if (input.password.trim().length < 8) {
+				throw new Error("Password baru minimal 8 karakter.");
+			}
+			passwordHash = await hashPassword(input.password.trim());
+		}
+
 		const updated = await this.userRepo.updateUser(id, {
 			name: input.name,
 			email: input.email,
 			roleId,
 			assignedPropertyId: propertyId,
+			passwordHash,
 		});
 
 		return {
@@ -356,9 +374,18 @@ export class UserManagementService {
 			}
 		}
 
+		let passwordHash: string | undefined;
+		if (input.newPassword && input.newPassword.trim().length > 0) {
+			if (input.newPassword.trim().length < 8) {
+				throw new Error("Password baru minimal 8 karakter.");
+			}
+			passwordHash = await hashPassword(input.newPassword.trim());
+		}
+
 		await this.userRepo.updateUser(userId, {
 			name: input.name,
 			email: input.email,
+			passwordHash,
 		});
 
 		return this.getMyProfile(userId);
@@ -382,6 +409,11 @@ export class UserManagementService {
 		if (input.newPassword.length < 8) {
 			throw new Error("Password baru minimal 8 karakter.");
 		}
+
+		const passwordHash = await hashPassword(input.newPassword);
+		await this.userRepo.updateUser(userId, {
+			passwordHash,
+		});
 
 		return {
 			success: true,
@@ -488,9 +520,7 @@ export class UserManagementService {
 		const cleanEmail = email.trim().toLowerCase();
 		const user = await this.userRepo.findByEmail(cleanEmail);
 		if (!user) {
-			throw new Error(
-				"Email tidak terdaftar dalam sistem akun pengelola kos.",
-			);
+			throw new Error("Email tidak terdaftar dalam sistem akun pengelola kos.");
 		}
 
 		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
@@ -585,17 +615,10 @@ export class UserManagementService {
 
 		const passwordHash = await hashPassword(newPassword);
 
-		// Perbarui password di account Better-Auth
-		const account = await this.db.account.findFirst({
-			where: { userId: user.id },
+		// Perbarui password di tabel User dan Account Better-Auth
+		await this.userRepo.updateUser(user.id, {
+			passwordHash,
 		});
-
-		if (account) {
-			await this.db.account.update({
-				where: { id: account.id },
-				data: { password: passwordHash },
-			});
-		}
 
 		// Hapus token verifikasi setelah berhasil digunakan
 		await this.db.verification.delete({

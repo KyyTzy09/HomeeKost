@@ -13,6 +13,12 @@ export const userFormSchema = z.object({
 		.min(1, "Pilih penugasan cabang kos")
 		.default("Semua Kost"),
 	status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+	password: z
+		.string()
+		.min(8, "Password minimal 8 karakter")
+		.optional()
+		.or(z.literal(""))
+		.default(""),
 });
 
 export type UserFormValues = z.infer<typeof userFormSchema>;

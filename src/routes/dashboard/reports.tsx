@@ -5,11 +5,12 @@ import {
 	Calendar,
 	CheckCircle2,
 	Loader2,
+	Play,
 	Printer,
 	RefreshCw,
 	Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Select,
@@ -34,10 +35,10 @@ import {
 	propertiesQueryOptions,
 	useAnnualReportMatrix,
 	useDashboardContext,
-	useExportAnnualReportCsv,
 	useMonthlyReport,
 	useProperties,
 	useRegenerateAiInsight,
+	useTriggerMonthlyReportCron,
 } from "../../hooks/index.ts";
 import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
@@ -100,6 +101,36 @@ const YEARS: SelectOption<number>[] = [
 const DEFAULT_MONTH_OPTION = MONTHS[0];
 const DEFAULT_YEAR_OPTION = YEARS[2];
 
+const AUTOMATION_STORAGE_KEY = "homeekost_report_automation_settings";
+
+const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
+	scheduleDay: 1,
+	scheduleTime: "08:00",
+	aiModel: "gemini-1.5-flash",
+	autoSendWhatsApp: false,
+	targetPhone: "",
+};
+
+const loadStoredAutomationSettings = (): AutomationSettingsFormValues => {
+	if (typeof window === "undefined") return DEFAULT_AUTOMATION_SETTINGS;
+	try {
+		const stored = localStorage.getItem(AUTOMATION_STORAGE_KEY);
+		if (!stored) return DEFAULT_AUTOMATION_SETTINGS;
+		const parsed = JSON.parse(stored);
+		if (parsed && typeof parsed === "object") {
+			// Bersihkan nomor dummy jika sebelumnya tersimpan
+			if (parsed.targetPhone === "081234567890") {
+				parsed.targetPhone = "";
+				parsed.autoSendWhatsApp = false;
+			}
+			return { ...DEFAULT_AUTOMATION_SETTINGS, ...parsed };
+		}
+		return DEFAULT_AUTOMATION_SETTINGS;
+	} catch {
+		return DEFAULT_AUTOMATION_SETTINGS;
+	}
+};
+
 function ReportsPage() {
 	const { user, userRole, isSuperAdmin, activeProperty } =
 		useDashboardContext();
@@ -126,12 +157,12 @@ function ReportsPage() {
 	// Automation settings state
 	const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 	const [automationSettings, setAutomationSettings] =
-		useState<AutomationSettingsFormValues>({
-			scheduleDay: 1,
-			aiModel: "gemini-3-flash",
-			autoSendWhatsApp: true,
-			targetPhone: "081234567890",
-		});
+		useState<AutomationSettingsFormValues>(DEFAULT_AUTOMATION_SETTINGS);
+
+	useEffect(() => {
+		const loaded = loadStoredAutomationSettings();
+		setAutomationSettings(loaded);
+	}, []);
 
 	// Toast state
 	const [toastMessage, setToastMessage] = useState<{
@@ -177,7 +208,6 @@ function ReportsPage() {
 
 	// 3. Mutations
 	const regenerateAiMutation = useRegenerateAiInsight();
-	const exportCsvMutation = useExportAnnualReportCsv();
 
 	const handleRegenerateAi = async () => {
 		if (monthlyReport && monthlyReport.canRefreshToday === false) {
@@ -204,7 +234,7 @@ function ReportsPage() {
 		}
 	};
 
-	// Export Excel & CSV State
+	// Export Excel State
 	const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
 
 	const handleExportAnnualExcel = async () => {
@@ -229,48 +259,80 @@ function ReportsPage() {
 		}
 	};
 
-	const handleExportAnnualCsv = async () => {
-		try {
-			const result = await exportCsvMutation.mutateAsync({
-				year: selectedYear.value,
-				propertyId: effectivePropertyId,
-			});
-
-			if (result?.csvContent) {
-				const blob = new Blob([result.csvContent], {
-					type: "text/csv;charset=utf-8;",
-				});
-				const url = URL.createObjectURL(blob);
-				const link = document.createElement("a");
-				link.setAttribute("href", url);
-				link.setAttribute("download", result.filename);
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				URL.revokeObjectURL(url);
-
-				showToast(
-					`File CSV ${result.filename} berhasil diunduh dan siap dibuka di Excel!`,
-				);
-			}
-		} catch (err) {
-			showToast(
-				err instanceof Error ? err.message : "Gagal mengekspor laporan CSV.",
-				"error",
-			);
-		}
-	};
-
 	const handlePrintPdf = () => {
 		window.print();
+	};
+
+	// Cron Trigger Mutation
+	const triggerCronMutation = useTriggerMonthlyReportCron();
+
+	const handleTriggerCron = async (
+		overrideSettings?: Partial<AutomationSettingsFormValues>,
+	) => {
+		const activeSettings = { ...automationSettings, ...overrideSettings };
+
+		// Validasi: jika nomor WhatsApp belum diatur, arahkan user untuk memasukkan nomornya
+		if (!activeSettings.targetPhone || !activeSettings.targetPhone.trim()) {
+			showToast(
+				"Nomor WhatsApp pengelola belum diatur. Silakan masukkan nomor WhatsApp Anda pada Pengaturan Jadwal Automasi terlebih dahulu.",
+				"error",
+			);
+			setIsSettingsOpen(true);
+			return;
+		}
+
+		try {
+			const res = await triggerCronMutation.mutateAsync({
+				propertyId: effectivePropertyId,
+				targetPhone: activeSettings.targetPhone,
+				sendWhatsApp: true,
+				month: selectedMonth.value,
+				year: selectedYear.value,
+				forceSend: true,
+			});
+
+			const wa = res.whatsApp;
+
+			if (wa?.status === "FAILED") {
+				showToast(
+					`Laporan berhasil diproses, namun WhatsApp GAGAL terkirim ke ${activeSettings.targetPhone}: ${wa.detail || "Cek token atau koneksi perangkat Fonnte"}.`,
+					"error",
+				);
+			} else if (wa?.status === "SENT") {
+				showToast(
+					`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses & ringkasan terkirim ke WhatsApp (${activeSettings.targetPhone})!`,
+					"success",
+				);
+			} else if (wa?.status === "PARTIAL") {
+				showToast(
+					`Cron Laporan Selesai: Sebagian laporan terkirim (${wa.sentCount} terkirim, ${wa.failedCount} gagal).`,
+					"error",
+				);
+			} else {
+				showToast(
+					`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}.`,
+					"success",
+				);
+			}
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(error.message || "Gagal menjalankan cron laporan.", "error");
+		}
 	};
 
 	const handleSaveAutomationSettings = (
 		values: AutomationSettingsFormValues,
 	) => {
 		setAutomationSettings(values);
+		if (typeof window !== "undefined") {
+			try {
+				localStorage.setItem(AUTOMATION_STORAGE_KEY, JSON.stringify(values));
+			} catch {
+				// Ignore write error
+			}
+		}
 		showToast(
-			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay})`,
+			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay} pukul ${values.scheduleTime || "08:00"} WIB)`,
 		);
 	};
 
@@ -297,15 +359,6 @@ function ReportsPage() {
 			{/* Page Header */}
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
 				<div>
-					<div className="flex items-center gap-2 mb-1">
-						<span className="text-[11px] font-semibold text-[#4f6958] bg-[#eef3ee] px-2.5 py-0.5 rounded-md flex items-center gap-1.5 border border-[#d6dfd7]">
-							<Building2 className="w-3.5 h-3.5" />
-							{monthlyReport?.propertyName || selectedProperty.label}
-						</span>
-						<span className="text-[11px] text-[#737873]">
-							· Laporan Finansial
-						</span>
-					</div>
 					<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
 						Laporan & AI Insight
 					</h1>
@@ -449,10 +502,25 @@ function ReportsPage() {
 							: `Refresh AI (${monthlyReport?.remainingRefreshesToday ?? 2}/2)`}
 					</Button>
 
+					{/* Tombol Jalankan Cron Laporan (Testing & Operasional) */}
+					<Button
+						type="button"
+						variant="outline"
+						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#f3f7f3] text-xs font-semibold px-3 h-9 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+						onClick={() => handleTriggerCron()}
+						disabled={triggerCronMutation.isPending}
+						title="Jalankan trigger cron laporan bulanan secara manual untuk pengujian dan otomasi"
+					>
+						<Play className="w-3.5 h-3.5 text-[#4f6958]" />
+						{triggerCronMutation.isPending
+							? "Menjalankan..."
+							: "Jalankan Cron Laporan"}
+					</Button>
+
 					{/* Cetak / Download PDF Button */}
 					<Button
 						type="button"
-						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-9 shadow-2xs flex items-center gap-1.5"
+						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-3.5 h-9 shadow-2xs flex items-center gap-1.5 cursor-pointer"
 						onClick={handlePrintPdf}
 					>
 						<Printer className="w-3.5 h-3.5" />
@@ -528,21 +596,21 @@ function ReportsPage() {
 							expenses={monthlyReport.expenseBreakdown}
 						/>
 
-						{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
+						{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel */}
 						<ReportAnnualMatrixCard
 							data={annualMatrix}
 							isLoading={isAnnualLoading}
 							onExportExcel={handleExportAnnualExcel}
 							isExportingExcel={isExportingExcel}
-							onExportCsv={handleExportAnnualCsv}
-							isExporting={exportCsvMutation.isPending}
 						/>
 
 						{/* Automasi Laporan Bulanan Card */}
 						<ReportAutomationCard
 							scheduleDay={automationSettings.scheduleDay}
-							aiModel={automationSettings.aiModel}
+							scheduleTime={automationSettings.scheduleTime}
 							onOpenSettings={() => setIsSettingsOpen(true)}
+							onTriggerCron={() => handleTriggerCron()}
+							isTriggeringCron={triggerCronMutation.isPending}
 						/>
 					</div>
 				</>
@@ -554,6 +622,11 @@ function ReportsPage() {
 				onOpenChange={setIsSettingsOpen}
 				initialValues={automationSettings}
 				onSubmit={handleSaveAutomationSettings}
+				onTestTrigger={(values) => {
+					handleSaveAutomationSettings(values);
+					handleTriggerCron(values);
+				}}
+				isTestingTrigger={triggerCronMutation.isPending}
 			/>
 		</div>
 	);

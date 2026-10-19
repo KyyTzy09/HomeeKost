@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+	automationSettingsSchema,
+	broadcastToSelectedRecipientsSchema,
 	confirmPaymentSchema,
 	roomSchema,
+	sendSingleTemplateMessageSchema,
 	tenantSchema,
 	transactionFormSchema,
 	updateTenantSchema,
+	userFormSchema,
 } from "../../src/common/validations/index.ts";
 
 describe("Zod Validation Schemas", () => {
@@ -229,4 +233,225 @@ describe("Zod Validation Schemas", () => {
 			expect(result.success).toBe(false);
 		});
 	});
+
+	describe("automationSettingsSchema", () => {
+		it("harus meloloskan konfigurasi automasi laporan yang valid", () => {
+			const validSettings = {
+				scheduleDay: 5,
+				scheduleTime: "08:30",
+				autoSendWhatsApp: true,
+				targetPhone: "081298765432",
+			};
+			const result = automationSettingsSchema.safeParse(validSettings);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.scheduleDay).toBe(5);
+				expect(result.data.scheduleTime).toBe("08:30");
+				expect(result.data.aiModel).toBe("gemini-1.5-flash");
+			}
+		});
+
+		it("harus menolak jika tanggal di luar 1-28", () => {
+			const invalidDayZero = {
+				scheduleDay: 0,
+				scheduleTime: "08:00",
+				targetPhone: "081298765432",
+			};
+			expect(automationSettingsSchema.safeParse(invalidDayZero).success).toBe(
+				false,
+			);
+
+			const invalidDay29 = {
+				scheduleDay: 29,
+				scheduleTime: "08:00",
+				targetPhone: "081298765432",
+			};
+			expect(automationSettingsSchema.safeParse(invalidDay29).success).toBe(
+				false,
+			);
+		});
+
+		it("harus menolak jika format waktu eksekusi bukan HH:mm", () => {
+			const invalidTime = {
+				scheduleDay: 1,
+				scheduleTime: "8 pagi",
+				targetPhone: "081298765432",
+			};
+			expect(automationSettingsSchema.safeParse(invalidTime).success).toBe(
+				false,
+			);
+		});
+
+		it("harus meloloskan jika autoSendWhatsApp dinonaktifkan meski targetPhone kosong", () => {
+			const validNoWa = {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: false,
+				targetPhone: "",
+			};
+			const result = automationSettingsSchema.safeParse(validNoWa);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak jika autoSendWhatsApp aktif tetapi nomor WhatsApp kosong atau kurang dari 10 digit", () => {
+			const emptyPhone = {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: true,
+				targetPhone: "",
+			};
+			expect(automationSettingsSchema.safeParse(emptyPhone).success).toBe(false);
+
+			const shortPhone = {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: true,
+				targetPhone: "08123",
+			};
+			expect(automationSettingsSchema.safeParse(shortPhone).success).toBe(false);
+		});
+	});
+
+	describe("sendSingleTemplateMessageSchema", () => {
+		it("harus meloloskan input template personal yang valid", () => {
+			const valid = {
+				tenantId: "tenant_123",
+				templateContent: "Halo {nama}, selamat datang di {kos}!",
+			};
+			const result = sendSingleTemplateMessageSchema.safeParse(valid);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak jika tenantId atau templateContent kosong", () => {
+			expect(
+				sendSingleTemplateMessageSchema.safeParse({
+					tenantId: "",
+					templateContent: "Halo",
+				}).success,
+			).toBe(false);
+
+			expect(
+				sendSingleTemplateMessageSchema.safeParse({
+					tenantId: "tenant_123",
+					templateContent: "",
+				}).success,
+			).toBe(false);
+		});
+	});
+
+	describe("broadcastToSelectedRecipientsSchema", () => {
+		it("harus meloloskan payload broadcast selektif yang valid", () => {
+			const valid = {
+				tenantIds: ["tenant_1", "tenant_2"],
+				templateContent: "Pemberitahuan untuk {nama} di kamar {kamar}",
+				title: "Info Kebersihan",
+			};
+			const result = broadcastToSelectedRecipientsSchema.safeParse(valid);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak jika daftar tenantIds kosong", () => {
+			const invalid = {
+				tenantIds: [],
+				templateContent: "Pemberitahuan",
+			};
+			const result = broadcastToSelectedRecipientsSchema.safeParse(invalid);
+			expect(result.success).toBe(false);
+		});
+	});
+
+	describe("userFormSchema", () => {
+		it("harus meloloskan pembuatan akun pengguna dengan password valid", () => {
+			const validUser = {
+				name: "Staf Operasional Kos",
+				email: "staf.melati@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "HomeeKost Cabang Melati",
+				status: "ACTIVE" as const,
+				password: "password123",
+			};
+			const result = userFormSchema.safeParse(validUser);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.password).toBe("password123");
+			}
+		});
+
+		it("harus meloloskan edit akun pengguna dengan password kosong", () => {
+			const editUser = {
+				name: "Staf Operasional Kos",
+				email: "staf.melati@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "HomeeKost Cabang Melati",
+				status: "ACTIVE" as const,
+				password: "",
+			};
+			const result = userFormSchema.safeParse(editUser);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.password).toBe("");
+			}
+		});
+
+		it("harus meloloskan jika field password tidak disertakan (default ke string kosong)", () => {
+			const userWithoutPassword = {
+				name: "SuperAdmin Baru",
+				email: "owner2@homeekost.com",
+				role: "SUPER_ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+			};
+			const result = userFormSchema.safeParse(userWithoutPassword);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.password).toBe("");
+			}
+		});
+
+		it("harus menolak jika password kurang dari 8 karakter", () => {
+			const invalidPasswordUser = {
+				name: "Staf Melati",
+				email: "staf@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+				password: "12345",
+			};
+			const result = userFormSchema.safeParse(invalidPasswordUser);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0].message).toBe(
+					"Password minimal 8 karakter",
+				);
+			}
+		});
+
+		it("harus menolak jika format email tidak valid", () => {
+			const invalidEmailUser = {
+				name: "Staf Melati",
+				email: "bukan-email-valid",
+				role: "ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+				password: "password123",
+			};
+			const result = userFormSchema.safeParse(invalidEmailUser);
+			expect(result.success).toBe(false);
+		});
+
+		it("harus menolak jika nama pengguna kosong", () => {
+			const emptyNameUser = {
+				name: "",
+				email: "staf@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+				password: "password123",
+			};
+			const result = userFormSchema.safeParse(emptyNameUser);
+			expect(result.success).toBe(false);
+		});
+	});
 });
+
+

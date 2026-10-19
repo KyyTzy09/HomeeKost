@@ -329,10 +329,13 @@ _— Manajemen Pengelola Kos_`;
 		financialHealthGrade: string;
 		dashboardUrl?: string;
 	}): string {
-		return `📊 *LAPORAN KEUANGAN KOST HOMEEKOST* 📊
+		const appUrl = process.env.APP_URL || "http://localhost:3000";
+		const reportUrl = p.dashboardUrl || `${appUrl}/dashboard/reports`;
+
+		return `📊 *LAPORAN KEUANGAN KOST* 📊
 ━━━━━━━━━━━━━━━━━━━━━
 Halo Bapak/Ibu Pengelola,
-Laporan Keuangan Eksekutif untuk *${p.propertyName}* periode *${p.periodMonth} ${p.periodYear}* telah selesai dibuat dan dianalisis oleh AI.
+Laporan Keuangan Eksekutif untuk *${p.propertyName}* periode *${p.periodMonth} ${p.periodYear}* telah selesai diperbarui dan siap ditinjau.
 
 💰 *Ringkasan Keuangan:*
 • Total Pemasukan: *${formatRupiah(p.totalIncome)}*
@@ -341,9 +344,9 @@ Laporan Keuangan Eksekutif untuk *${p.propertyName}* periode *${p.periodMonth} $
 • Status Finansial: *${p.financialHealthGrade}*
 • Okupansi Kamar: *${p.occupancyRate}%*
 
-Silakan buka Web Dashboard HomeeKost untuk melihat rincian laporan dan wawasan bisnis lengkap:
-🔗 ${p.dashboardUrl || "https://app.homeekost.id/dashboard/reports"}
+Silakan buka Web Dashboard untuk melihat rincian laporan dan wawasan bisnis lengkap:
+🔗 ${reportUrl}
 ━━━━━━━━━━━━━━━━━━━━━
-_Pesan otomatis dari Sistem Manajemen HomeeKost_`;
+_Pesan otomatis dari Sistem Manajemen Kost_`;
 	},
 };

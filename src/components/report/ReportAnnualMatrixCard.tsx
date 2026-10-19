@@ -1,6 +1,5 @@
 import {
 	CalendarDays,
-	Download,
 	FileSpreadsheet,
 	Loader2,
 	TrendingUp,
@@ -15,8 +14,6 @@ interface ReportAnnualMatrixCardProps {
 	isLoading?: boolean;
 	onExportExcel?: () => void;
 	isExportingExcel?: boolean;
-	onExportCsv?: () => void;
-	isExporting?: boolean;
 }
 
 const MONTH_LABELS = [
@@ -39,8 +36,6 @@ export function ReportAnnualMatrixCard({
 	isLoading,
 	onExportExcel,
 	isExportingExcel,
-	onExportCsv,
-	isExporting,
 }: ReportAnnualMatrixCardProps) {
 	if (isLoading) {
 		return (
@@ -78,22 +73,6 @@ export function ReportAnnualMatrixCard({
 				</div>
 
 				<div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-					{onExportCsv && (
-						<Button
-							type="button"
-							variant="outline"
-							onClick={onExportCsv}
-							disabled={isExporting}
-							className="border-[#d6dfd7] bg-white text-[#2d3b30] hover:bg-[#edf4ee] text-xs font-semibold h-9 px-3.5 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-						>
-							{isExporting ? (
-								<Loader2 className="w-3.5 h-3.5 animate-spin" />
-							) : (
-								<Download className="w-3.5 h-3.5 text-[#4f6958]" />
-							)}
-							{isExporting ? "Mengekspor..." : "Ekspor CSV (.CSV)"}
-						</Button>
-					)}
 					{onExportExcel && (
 						<Button
 							type="button"
@@ -314,7 +293,8 @@ export function ReportAnnualMatrixCard({
 				</table>
 				<div className="p-2.5 bg-[#f9faf9] border-t border-[#e4e9e4] text-[10.5px] text-[#737873] flex items-center justify-between">
 					<span>
-						* Angka kolom bulanan disajikan dalam format ringkas (rb: Ribu, jt: Juta, M: Miliar)
+						* Angka kolom bulanan disajikan dalam format ringkas (rb: Ribu, jt:
+						Juta, M: Miliar)
 					</span>
 					<span>
 						Margin Laba Bersih Rata-rata:{" "}

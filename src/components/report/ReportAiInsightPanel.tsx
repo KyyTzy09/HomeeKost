@@ -2,6 +2,7 @@ import {
 	Activity,
 	AlertCircle,
 	CheckCircle2,
+	Clock,
 	Info,
 	Sparkles,
 	TrendingUp,
@@ -74,9 +75,14 @@ export function ReportAiInsightPanel({
 	trendAnalysis,
 	complaintCostImpact,
 	recommendations = [],
-	aiProviderUsed,
 }: ReportAiInsightPanelProps) {
-	const gradeBadge = getHealthGradeBadge(financialHealthGrade);
+	const gradeBadge = !isClosedPeriod
+		? {
+				label: "Sedang Berjalan ⏳",
+				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
+				icon: Clock,
+			}
+		: getHealthGradeBadge(financialHealthGrade);
 	const GradeIcon = gradeBadge.icon;
 
 	return (
@@ -89,13 +95,8 @@ export function ReportAiInsightPanel({
 						Executive AI Insight · {propertyName}
 					</h2>
 					<p className="text-[11px] text-[#737873] mt-0.5">
-						Analisis deterministik operasional {periodLabel}
-						{isClosedPeriod ? " (Tutup Buku)" : " (Data Berjalan)"}
-						{aiProviderUsed && (
-							<span className="ml-1 text-[10px] text-[#8fa594]">
-								· Engine: {aiProviderUsed}
-							</span>
-						)}
+						Analisis operasional & performa bisnis {periodLabel}
+						{isClosedPeriod ? " (Tutup Buku)" : " (Sedang Berjalan)"}
 					</p>
 				</div>
 

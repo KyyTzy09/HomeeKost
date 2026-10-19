@@ -8,9 +8,27 @@ export function buildFinancialFeaturePrompt(
 ): string {
 	const jsonPayload = JSON.stringify(payload, null, 2);
 
+	const timeContext = payload.period.asOfDate
+		? `WAKTU ANALISIS: ${payload.period.asOfDate} (Hari ke-${payload.period.dayOfMonth || 1} dari ${payload.period.totalDaysInMonth || 30} hari · Progres Bulan: ${payload.period.monthProgressPercentage || 0}%).`
+		: "WAKTU ANALISIS: Akhir Periode.";
+
+	const statusRule = payload.period.isClosedPeriod
+		? "STATUS PERIODE: SUDAH TUTUP BUKU (Data Keuangan Final). Evaluasi menggunakan rubrik performa penuh di bawah."
+		: `STATUS PERIODE: SEDANG BERJALAN (Data Dinamis / Belum Tutup Buku).
+ATURAN KERAS UNTUK BULAN SEDANG BERJALAN:
+- Data belum lengkap karena bulan masih aktif berjalan.
+- DILARANG KERAS menyimpulkan kondisi keuangan "KRITIS" hanya karena bulan baru berjalan sebagian hari (misal pengeluaran operasional dicatat di awal bulan sementara pembayaran sewa penghuni belum seluruhnya jatuh tempo).
+- Evaluasi penagihan dan okupansi harus dipandang proporsional terhadap hari yang telah berjalan.
+- Gaya narasi harus bersifat "Observasi Progresif", menyebutkan tanggal berjalan dan menegaskan bahwa angka masih berkembang hingga penutupan buku akhir bulan.
+- Untuk nilai "financialHealthGrade": Jangan tetapkan "KRITIS" hanya karena ketidaksinkronan waktu pencatatan di awal/tengah bulan.`;
+
 	return `Anda adalah Analis Finansial Eksekutif AI HomeeKost.
 
 Tugas Anda adalah menganalisis data keuangan bulanan kos dari JSON_INPUT dan menghasilkan evaluasi bisnis eksekutif dalam format JSON terstruktur.
+
+# KONTEKS WAKTU & STATUS:
+${timeContext}
+${statusRule}
 
 # RUBRIK PENILAIAN FINANCIAL HEALTH GRADE (MANDATORY)
 Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria berikut:
@@ -25,9 +43,9 @@ Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria 
    - Margin Laba Bersih 15% - 39.9% ATAU
    - Okupansi Kamar < 70% ATAU
    - Biaya perbaikan/komplain menyerap > 20% dari total pengeluaran
-4. "KRITIS":
-   - Margin Laba Bersih < 15% (atau defisit/rugi) ATAU
-   - Collection Rate < 50% (tunggakan sewa parah)
+4. "KRITIS" (Hanya berlaku jika SUDAH TUTUP BUKU atau performa okupansi riil sangat hancur):
+   - Periode telah TUTUP BUKU DAN (Margin Laba Bersih < 15% ATAU Collection Rate < 50%)
+   - Pengecualian pada bulan berjalan: Hanya boleh "KRITIS" jika okupansi kamar < 25% dan tidak ada penerimaan sama sekali.
 
 # ATURAN PENULISAN ELEMEN OUTPUT:
 1. "executiveSummary":

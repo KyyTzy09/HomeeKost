@@ -202,5 +202,33 @@ describe("WhatsApp Notification Message Templates", () => {
 			expect(msg).toContain("telah kami terima dan diverifikasi");
 		});
 	});
+
+	describe("executiveReportReminder Template", () => {
+		it("harus menyusun pesan pengingat laporan tanpa hardcoded HomeeKost dan mencantumkan 4 angka kunci", () => {
+			const msg = whatsappTemplates.executiveReportReminder({
+				propertyName: "Kost Flamboyan",
+				periodMonth: "Oktober",
+				periodYear: 2026,
+				totalIncome: 18000000,
+				totalExpense: 2000000,
+				netProfit: 16000000,
+				profitMarginPercentage: 88.9,
+				occupancyRate: 90,
+				financialHealthGrade: "PRIMA 🌟",
+			});
+
+			expect(msg).toContain("📊 *LAPORAN KEUANGAN KOST* 📊");
+			expect(msg).not.toContain("HOMEEKOST");
+			expect(msg).toContain("Kost Flamboyan");
+			expect(msg).toContain("Oktober 2026");
+			expect(msg).toContain("Rp18.000.000");
+			expect(msg).toContain("Rp2.000.000");
+			expect(msg).toContain("Rp16.000.000");
+			expect(msg).toContain("Margin: 88.9%");
+			expect(msg).toContain("PRIMA 🌟");
+			expect(msg).toContain("90%");
+			expect(msg).toContain("/dashboard/reports");
+		});
+	});
 });
 

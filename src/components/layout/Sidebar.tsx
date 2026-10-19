@@ -10,7 +10,6 @@ import {
 	Receipt,
 	UserCog,
 	Users,
-	Video,
 	Wallet,
 } from "lucide-react";
 import type { DashboardContextData } from "../../common/types/index.ts";
@@ -92,12 +91,6 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 			to: "/dashboard/engagement",
 			label: "Engagement",
 			icon: <MessageSquare className="w-[17px] h-[17px]" />,
-			superAdminOnly: false,
-		},
-		{
-			to: "/dashboard/cctv",
-			label: "CCTV",
-			icon: <Video className="w-[17px] h-[17px]" />,
 			superAdminOnly: false,
 		},
 		{

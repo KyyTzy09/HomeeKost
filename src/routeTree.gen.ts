@@ -15,7 +15,6 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as DashboardCctvRouteImport } from './routes/dashboard/cctv'
 import { Route as DashboardEngagementRouteImport } from './routes/dashboard/engagement'
 import { Route as DashboardFinanceRouteImport } from './routes/dashboard/finance'
 import { Route as DashboardInvoicesRouteImport } from './routes/dashboard/invoices'
@@ -28,6 +27,7 @@ import { Route as DashboardTenantsRouteImport } from './routes/dashboard/tenants
 import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiCronDailyTasksRouteImport } from './routes/api/cron/daily-tasks'
+import { Route as ApiCronMonthlyReportsRouteImport } from './routes/api/cron/monthly-reports'
 import { Route as DashboardPropertiesPropertyIdRouteImport } from './routes/dashboard/properties.$propertyId'
 import { Route as ApiInvoicesInvoiceIdDocumentRouteImport } from './routes/api/invoices/$invoiceId/document'
 
@@ -59,11 +59,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardCctvRoute = DashboardCctvRouteImport.update({
-  id: '/cctv',
-  path: '/cctv',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardEngagementRoute = DashboardEngagementRouteImport.update({
@@ -126,6 +121,11 @@ const ApiCronDailyTasksRoute = ApiCronDailyTasksRouteImport.update({
   path: '/api/cron/daily-tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronMonthlyReportsRoute = ApiCronMonthlyReportsRouteImport.update({
+  id: '/api/cron/monthly-reports',
+  path: '/api/cron/monthly-reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardPropertiesPropertyIdRoute =
   DashboardPropertiesPropertyIdRouteImport.update({
     id: '/properties/$propertyId',
@@ -145,7 +145,6 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -159,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
+  '/api/cron/monthly-reports': typeof ApiCronMonthlyReportsRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
   '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
@@ -167,7 +167,6 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -181,6 +180,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
+  '/api/cron/monthly-reports': typeof ApiCronMonthlyReportsRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
   '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
@@ -191,7 +191,6 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -205,6 +204,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
+  '/api/cron/monthly-reports': typeof ApiCronMonthlyReportsRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
   '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
@@ -216,7 +216,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -230,6 +229,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/api/auth/$'
     | '/api/cron/daily-tasks'
+    | '/api/cron/monthly-reports'
     | '/dashboard/properties/$propertyId'
     | '/api/invoices/$invoiceId/document'
   fileRoutesByTo: FileRoutesByTo
@@ -238,7 +238,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -252,6 +251,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/auth/$'
     | '/api/cron/daily-tasks'
+    | '/api/cron/monthly-reports'
     | '/dashboard/properties/$propertyId'
     | '/api/invoices/$invoiceId/document'
   id:
@@ -261,7 +261,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -275,6 +274,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/api/auth/$'
     | '/api/cron/daily-tasks'
+    | '/api/cron/monthly-reports'
     | '/dashboard/properties/$propertyId'
     | '/api/invoices/$invoiceId/document'
   fileRoutesById: FileRoutesById
@@ -287,6 +287,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCronDailyTasksRoute: typeof ApiCronDailyTasksRoute
+  ApiCronMonthlyReportsRoute: typeof ApiCronMonthlyReportsRoute
   ApiInvoicesInvoiceIdDocumentRoute: typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 
@@ -332,13 +333,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/cctv': {
-      id: '/dashboard/cctv'
-      path: '/cctv'
-      fullPath: '/dashboard/cctv'
-      preLoaderRoute: typeof DashboardCctvRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/engagement': {
@@ -425,6 +419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronDailyTasksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/monthly-reports': {
+      id: '/api/cron/monthly-reports'
+      path: '/api/cron/monthly-reports'
+      fullPath: '/api/cron/monthly-reports'
+      preLoaderRoute: typeof ApiCronMonthlyReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/properties/$propertyId': {
       id: '/dashboard/properties/$propertyId'
       path: '/properties/$propertyId'
@@ -443,7 +444,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
-  DashboardCctvRoute: typeof DashboardCctvRoute
   DashboardEngagementRoute: typeof DashboardEngagementRoute
   DashboardFinanceRoute: typeof DashboardFinanceRoute
   DashboardInvoicesRoute: typeof DashboardInvoicesRoute
@@ -459,7 +459,6 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardCctvRoute: DashboardCctvRoute,
   DashboardEngagementRoute: DashboardEngagementRoute,
   DashboardFinanceRoute: DashboardFinanceRoute,
   DashboardInvoicesRoute: DashboardInvoicesRoute,
@@ -486,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCronDailyTasksRoute: ApiCronDailyTasksRoute,
+  ApiCronMonthlyReportsRoute: ApiCronMonthlyReportsRoute,
   ApiInvoicesInvoiceIdDocumentRoute: ApiInvoicesInvoiceIdDocumentRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,3 +1,4 @@
+import type { EngagementRecipient } from "../../common/types/engagement.types.ts";
 import { prisma } from "../../db.ts";
 import type {
 	AnnouncementCategory,
@@ -5,7 +6,9 @@ import type {
 	NotificationType,
 	PrismaClient,
 } from "../../generated/prisma/client.js";
+import { getTodayDateString } from "../../lib/date-utils.ts";
 import { calculateInstallmentSummary } from "../../lib/payment-utils.ts";
+import { sanitizePhoneNumber } from "../../lib/phone-sanitizer.ts";
 
 export interface UpcomingBirthdayResult {
 	id: string;
@@ -46,6 +49,217 @@ const MONTH_NAMES = [
 
 export class EngagementRepository {
 	constructor(private readonly db: PrismaClient = prisma) {}
+
+	/**
+	 * Dapatkan seluruh penyewa aktif beserta metadata lengkap untuk Engagement Hub (Dataset Tunggal):
+	 * - Data penyewa & kamar/kost
+	 * - Tanggal mulai sewa & ulang tahun (beserta sisa hari & label relatif)
+	 * - Riwayat pembayaran terakhir & status ketepatan waktu (on-time payment)
+	 * - Status apakah sudah dikirimi pesan/notifikasi hari ini
+	 */
+	async getActiveTenantsWithEngagementMetadata(
+		propertyIds?: string[],
+	): Promise<EngagementRecipient[]> {
+		const todayStr = getTodayDateString();
+		const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+		const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
+
+		const [contracts, todaySentLogs] = await Promise.all([
+			this.db.rentalContract.findMany({
+				where: {
+					status: "ACTIVE",
+					tenant: {
+						status: "ACTIVE",
+					},
+					...(propertyIds && propertyIds.length > 0
+						? {
+								room: {
+									propertyId: { in: propertyIds },
+								},
+							}
+						: {}),
+				},
+				select: {
+					id: true,
+					startDate: true,
+					tenant: {
+						select: {
+							id: true,
+							name: true,
+							birthDate: true,
+							whatsappNumber: true,
+							phoneNumber: true,
+						},
+					},
+					room: {
+						select: {
+							roomNumber: true,
+							property: {
+								select: {
+									id: true,
+									name: true,
+								},
+							},
+						},
+					},
+					invoices: {
+						orderBy: { dueDate: "desc" },
+						take: 5,
+						select: {
+							id: true,
+							dueDate: true,
+							paidAt: true,
+							status: true,
+							transactions: {
+								orderBy: { transactionDate: "desc" },
+								take: 1,
+								select: {
+									transactionDate: true,
+								},
+							},
+						},
+					},
+				},
+				orderBy: {
+					startDate: "desc",
+				},
+			}),
+			this.getTodaySentNotificationLogs(startOfDay, endOfDay),
+		]);
+
+		const sentPhonesToday = new Set<string>();
+		for (const log of todaySentLogs) {
+			if (log.recipientNumber) {
+				const sanitized = sanitizePhoneNumber(log.recipientNumber);
+				if (sanitized) {
+					sentPhonesToday.add(sanitized);
+				}
+			}
+		}
+
+		const now = new Date();
+		now.setHours(0, 0, 0, 0);
+		const currentYear = now.getFullYear();
+
+		const recipientMap = new Map<string, EngagementRecipient>();
+
+		for (const contract of contracts) {
+			const tenantId = contract.tenant.id;
+			if (recipientMap.has(tenantId)) {
+				continue;
+			}
+
+			// 1. Birthday computation
+			let daysRemaining: number | null = null;
+			let relativeBirthdayLabel: string | null = null;
+			const bdate = contract.tenant.birthDate;
+
+			if (bdate) {
+				const birthMonth = bdate.getMonth();
+				const birthDay = bdate.getDate();
+
+				let nextBirthday = new Date(currentYear, birthMonth, birthDay);
+				nextBirthday.setHours(0, 0, 0, 0);
+
+				if (nextBirthday.getTime() < now.getTime()) {
+					nextBirthday = new Date(currentYear + 1, birthMonth, birthDay);
+					nextBirthday.setHours(0, 0, 0, 0);
+				}
+
+				const diffTime = nextBirthday.getTime() - now.getTime();
+				daysRemaining = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+				if (daysRemaining === 0) {
+					relativeBirthdayLabel = "Hari ini 🎉";
+				} else if (daysRemaining === 1) {
+					relativeBirthdayLabel = "Besok";
+				} else {
+					relativeBirthdayLabel = `${daysRemaining} hari lagi`;
+				}
+			}
+
+			// 2. Invoice & payment status computation
+			let lastPaymentDate: string | null = null;
+			let isOnTimePayment = true;
+
+			const allTransactions: { transactionDate: Date }[] = [];
+			for (const inv of contract.invoices) {
+				for (const tx of inv.transactions) {
+					if (tx.transactionDate) {
+						allTransactions.push(tx);
+					}
+				}
+			}
+			allTransactions.sort(
+				(a, b) => b.transactionDate.getTime() - a.transactionDate.getTime(),
+			);
+
+			const hasOverdueInvoice = contract.invoices.some(
+				(inv) => inv.status === "OVERDUE",
+			);
+			const latestPaidInvoice = contract.invoices.find(
+				(inv) => inv.status === "PAID",
+			);
+
+			if (allTransactions.length > 0) {
+				lastPaymentDate = allTransactions[0].transactionDate.toISOString();
+			} else if (latestPaidInvoice?.paidAt) {
+				lastPaymentDate = latestPaidInvoice.paidAt.toISOString();
+			}
+
+			if (hasOverdueInvoice) {
+				isOnTimePayment = false;
+			} else if (latestPaidInvoice) {
+				const pDate =
+					latestPaidInvoice.paidAt ||
+					(latestPaidInvoice.transactions[0]?.transactionDate ?? null);
+				if (pDate) {
+					const payDateObj = new Date(pDate);
+					const dueDateObj = new Date(latestPaidInvoice.dueDate);
+					isOnTimePayment =
+						payDateObj.getTime() <= dueDateObj.getTime() ||
+						payDateObj.getDate() <= 5;
+				} else {
+					isOnTimePayment = true;
+				}
+			} else {
+				const hasPastDuePending = contract.invoices.some(
+					(inv) =>
+						inv.status === "PENDING" &&
+						new Date(inv.dueDate).getTime() < now.getTime(),
+				);
+				isOnTimePayment = !hasPastDuePending;
+			}
+
+			// 3. Phone & isSentToday
+			const rawPhone =
+				contract.tenant.whatsappNumber || contract.tenant.phoneNumber || "";
+			const sanitizedPhone = sanitizePhoneNumber(rawPhone);
+			const isSentToday = Boolean(
+				sanitizedPhone && sentPhonesToday.has(sanitizedPhone),
+			);
+
+			recipientMap.set(tenantId, {
+				tenantId,
+				name: contract.tenant.name,
+				phone: rawPhone,
+				roomNumber: contract.room.roomNumber,
+				propertyId: contract.room.property.id,
+				propertyName: contract.room.property.name,
+				startDate: contract.startDate.toISOString(),
+				birthDate: bdate ? bdate.toISOString() : null,
+				daysRemaining,
+				relativeBirthdayLabel,
+				lastPaymentDate,
+				isOnTimePayment,
+				isSentToday,
+			});
+		}
+
+		return Array.from(recipientMap.values()).sort((a, b) =>
+			a.name.localeCompare(b.name, "id"),
+		);
+	}
 
 	/**
 	 * Dapatkan daftar penghuni aktif yang berulang tahun dalam N hari ke depan (Deduplikasi via Map)

@@ -10,7 +10,9 @@ import type {
 	SessionUser,
 } from "../../common/types/index.ts";
 import { generateAnnualFinancialCsv } from "../../lib/csv-exporter.ts";
+import { getTodayDateString } from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
+import { sanitizePhoneNumber } from "../../lib/phone-sanitizer.ts";
 import { whatsappTemplates } from "../../lib/whatsapp-templates.ts";
 import {
 	type EngagementRepository,
@@ -155,7 +157,7 @@ export class ReportService {
 			targetYear,
 		);
 
-		const todayStr = new Date().toISOString().slice(0, 10);
+		const todayStr = getTodayDateString();
 		let aiData: AiFinancialInsightData;
 		let aiProviderUsed = "HomeeKost Rule Engine (Instan)";
 		let isAutomated = false;
@@ -315,7 +317,7 @@ export class ReportService {
 			targetYear,
 		);
 
-		const todayStr = new Date().toISOString().slice(0, 10);
+		const todayStr = getTodayDateString();
 		let currentRefreshCount = 0;
 
 		if (
@@ -361,13 +363,29 @@ export class ReportService {
 			targetYear,
 		);
 
-		// 4. Susun Payload Context untuk AI LLM
+		// 4. Susun Payload Context untuk AI LLM dengan Time Context Real-Time
+		const lastDayOfMonth = new Date(targetYear, targetMonth, 0).getDate();
+		const currentDayOfMonth = isClosedPeriod ? lastDayOfMonth : now.getDate();
+		const monthProgress = Math.min(
+			100,
+			Math.max(1, Math.round((currentDayOfMonth / lastDayOfMonth) * 100)),
+		);
+		const asOfDate = now.toLocaleDateString("id-ID", {
+			day: "numeric",
+			month: "long",
+			year: "numeric",
+		});
+
 		const aiPayload = {
 			period: {
 				month: targetMonth,
 				monthName,
 				year: targetYear,
 				isClosedPeriod,
+				asOfDate,
+				dayOfMonth: currentDayOfMonth,
+				totalDaysInMonth: lastDayOfMonth,
+				monthProgressPercentage: monthProgress,
 			},
 			property: {
 				id: effectivePropertyId,
@@ -504,11 +522,15 @@ export class ReportService {
 		propertyId?: string;
 		targetPhone?: string;
 		sendWhatsApp?: boolean;
+		month?: number;
+		year?: number;
+		idempotencyKey?: string;
+		forceSend?: boolean;
 	}) {
 		const now = new Date();
-		// Default: Laporan untuk bulan sebelumnya (Tutup Buku) atau bulan berjalan
-		let month = now.getMonth(); // bulan lalu
-		let year = now.getFullYear();
+		// Default: Laporan untuk bulan sebelumnya (Tutup Buku) atau bulan berjalan jika dispesifikasi
+		let month = options?.month ?? now.getMonth();
+		let year = options?.year ?? now.getFullYear();
 		if (month === 0) {
 			month = 12;
 			year -= 1;
@@ -523,6 +545,32 @@ export class ReportService {
 			? properties.filter((p) => p.id === options.propertyId)
 			: properties;
 
+		const todayStr = getTodayDateString();
+		const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
+		const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
+
+		const sentReportTokensToday = new Set<string>();
+		try {
+			const todaySentLogs =
+				await this.engagementRepo.getTodaySentNotificationLogs(
+					startOfDay,
+					endOfDay,
+				);
+			for (const log of todaySentLogs) {
+				if (log.notes) {
+					const match = log.notes.match(/\[(TOKEN:REPORT:[^\]]+)\]/);
+					if (match) {
+						sentReportTokensToday.add(match[1]);
+					}
+				}
+			}
+		} catch (err) {
+			console.error(
+				"[Cron Report] Gagal membaca log idempotensi hari ini:",
+				err,
+			);
+		}
+
 		const results = [];
 		const notificationLogs: Array<{
 			recipientNumber: string;
@@ -531,17 +579,61 @@ export class ReportService {
 			notes?: string | null;
 		}> = [];
 
+		let skippedCount = 0;
+
 		for (const prop of targetProperties) {
 			try {
-				const report = await this.generateOrRefreshAiReport(
-					prop.id,
-					month,
-					year,
-				);
+				let report: AiMonthlyReportData;
+				try {
+					report = await this.generateOrRefreshAiReport(prop.id, month, year);
+				} catch (aiErr) {
+					console.warn(
+						`[Cron Report] Kuota refresh AI tercapai atau regenerasi dilewati untuk properti ${prop.name}, mengambil laporan eksisting:`,
+						aiErr instanceof Error ? aiErr.message : aiErr,
+					);
+					report = await this.getMonthlyReport(prop.id, month, year);
+				}
 				results.push(report);
 
 				// Kirim pengingat WhatsApp jika diaktifkan (Hanya Teks - Hemat Biaya Fonnte)
-				if (options?.sendWhatsApp && options?.targetPhone) {
+				const targetNumber = options?.targetPhone
+					? sanitizePhoneNumber(options.targetPhone)
+					: "";
+
+				const shouldSendWhatsApp =
+					options?.sendWhatsApp !== undefined
+						? options.sendWhatsApp
+						: Boolean(targetNumber);
+
+				if (targetNumber === "6281234567890") {
+					console.warn(
+						"[Cron Report] Nomor target adalah dummy contoh (081234567890), pengiriman WhatsApp dilewati.",
+					);
+					notificationLogs.push({
+						recipientNumber: targetNumber,
+						messageType: "ANNOUNCEMENT",
+						status: "FAILED",
+						notes:
+							"Nomor tujuan adalah nomor dummy contoh (081234567890). Harap gunakan nomor WhatsApp asli Anda.",
+					});
+				} else if (shouldSendWhatsApp && targetNumber) {
+					const reportToken =
+						options?.idempotencyKey ||
+						`TOKEN:REPORT:${prop.id}:${year}-${month}:${todayStr}`;
+
+					// Anti-Spam Idempotency Check: cegah spam berulang jika cron ditembak berkali-kali hari ini (dapat di-bypass dengan forceSend)
+					if (!options?.forceSend && sentReportTokensToday.has(reportToken)) {
+						console.log(
+							`[Cron Report] Lewati kirim WhatsApp untuk ${prop.name} karena sudah terkirim hari ini (${reportToken})`,
+						);
+						skippedCount++;
+						continue;
+					}
+
+					console.log(
+						`[Cron Report] Mengirim ringkasan laporan ke WhatsApp ${targetNumber}...`,
+					);
+
 					const message = whatsappTemplates.executiveReportReminder({
 						propertyName: report.propertyName,
 						periodMonth: report.periodMonth,
@@ -555,16 +647,35 @@ export class ReportService {
 					});
 
 					const sendRes = await this.fonnte.sendText({
-						target: options.targetPhone,
+						target: targetNumber,
 						message,
 					});
 
+					console.log(
+						`[Cron Report] Respon pengiriman WhatsApp (${targetNumber}): status=${sendRes.status}, detail=${sendRes.detail || sendRes.reason || "Success"}`,
+					);
+
+					const status = sendRes.status ? "SENT" : "FAILED";
+					const errorReason =
+						sendRes.reason ||
+						sendRes.detail ||
+						(sendRes.status ? "Success" : "Failed");
+					const noteLabel = `[${reportToken}] Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${errorReason}`;
+
 					notificationLogs.push({
-						recipientNumber: options.targetPhone,
+						recipientNumber: targetNumber,
 						messageType: "ANNOUNCEMENT",
-						status: sendRes.status ? "SENT" : "FAILED",
-						notes: `Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${sendRes.detail || "Success"}`,
+						status,
+						notes: noteLabel,
 					});
+
+					if (sendRes.status) {
+						sentReportTokensToday.add(reportToken);
+					}
+				} else if (options?.sendWhatsApp && !targetNumber) {
+					console.warn(
+						"[Cron Report] Opsi kirim WhatsApp aktif tetapi nomor target pengelola belum diisi.",
+					);
 				}
 			} catch (err) {
 				console.error(
@@ -578,10 +689,36 @@ export class ReportService {
 			await this.engagementRepo.recordNotificationLogsBatch(notificationLogs);
 		}
 
+		const sentLogs = notificationLogs.filter((l) => l.status === "SENT");
+		const failedLogs = notificationLogs.filter((l) => l.status === "FAILED");
+
 		return {
 			success: true,
 			processedCount: results.length,
+			skippedCount,
 			period: { month, year },
+			whatsApp: {
+				attempted: notificationLogs.length > 0,
+				targetPhone: options?.targetPhone || null,
+				sentCount: sentLogs.length,
+				failedCount: failedLogs.length,
+				status:
+					notificationLogs.length === 0
+						? ("NOT_ATTEMPTED" as const)
+						: failedLogs.length === 0
+							? ("SENT" as const)
+							: sentLogs.length > 0
+								? ("PARTIAL" as const)
+								: ("FAILED" as const),
+				detail:
+					notificationLogs.length === 0
+						? options?.sendWhatsApp === false
+							? "Pengiriman WhatsApp dinonaktifkan."
+							: !options?.targetPhone
+								? "Nomor WhatsApp belum diisi."
+								: "WhatsApp tidak dikirim."
+						: notificationLogs[0]?.notes || null,
+			},
 		};
 	}
 

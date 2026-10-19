@@ -40,11 +40,39 @@ export const engagementEventSchema = z.object({
 
 export type EngagementEventFormValues = z.infer<typeof engagementEventSchema>;
 
+export const engagementTemplateCategoryEnum = z.enum([
+	"Sambutan",
+	"Pembayaran",
+	"Ulang Tahun",
+	"Kerja Bakti",
+	"Umum",
+]);
+
 export const engagementTemplateSchema = z.object({
 	name: z.string().min(1, "Nama template wajib diisi").default(""),
+	category: engagementTemplateCategoryEnum.default("Umum"),
 	content: z.string().min(1, "Isi template pesan wajib diisi").default(""),
 });
 
 export type EngagementTemplateFormValues = z.infer<
 	typeof engagementTemplateSchema
+>;
+
+export const sendSingleTemplateMessageSchema = z.object({
+	tenantId: z.string().min(1, "ID Penyewa wajib diisi"),
+	templateContent: z.string().min(1, "Konten pesan wajib diisi"),
+});
+
+export type SendSingleTemplateMessageInput = z.infer<
+	typeof sendSingleTemplateMessageSchema
+>;
+
+export const broadcastToSelectedRecipientsSchema = z.object({
+	tenantIds: z.array(z.string().min(1)).min(1, "Pilih minimal 1 penerima"),
+	templateContent: z.string().min(1, "Konten pesan wajib diisi"),
+	title: z.string().optional(),
+});
+
+export type BroadcastToSelectedRecipientsInput = z.infer<
+	typeof broadcastToSelectedRecipientsSchema
 >;

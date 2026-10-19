@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle2, MessageSquare, Play, Plus, Send } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import type {
 	AnnouncementItem,
+	EngagementRecipient,
 	EngagementTemplateItem,
-	UpcomingBirthdayItem,
 } from "../../common/types/index.ts";
 import type {
 	BroadcastAnnouncementInput,
@@ -14,7 +14,7 @@ import type {
 } from "../../common/validations/index.ts";
 import {
 	EngagementAnnouncementSection,
-	EngagementBirthdayPanel,
+	EngagementDynamicRecipientPanel,
 	EngagementEventDialog,
 	EngagementNotificationLogSection,
 	EngagementTemplateDetailDialog,
@@ -25,12 +25,13 @@ import {
 	engagementDashboardQueryOptions,
 	propertiesQueryOptions,
 	useBroadcastAnnouncement,
+	useBroadcastToSelectedRecipients,
 	useDashboardContext,
 	useDeleteAnnouncement,
 	useEngagementDashboard,
 	useProperties,
 	useRunDailyCronTasks,
-	useSendBirthdayWish,
+	useSendSingleTemplateMessage,
 } from "../../hooks/index.ts";
 
 export const Route = createFileRoute("/dashboard/engagement")({
@@ -87,10 +88,40 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 	},
 ];
 
+const TEMPLATE_STORAGE_KEY = "homeekost_engagement_templates";
+
+const CATEGORY_ICONS: Record<string, string> = {
+	Sambutan: "👋",
+	Pembayaran: "💳",
+	"Ulang Tahun": "🎂",
+	"Kerja Bakti": "🧹",
+	Umum: "💬",
+};
+
+const getCategoryIcon = (category?: string): string => {
+	if (!category) return "💬";
+	return CATEGORY_ICONS[category] || "💬";
+};
+
+const loadStoredTemplates = (): EngagementTemplateItem[] => {
+	if (typeof window === "undefined") return DEFAULT_TEMPLATES;
+	try {
+		const stored = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+		if (!stored) return DEFAULT_TEMPLATES;
+		const parsed = JSON.parse(stored);
+		return Array.isArray(parsed) && parsed.length > 0
+			? parsed
+			: DEFAULT_TEMPLATES;
+	} catch {
+		return DEFAULT_TEMPLATES;
+	}
+};
+
 function EngagementPage() {
 	const dashboardContext = useDashboardContext();
 	const currentUser = dashboardContext.user;
 	const userRole = dashboardContext.userRole || "ADMIN";
+	const isSuperAdmin = dashboardContext.isSuperAdmin;
 	const userPropertyId = currentUser?.assignedPropertyId;
 
 	// Queries
@@ -98,16 +129,27 @@ function EngagementPage() {
 	const { data: engagementData } = useEngagementDashboard();
 
 	// Mutations
-	const sendBirthdayWishMutation = useSendBirthdayWish();
 	const broadcastAnnouncementMutation = useBroadcastAnnouncement();
 	const deleteAnnouncementMutation = useDeleteAnnouncement();
 	const runCronMutation = useRunDailyCronTasks();
+	const sendSingleTemplateMutation = useSendSingleTemplateMessage();
+	const broadcastSelectedMutation = useBroadcastToSelectedRecipients();
 
 	// State
 	const [templates, setTemplates] =
 		useState<EngagementTemplateItem[]>(DEFAULT_TEMPLATES);
 	const [selectedTemplate, setSelectedTemplate] =
 		useState<EngagementTemplateItem | null>(DEFAULT_TEMPLATES[2] ?? null);
+
+	useEffect(() => {
+		const loaded = loadStoredTemplates();
+		setTemplates(loaded);
+		setSelectedTemplate((current) => {
+			if (!current) return loaded[0] ?? null;
+			const found = loaded.find((t) => t.id === current.id);
+			return found ?? loaded[0] ?? null;
+		});
+	}, []);
 
 	// Dialog & Toast states
 	const [isEventDialogOpen, setIsEventDialogOpen] = useState<boolean>(false);
@@ -129,22 +171,6 @@ function EngagementPage() {
 		}, 4000);
 	};
 
-	// Map backend upcoming birthdays to UI format
-	const birthdays: UpcomingBirthdayItem[] = useMemo(() => {
-		if (!engagementData?.upcomingBirthdays) return [];
-		return engagementData.upcomingBirthdays.map((b) => ({
-			id: b.id,
-			tenantId: b.tenantId,
-			name: b.name,
-			room: b.roomNumber,
-			property: b.propertyName,
-			birthDate: b.birthDate,
-			daysRemaining: b.daysRemaining,
-			relativeLabel: b.relativeLabel,
-			phone: b.phone,
-		}));
-	}, [engagementData]);
-
 	// Map backend announcements to UI format
 	const announcements: AnnouncementItem[] = useMemo(() => {
 		if (!engagementData?.recentAnnouncements) return [];
@@ -160,48 +186,81 @@ function EngagementPage() {
 		}));
 	}, [engagementData]);
 
-	// Birthday Action Handlers
-	const handleSendWish = async (item: UpcomingBirthdayItem) => {
-		if (!item.tenantId) {
-			showToast("ID Penyewa tidak ditemukan.");
+	// Single Template Send Handler
+	const handleSendSingleTemplate = async (recipient: EngagementRecipient) => {
+		if (!selectedTemplate) {
+			showToast("Silakan pilih template pesan terlebih dahulu.");
 			return;
 		}
 
 		try {
-			const res = await sendBirthdayWishMutation.mutateAsync({
-				tenantId: item.tenantId,
+			const res = await sendSingleTemplateMutation.mutateAsync({
+				tenantId: recipient.tenantId,
+				templateContent: selectedTemplate.content,
 			});
 
-			if (res?.success) {
+			if (res.success) {
 				showToast(
-					`Ucapan selamat ulang tahun berhasil dikirimkan ke WhatsApp ${item.name} (${item.phone})! 🎂🎉`,
+					`Pesan "${selectedTemplate.name}" berhasil dikirim ke WhatsApp ${recipient.name} (${recipient.phone})!`,
 				);
 			} else {
 				showToast(
-					`Fonnte: ${res?.detail || "Gagal mengirim via API. Silakan gunakan tautan WhatsApp manual."}`,
+					`Fonnte: ${res.detail || "Gagal mengirim via WhatsApp API."}`,
 				);
 			}
 		} catch (err: unknown) {
 			const error = err as Error;
-			showToast(error.message || "Gagal mengirimkan ucapan ulang tahun.");
+			showToast(error.message || "Gagal mengirimkan pesan template.");
 		}
 	};
 
-	const handleSetReminder = (_item: UpcomingBirthdayItem) => {
-		showToast(
-			"Sistem otomatis akan mengirimkan ucapan WA pada hari-H pukul 08:00 WIB via Cron Scheduler.",
-		);
+	// Multi-Select Batch Broadcast Handler
+	const handleBroadcastSelectedRecipients = async (
+		selectedRecipients: EngagementRecipient[],
+	) => {
+		if (!selectedTemplate) {
+			showToast("Silakan pilih template pesan terlebih dahulu.");
+			return;
+		}
+		if (selectedRecipients.length === 0) {
+			showToast("Pilih minimal satu penghuni untuk broadcast.");
+			return;
+		}
+
+		try {
+			const res = await broadcastSelectedMutation.mutateAsync({
+				tenantIds: selectedRecipients.map((r) => r.tenantId),
+				templateContent: selectedTemplate.content,
+				title: selectedTemplate.name,
+			});
+
+			showToast(
+				`Broadcast selesai: ${res.sentCount} pesan berhasil dikirim${res.failedCount > 0 ? `, ${res.failedCount} gagal` : ""}.`,
+			);
+		} catch (err: unknown) {
+			const error = err as Error;
+			showToast(
+				error.message || "Gagal melakukan broadcast ke penghuni terpilih.",
+			);
+		}
 	};
 
 	// Template Action Handlers
 	const handleSaveTemplate = (values: EngagementTemplateFormValues) => {
+		const icon = getCategoryIcon(values.category);
+		let nextTemplates: EngagementTemplateItem[];
+
 		if (editingTemplate) {
-			setTemplates((prev) =>
-				prev.map((t) =>
-					t.id === editingTemplate.id
-						? { ...t, name: values.name, content: values.content }
-						: t,
-				),
+			nextTemplates = templates.map((t) =>
+				t.id === editingTemplate.id
+					? {
+							...t,
+							name: values.name,
+							category: values.category,
+							content: values.content,
+							icon,
+						}
+					: t,
 			);
 			showToast(`Template "${values.name}" berhasil diperbarui`);
 		} else {
@@ -209,19 +268,57 @@ function EngagementPage() {
 				id: `tpl-${Date.now()}`,
 				name: values.name,
 				content: values.content,
-				category: "Kustom",
-				icon: "💬",
+				category: values.category || "Umum",
+				icon,
 			};
-			setTemplates((prev) => [...prev, newTpl]);
+			nextTemplates = [...templates, newTpl];
 			showToast(`Template "${values.name}" berhasil dibuat`);
 		}
+
+		setTemplates(nextTemplates);
+		if (typeof window !== "undefined") {
+			try {
+				localStorage.setItem(
+					TEMPLATE_STORAGE_KEY,
+					JSON.stringify(nextTemplates),
+				);
+			} catch {
+				// Ignore write errors
+			}
+		}
+
+		if (
+			selectedTemplate &&
+			editingTemplate &&
+			selectedTemplate.id === editingTemplate.id
+		) {
+			setSelectedTemplate({
+				...selectedTemplate,
+				name: values.name,
+				category: values.category,
+				content: values.content,
+				icon,
+			});
+		}
+
 		setEditingTemplate(null);
 	};
 
 	const handleDeleteTemplate = (tpl: EngagementTemplateItem) => {
-		setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+		const nextTemplates = templates.filter((t) => t.id !== tpl.id);
+		setTemplates(nextTemplates);
+		if (typeof window !== "undefined") {
+			try {
+				localStorage.setItem(
+					TEMPLATE_STORAGE_KEY,
+					JSON.stringify(nextTemplates),
+				);
+			} catch {
+				// Ignore write errors
+			}
+		}
 		if (selectedTemplate?.id === tpl.id) {
-			setSelectedTemplate(templates[0] ?? null);
+			setSelectedTemplate(nextTemplates[0] ?? null);
 		}
 		showToast(`Template "${tpl.name}" berhasil dihapus`);
 	};
@@ -328,15 +425,17 @@ function EngagementPage() {
 							: "Jalankan Cron Pagi"}
 					</Button>
 
-					<Button
-						type="button"
-						variant="outline"
-						className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 shadow-sm"
-						onClick={() => setIsEventDialogOpen(true)}
-					>
-						<Plus className="w-3.5 h-3.5 mr-1.5" />
-						Buat Broadcast
-					</Button>
+					{isSuperAdmin && (
+						<Button
+							type="button"
+							variant="outline"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 shadow-sm"
+							onClick={() => setIsEventDialogOpen(true)}
+						>
+							<Plus className="w-3.5 h-3.5 mr-1.5" />
+							Buat Broadcast
+						</Button>
+					)}
 					<Button
 						type="button"
 						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
@@ -351,12 +450,20 @@ function EngagementPage() {
 				</div>
 			</div>
 
-			{/* Top Grid (2 Columns: Upcoming Birthdays & Message Templates) */}
+			{/* Top Grid (2 Columns: Dynamic Recipients & Message Templates) */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<EngagementBirthdayPanel
-					birthdays={birthdays}
-					onSendWish={handleSendWish}
-					onSetReminder={handleSetReminder}
+				<EngagementDynamicRecipientPanel
+					recipients={engagementData?.recipients || []}
+					selectedTemplate={selectedTemplate}
+					selectedPropertyId={
+						userRole === "ADMIN" && userPropertyId ? userPropertyId : undefined
+					}
+					onSendSingle={handleSendSingleTemplate}
+					onBroadcastSelected={handleBroadcastSelectedRecipients}
+					isSending={
+						sendSingleTemplateMutation.isPending ||
+						broadcastSelectedMutation.isPending
+					}
 				/>
 
 				<EngagementTemplatePanel
@@ -401,17 +508,19 @@ function EngagementPage() {
 							>
 								Lihat / Edit Detail
 							</Button>
-							<Button
-								type="button"
-								size="sm"
-								className="h-8 text-xs bg-[#4f6958] hover:bg-[#425949] text-white font-semibold flex items-center gap-1.5 shadow-sm"
-								onClick={() => {
-									setIsEventDialogOpen(true);
-								}}
-							>
-								<Send className="w-3 h-3" />
-								Gunakan untuk Broadcast
-							</Button>
+							{isSuperAdmin && (
+								<Button
+									type="button"
+									size="sm"
+									className="h-8 text-xs bg-[#4f6958] hover:bg-[#425949] text-white font-semibold flex items-center gap-1.5 shadow-sm"
+									onClick={() => {
+										setIsEventDialogOpen(true);
+									}}
+								>
+									<Send className="w-3 h-3" />
+									Gunakan untuk Broadcast
+								</Button>
+							)}
 						</div>
 					</div>
 
