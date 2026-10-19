@@ -78,12 +78,12 @@ async getActiveTenantsWithEngagementMetadata(propertyIds?: string[]): Promise<En
 
 Di dalam komponen halaman `/dashboard/engagement`, daftar penerima disaring otomatis berdasarkan template yang aktif:
 
-| Kategori / ID Template | Logika Penyaringan Data | Keterangan Header Panel |
-| :--- | :--- | :--- |
-| **Sambutan** (`category: "Sambutan"`) | Penyewa dengan kontrak aktif yang tanggal mulai sewanya (`startDate`) berada dalam **30 hari terakhir** (diurutkan dari yang terbaru). | *Daftar Penerima: Anak Kos Baru (N)* |
-| **Ulang Tahun** (`category: "Ulang Tahun"`) | Penyewa dengan `daysRemaining` bernilai **antara 0 s/d 5 hari** (H-5 s/d Hari-H). | *Daftar Penerima: Ulang Tahun H-5 (N)* |
-| **Pembayaran** (`category: "Pembayaran"`) | Penyewa yang **baru-baru ini membayar tepat waktu** (`isOnTimePayment === true` dalam 14 hari terakhir). | *Daftar Penerima: Lunas Tepat Waktu (N)* |
-| **Kerja Bakti / Pengumuman / Kustom** | **Seluruh Penyewa Aktif** pada cabang yang dipilih (atau seluruh cabang jika filter global). | *Daftar Penerima: Seluruh Penghuni (N)* |
+| Kategori / ID Template                      | Logika Penyaringan Data                                                                                                                | Keterangan Header Panel                  |
+| :------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------- |
+| **Sambutan** (`category: "Sambutan"`)       | Penyewa dengan kontrak aktif yang tanggal mulai sewanya (`startDate`) berada dalam **30 hari terakhir** (diurutkan dari yang terbaru). | *Daftar Penerima: Anak Kos Baru (N)*     |
+| **Ulang Tahun** (`category: "Ulang Tahun"`) | Penyewa dengan `daysRemaining` bernilai **antara 0 s/d 5 hari** (H-5 s/d Hari-H).                                                      | *Daftar Penerima: Ulang Tahun H-5 (N)*   |
+| **Pembayaran** (`category: "Pembayaran"`)   | Penyewa yang **baru-baru ini membayar tepat waktu** (`isOnTimePayment === true` dalam 14 hari terakhir).                               | *Daftar Penerima: Lunas Tepat Waktu (N)* |
+| **Kerja Bakti / Pengumuman / Kustom**       | **Seluruh Penyewa Aktif** pada cabang yang dipilih (atau seluruh cabang jika filter global).                                           | *Daftar Penerima: Seluruh Penghuni (N)*  |
 
 Jika hasil filter menghasilkan 0 penyewa (misal tidak ada yang berulang tahun dalam 5 hari ke depan), panel menampilkan pesan informatif ramah: *"Tidak ada penghuni yang memenuhi kriteria untuk template ini saat ini."*
 
@@ -117,6 +117,12 @@ Komponen baru ini menggantikan `EngagementBirthdayPanel.tsx` di kolom kiri:
    - Tombol Aksi 1-per-1:
      - Tombol **Kirim** di ujung kanan baris.
      - Jika diklik, langsung memicu pengiriman template yang sedang aktif ke penyewa tersebut.
+   - **Konfirmasi Khusus Apresiasi Pembayaran (Pencegahan Spam / Double-Send)**:
+     - Pada saat pelunasan sewa di sistem, jika opsi kirim WA dicentang dan penyewa bayar tepat waktu, pesan apresiasi pelunasan otomatis sudah terkirim.
+     - Di halaman Engagement pada template **Apresiasi Pembayaran**, penghuni yang sudah menerima pesan tersebut otomatis ditandai `Terkirim Hari Ini`.
+     - Pengelola tetap memiliki kendali untuk mengirim ulang jika diperlukan. Namun, sistem akan menampilkan dialog konfirmasi pengaman:
+       - Kirim 1-per-1: *"Penghuni [Nama] sudah diapresiasi sebelumnya, ingin mengirim apresiasi lagi?"*
+       - Kirim Terpilih (Batch): *"Sebagian penghuni yang dipilih sudah menerima apresiasi sebelumnya. Ingin tetap mengirim apresiasi lagi ke seluruh penghuni terpilih?"*
 
 ---
 

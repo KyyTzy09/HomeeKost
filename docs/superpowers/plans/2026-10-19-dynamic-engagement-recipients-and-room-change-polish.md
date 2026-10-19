@@ -183,6 +183,10 @@ Create component with:
 - Subtitle explaining the active filter criteria.
 - Selection Bar: Checkbox "Pilih Semua", counter "(N) dari (M) dipilih", button `Broadcast ke (N) Terpilih`.
 - Recipient items: Checkbox, Name, Room, Property, context tag, status badge (`Terkirim Hari Ini` vs `Belum Dikirim`), and `Kirim` button.
+- Anti-Spam Confirmation for Payment Appreciation:
+  - If template category is "Pembayaran" and recipient is already `isSentToday === true`:
+    - 1-per-1: Prompt confirmation `window.confirm("Penghuni " + recipient.name + " sudah diapresiasi sebelumnya, ingin mengirim apresiasi lagi?")`.
+    - Batch: Prompt confirmation `window.confirm("Sebagian penghuni yang dipilih sudah menerima apresiasi sebelumnya. Ingin tetap mengirim apresiasi lagi ke seluruh penghuni terpilih?")`.
 - Export in `src/components/engagement/index.ts`.
 
 - [ ] **Step 3: Verify TypeScript and Biome**
