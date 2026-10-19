@@ -274,15 +274,15 @@ export class EngagementService {
 		const roomNumber = activeContract.room?.roomNumber || "-";
 
 		// Validasi RBAC untuk Admin
-		if (
-			user?.role?.name === "ADMIN" &&
-			user?.assignedPropertyId &&
-			propertyId &&
-			propertyId !== user.assignedPropertyId
-		) {
-			throw new Error(
-				"Anda hanya dapat mengirimkan pesan ke penyewa di cabang kos Anda.",
-			);
+		if (user?.role?.name === "ADMIN") {
+			if (!user.assignedPropertyId) {
+				throw new Error("Admin cabang belum di-assign ke cabang kos manapun.");
+			}
+			if (propertyId && propertyId !== user.assignedPropertyId) {
+				throw new Error(
+					"Anda hanya dapat mengirimkan pesan ke penyewa di cabang kos Anda.",
+				);
+			}
 		}
 
 		const phone = tenant.whatsappNumber || tenant.phoneNumber;
@@ -297,10 +297,10 @@ export class EngagementService {
 
 		// Personalisasi placeholder {nama}, {kamar}, {kos}
 		const message = input.templateContent
-			.replace(/{nama}/gi, tenant.name)
-			.replace(/{kamar}/gi, roomNumber)
-			.replace(/{kos}/gi, propertyName)
-			.replace(/{kost}/gi, propertyName);
+			.replace(/{nama}/gi, () => tenant.name)
+			.replace(/{kamar}/gi, () => roomNumber)
+			.replace(/{kos}/gi, () => propertyName)
+			.replace(/{kost}/gi, () => propertyName);
 
 		const apiRes = await this.fonnte.sendText({
 			target: sanitizedPhone,
@@ -330,12 +330,16 @@ export class EngagementService {
 		input: BroadcastToSelectedRecipientsInput,
 		user?: SessionUser,
 	) {
-		if (!input.tenantIds || input.tenantIds.length === 0) {
+		const uniqueTenantIds = Array.from(new Set(input.tenantIds || []));
+		if (uniqueTenantIds.length === 0) {
 			throw new Error("Pilih minimal 1 penyewa tujuan broadcast.");
 		}
 
 		const isAdmin = user?.role?.name === "ADMIN";
 		const userPropertyId = user?.assignedPropertyId;
+		if (isAdmin && !userPropertyId) {
+			throw new Error("Admin cabang belum di-assign ke cabang kos manapun.");
+		}
 		const propertyIds =
 			isAdmin && userPropertyId ? [userPropertyId] : undefined;
 
@@ -343,7 +347,7 @@ export class EngagementService {
 		const allRecipients =
 			await this.repo.getActiveTenantsWithEngagementMetadata(propertyIds);
 
-		const selectedSet = new Set(input.tenantIds);
+		const selectedSet = new Set(uniqueTenantIds);
 		const targetRecipients = allRecipients.filter((r) =>
 			selectedSet.has(r.tenantId),
 		);
@@ -368,7 +372,7 @@ export class EngagementService {
 		}
 
 		let sentCount = 0;
-		let failedCount = input.tenantIds.length - targetRecipients.length;
+		let failedCount = uniqueTenantIds.length - targetRecipients.length;
 
 		const notificationLogs: Array<{
 			recipientNumber: string;
@@ -385,10 +389,10 @@ export class EngagementService {
 			}
 
 			const message = input.templateContent
-				.replace(/{nama}/gi, r.name)
-				.replace(/{kamar}/gi, r.roomNumber)
-				.replace(/{kos}/gi, r.propertyName)
-				.replace(/{kost}/gi, r.propertyName);
+				.replace(/{nama}/gi, () => r.name)
+				.replace(/{kamar}/gi, () => r.roomNumber)
+				.replace(/{kos}/gi, () => r.propertyName)
+				.replace(/{kost}/gi, () => r.propertyName);
 
 			try {
 				const res = await this.fonnte.sendText({
