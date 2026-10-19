@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EngagementRecipient } from "../../src/common/types/engagement.types.ts";
 import {
+	filterNotificationLogsByDateRange,
 	filterRecipientsByTemplate,
 	personalizeMessage,
 } from "../../src/lib/engagement-utils.ts";
@@ -248,3 +249,50 @@ describe("Engagement Utils - personalizeMessage", () => {
 		).toBe("Halo   ");
 	});
 });
+
+describe("Engagement Utils - filterNotificationLogsByDateRange", () => {
+	const sampleLogs = [
+		{ id: "1", sentAt: "2026-10-10T08:00:00.000Z", note: "Log 1" },
+		{ id: "2", sentAt: "2026-10-15T10:30:00.000Z", note: "Log 2" },
+		{ id: "3", sentAt: "2026-10-19T02:00:00.000Z", note: "Log 3" },
+		{ id: "4", sentAt: "2026-10-25T14:15:00.000Z", note: "Log 4" },
+	];
+
+	it("returns empty array when logs is empty", () => {
+		expect(filterNotificationLogsByDateRange([], "2026-10-01", "2026-10-31")).toEqual([]);
+	});
+
+	it("returns all logs when neither startDate nor endDate is specified", () => {
+		const result = filterNotificationLogsByDateRange(sampleLogs);
+		expect(result).toHaveLength(4);
+	});
+
+	it("filters logs by startDate (inclusive)", () => {
+		const result = filterNotificationLogsByDateRange(sampleLogs, "2026-10-15");
+		expect(result.map((l) => l.id)).toEqual(["2", "3", "4"]);
+	});
+
+	it("filters logs by endDate (inclusive)", () => {
+		const result = filterNotificationLogsByDateRange(sampleLogs, undefined, "2026-10-19");
+		expect(result.map((l) => l.id)).toEqual(["1", "2", "3"]);
+	});
+
+	it("filters logs between startDate and endDate", () => {
+		const result = filterNotificationLogsByDateRange(
+			sampleLogs,
+			"2026-10-15",
+			"2026-10-19",
+		);
+		expect(result.map((l) => l.id)).toEqual(["2", "3"]);
+	});
+
+	it("returns empty array when date range has no matching logs", () => {
+		const result = filterNotificationLogsByDateRange(
+			sampleLogs,
+			"2026-11-01",
+			"2026-11-30",
+		);
+		expect(result).toHaveLength(0);
+	});
+});
+

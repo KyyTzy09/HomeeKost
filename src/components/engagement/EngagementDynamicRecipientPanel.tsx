@@ -1,8 +1,16 @@
-import { Send, Users } from "lucide-react";
+import { AlertTriangle, Send, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "../../common/shadcn/dialog.tsx";
 import type {
 	EngagementRecipient,
 	EngagementTemplateItem,
@@ -145,20 +153,40 @@ export function EngagementDynamicRecipientPanel({
 		});
 	};
 
-	const handleSendSingle = async (recipient: EngagementRecipient) => {
+	interface ConfirmDialogState {
+		isOpen: boolean;
+		type: "single" | "batch";
+		recipient?: EngagementRecipient;
+		recipients?: EngagementRecipient[];
+		title: string;
+		description: string;
+	}
+
+	const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(
+		null,
+	);
+
+	const handleSendSingle = (recipient: EngagementRecipient) => {
 		if (isSending) return;
 
-		if (selectedTemplate?.category === "Pembayaran" && recipient.isSentToday) {
-			const confirmed = window.confirm(
-				`Penghuni ${recipient.name} sudah diapresiasi sebelumnya, ingin mengirim apresiasi lagi?`,
-			);
-			if (!confirmed) return;
+		if (recipient.isSentToday) {
+			const isPayment = selectedTemplate?.category === "Pembayaran";
+			setConfirmDialog({
+				isOpen: true,
+				type: "single",
+				recipient,
+				title: "Konfirmasi Kirim Ulang Pesan",
+				description: isPayment
+					? `Penghuni "${recipient.name}" (Kamar ${recipient.roomNumber}) sudah menerima pesan apresiasi pembayaran hari ini. Ingin tetap mengirim pesan apresiasi lagi?`
+					: `Penghuni "${recipient.name}" (Kamar ${recipient.roomNumber}) sudah menerima pesan hari ini. Ingin tetap mengirimkan pesan lagi?`,
+			});
+			return;
 		}
 
-		await onSendSingle(recipient);
+		onSendSingle(recipient);
 	};
 
-	const handleBroadcastSelected = async () => {
+	const handleBroadcastSelected = () => {
 		if (isSending || selectedCount === 0) return;
 
 		const selectedRecipients = filtered.filter((r) =>
@@ -166,17 +194,34 @@ export function EngagementDynamicRecipientPanel({
 		);
 		if (selectedRecipients.length === 0) return;
 
-		const hasSentToday = selectedRecipients.some((r) => r.isSentToday);
-		if (hasSentToday) {
+		const alreadySentList = selectedRecipients.filter((r) => r.isSentToday);
+		if (alreadySentList.length > 0) {
 			const isPayment = selectedTemplate?.category === "Pembayaran";
-			const confirmMsg = isPayment
-				? "Sebagian penghuni yang dipilih sudah menerima apresiasi sebelumnya. Ingin tetap mengirim apresiasi lagi ke seluruh penghuni terpilih?"
-				: "Sebagian penghuni yang dipilih sudah menerima pesan hari ini. Ingin tetap mengirimkan pesan ke seluruh penghuni terpilih?";
-			const confirmed = window.confirm(confirmMsg);
-			if (!confirmed) return;
+			setConfirmDialog({
+				isOpen: true,
+				type: "batch",
+				recipients: selectedRecipients,
+				title: "Konfirmasi Broadcast Ulang",
+				description: isPayment
+					? `Sebagian penghuni yang Anda pilih (${alreadySentList.length} dari ${selectedRecipients.length} orang) sudah menerima pesan apresiasi hari ini. Ingin tetap mengirim apresiasi ke seluruh penghuni terpilih?`
+					: `Sebagian penghuni yang Anda pilih (${alreadySentList.length} dari ${selectedRecipients.length} orang) sudah menerima pesan hari ini. Ingin tetap mengirimkan pesan ke seluruh penghuni terpilih?`,
+			});
+			return;
 		}
 
-		await onBroadcastSelected(selectedRecipients);
+		onBroadcastSelected(selectedRecipients);
+	};
+
+	const handleConfirmAction = async () => {
+		if (!confirmDialog) return;
+		const { type, recipient, recipients } = confirmDialog;
+		setConfirmDialog(null);
+
+		if (type === "single" && recipient) {
+			await onSendSingle(recipient);
+		} else if (type === "batch" && recipients) {
+			await onBroadcastSelected(recipients);
+		}
 	};
 
 	const category = selectedTemplate?.category;
@@ -198,12 +243,6 @@ export function EngagementDynamicRecipientPanel({
 							{headerSubtitle}
 						</p>
 					</div>
-
-					{selectedTemplate && (
-						<span className="text-[11px] font-semibold text-[#568062] bg-[#e8f2ea] px-2.5 py-0.5 rounded-md">
-							Template: {selectedTemplate.name}
-						</span>
-					)}
 				</div>
 
 				{/* Selection Bar */}
@@ -338,6 +377,51 @@ export function EngagementDynamicRecipientPanel({
 				</span>
 				<span>{filtered.length} total penghuni tersaring</span>
 			</div>
+
+			{/* Confirm Dialog Modal (Bukan default browser alert) */}
+			<Dialog
+				open={Boolean(confirmDialog?.isOpen)}
+				onOpenChange={(open) => {
+					if (!open) setConfirmDialog(null);
+				}}
+			>
+				<DialogContent className="max-w-md p-6 bg-white rounded-2xl border-[#e4e9e4] shadow-[0_25px_80px_rgba(25,40,30,0.18)]">
+					<DialogHeader className="flex flex-col gap-2 pb-3 border-b border-[#e4e9e4]">
+						<DialogTitle className="text-base font-bold text-[#252925] flex items-center gap-2">
+							<div className="w-8 h-8 rounded-full bg-[#fcf8ec] flex items-center justify-center shrink-0">
+								<AlertTriangle className="w-4 h-4 text-[#b18a4b]" />
+							</div>
+							{confirmDialog?.title || "Konfirmasi Pengiriman Ulang"}
+						</DialogTitle>
+						<DialogDescription className="text-xs text-[#55695a] leading-relaxed pt-1">
+							{confirmDialog?.description}
+						</DialogDescription>
+					</DialogHeader>
+
+					<DialogFooter className="flex items-center justify-end gap-2 pt-3 border-t border-[#e4e9e4]">
+						<Button
+							type="button"
+							variant="outline"
+							className="text-xs border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] h-9 px-4 font-medium"
+							onClick={() => setConfirmDialog(null)}
+							disabled={isSending}
+						>
+							Batal
+						</Button>
+						<Button
+							type="button"
+							className="text-xs bg-[#4f6958] hover:bg-[#425949] text-white h-9 px-4 font-semibold shadow-sm flex items-center gap-1.5"
+							onClick={handleConfirmAction}
+							disabled={isSending}
+						>
+							<Send className="w-3.5 h-3.5" />
+							{confirmDialog?.type === "batch"
+								? "Tetap Broadcast"
+								: "Tetap Kirim"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</Card>
 	);
 }

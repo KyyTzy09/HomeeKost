@@ -61,7 +61,7 @@ export class EngagementService {
 				this.repo.getActiveTenantsWithEngagementMetadata(propertyIds),
 				this.repo.getUpcomingBirthdays(propertyIds, 30),
 				this.repo.getRecentAnnouncements(propertyIds, 10),
-				this.repo.getNotificationLogs(15),
+				this.repo.getNotificationLogs(50),
 			]);
 
 		return {

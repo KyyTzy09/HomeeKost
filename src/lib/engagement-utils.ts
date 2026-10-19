@@ -105,3 +105,29 @@ export function personalizeMessage(
 		.replace(/\{kamar\}/gi, () => recipient.roomNumber || "")
 		.replace(/\{kost?\}/gi, () => recipient.propertyName || "");
 }
+
+/**
+ * Filter notification logs by inclusive date range (YYYY-MM-DD).
+ *
+ * @param logs Array of notification logs
+ * @param startDate Optional start date string (inclusive, YYYY-MM-DD)
+ * @param endDate Optional end date string (inclusive, YYYY-MM-DD)
+ */
+export function filterNotificationLogsByDateRange<
+	T extends { sentAt: Date | string },
+>(logs: T[], startDate?: string, endDate?: string): T[] {
+	if (!logs || logs.length === 0) return [];
+	if (!startDate && !endDate) return [...logs];
+
+	return logs.filter((log) => {
+		const sentDate = new Date(log.sentAt);
+		if (Number.isNaN(sentDate.getTime())) return true;
+
+		const pad = (n: number) => String(n).padStart(2, "0");
+		const logDateStr = `${sentDate.getFullYear()}-${pad(sentDate.getMonth() + 1)}-${pad(sentDate.getDate())}`;
+
+		if (startDate && logDateStr < startDate) return false;
+		if (endDate && logDateStr > endDate) return false;
+		return true;
+	});
+}
