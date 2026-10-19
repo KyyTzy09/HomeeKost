@@ -1,15 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import {
-	ArrowLeft,
-	Building2,
-	CheckCircle2,
-	KeyRound,
-	Loader2,
-	Mail,
-	MessageSquare,
-	ShieldCheck,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, KeyRound, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "../common/shadcn/button.tsx";
@@ -105,11 +96,7 @@ function ForgotPasswordPage() {
 				<CardHeader className="p-0 text-center mb-6">
 					<div className="w-14 h-14 rounded-2xl bg-[#edf5ee] border border-[#d2e2d5] text-[#4f6958] flex items-center justify-center mx-auto mb-3.5 shadow-[0_4px_16px_rgba(79,105,88,0.10)]">
 						{result ? (
-							result.role === "SUPER_ADMIN" ? (
-								<Mail className="w-7 h-7" />
-							) : (
-								<ShieldCheck className="w-7 h-7" />
-							)
+							<Mail className="w-7 h-7" />
 						) : (
 							<KeyRound className="w-7 h-7" />
 						)}
@@ -137,44 +124,24 @@ function ForgotPasswordPage() {
 
 					{result ? (
 						<div className="space-y-4">
-							{result.role === "SUPER_ADMIN" ? (
-								<div className="bg-[#edf5ee] border border-[#cbe0ce] rounded-xl p-4 text-center space-y-2">
-									<div className="w-9 h-9 rounded-full bg-[#dbece0] text-[#3e724d] flex items-center justify-center mx-auto">
-										<CheckCircle2 className="w-5 h-5" />
-									</div>
-									<h4 className="text-xs font-bold text-[#253129]">
-										Email Verifikasi Terkirim
-									</h4>
-									<p className="text-[11.5px] text-[#4c5c50] leading-relaxed">
-										{result.message}
-									</p>
+							<div className="bg-[#edf5ee] border border-[#cbe0ce] rounded-xl p-4 text-center space-y-2">
+								<div className="w-9 h-9 rounded-full bg-[#dbece0] text-[#3e724d] flex items-center justify-center mx-auto">
+									<CheckCircle2 className="w-5 h-5" />
 								</div>
-							) : (
-								<div className="bg-[#f7faf8] border border-[#dce6de] rounded-xl p-4 space-y-3">
-									<div className="flex items-start gap-2.5">
-										<Building2 className="w-4 h-4 text-[#4f6958] shrink-0 mt-0.5" />
-										<div>
-											<h4 className="text-xs font-bold text-[#253129]">
-												Otorisasi Pemilik Kos
-											</h4>
-											<p className="text-[11px] text-[#556358] leading-relaxed mt-1">
-												{result.message}
-											</p>
-										</div>
-									</div>
+								<h4 className="text-xs font-bold text-[#253129]">
+									Email Verifikasi Terkirim
+								</h4>
+								<p className="text-[11.5px] text-[#4c5c50] leading-relaxed">
+									{result.message}
+								</p>
+							</div>
 
-									<a
-										href={`https://wa.me/6281234567890?text=${encodeURIComponent(
-											`Halo Pemilik Kos, saya Admin Cabang (${result.name}) dengan email ${result.email} memohon bantuan untuk memperbarui kata sandi akun HomeeKost saya.`,
-										)}`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="w-full h-10 rounded-[10px] bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors"
-									>
-										<MessageSquare className="w-4 h-4" />
-										<span>Hubungi Pemilik via WhatsApp</span>
-									</a>
-								</div>
+							{result.role === "ADMIN" && (
+								<p className="text-[11px] text-[#718275] text-center px-2">
+									💡 <em>Catatan:</em> Pemilik Kos (SuperAdmin) juga dapat
+									membantu memperbarui kata sandi akun Anda secara langsung
+									melalui menu Pengaturan Pengguna di dashboard.
+								</p>
 							)}
 
 							<div className="pt-2 flex flex-col gap-2">

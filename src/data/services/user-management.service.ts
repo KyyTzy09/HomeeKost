@@ -524,58 +524,63 @@ export class UserManagementService {
 		}
 
 		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
-		if (roleName === "SUPER_ADMIN") {
-			const token = `${crypto.randomUUID()}-${crypto.randomBytes(16).toString("hex")}`;
-			const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
+		const roleLabel =
+			roleName === "SUPER_ADMIN"
+				? "SuperAdmin (Pemilik Kos)"
+				: "Admin Cabang Kos";
 
-			// Hapus token lama jika ada
-			await this.db.verification.deleteMany({
-				where: { identifier: user.email },
-			});
+		const token = `${crypto.randomUUID()}-${crypto.randomBytes(16).toString("hex")}`;
+		const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
 
-			await this.db.verification.create({
-				data: {
-					identifier: user.email,
-					value: token,
-					expiresAt,
-				},
-			});
+		// Hapus token lama jika ada
+		await this.db.verification.deleteMany({
+			where: { identifier: user.email },
+		});
 
-			const baseUrl = process.env.APP_URL || "http://localhost:3000";
-			const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
-
-			await emailService.sendPasswordResetEmail({
-				to: user.email,
-				name: user.name,
-				resetUrl,
-				expiresInMinutes: 60,
-			});
-
-			return {
-				success: true,
-				role: "SUPER_ADMIN",
-				email: user.email,
-				name: user.name,
-				message:
-					"Tautan pemulihan kata sandi telah dikirimkan ke alamat email SuperAdmin Anda. Silakan periksa kotak masuk atau spam email Anda.",
-			};
-		}
-
-		// Admin Cabang
-		const owner = await this.db.user.findFirst({
-			where: {
-				role: { name: "SUPER_ADMIN" },
+		await this.db.verification.create({
+			data: {
+				identifier: user.email,
+				value: token,
+				expiresAt,
 			},
-			select: { name: true },
+		});
+
+		const baseUrl = process.env.APP_URL || "http://localhost:3000";
+		const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}`;
+
+		const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+		const requestedAt = `${nowWib.getUTCDate()} ${
+			[
+				"Januari",
+				"Februari",
+				"Maret",
+				"April",
+				"Mei",
+				"Juni",
+				"Juli",
+				"Agustus",
+				"September",
+				"Oktober",
+				"November",
+				"Desember",
+			][nowWib.getUTCMonth()]
+		} ${nowWib.getUTCFullYear()}, ${String(nowWib.getUTCHours()).padStart(2, "0")}:${String(nowWib.getUTCMinutes()).padStart(2, "0")} WIB`;
+
+		await emailService.sendPasswordResetEmail({
+			to: user.email,
+			name: user.name,
+			resetUrl,
+			roleName: roleLabel,
+			expiresInMinutes: 60,
+			requestedAt,
 		});
 
 		return {
 			success: true,
-			role: "ADMIN",
+			role: roleName,
 			email: user.email,
 			name: user.name,
-			ownerPhone: "081234567890",
-			message: `Akun Admin Cabang dikelola langsung oleh Pemilik Kos (${owner?.name || "SuperAdmin"}). Silakan hubungi Pemilik Kos untuk mendapatkan pembaruan kata sandi akun Anda.`,
+			message: `Tautan verifikasi pemulihan kata sandi telah dikirimkan ke alamat email ${roleLabel} Anda (${user.email}). Silakan periksa kotak masuk atau folder spam email Anda.`,
 		};
 	}
 
@@ -625,10 +630,12 @@ export class UserManagementService {
 			where: { id: verification.id },
 		});
 
+		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
+		const roleLabel = roleName === "SUPER_ADMIN" ? "SuperAdmin" : "Admin";
+
 		return {
 			success: true,
-			message:
-				"Kata sandi akun SuperAdmin berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.",
+			message: `Kata sandi akun ${roleLabel} berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.`,
 		};
 	}
 }
