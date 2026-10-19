@@ -129,13 +129,44 @@ Saat template dikirimkan ke masing-masing penerima (baik 1-per-1 maupun batch), 
 
 ---
 
-## 7. Rencana Verifikasi & Testing
+## 7. Penyempurnaan Tambahan UI & RBAC (Cross-Page Design Feedback)
+
+### A. `/dashboard/tenants` (Update & Pindah Kamar Tenant)
+- **Masalah**: Checkbox "Otomatis buat tagihan selisih bulan ini" dan "Sesuaikan tagihan bulan ini" membingungkan bagi orang awam karena proses ini secara alami harus berjalan otomatis.
+- **Solusi**:
+  - Hapus elemen checkbox input dari form.
+  - Nilai `createDifferenceInvoice` (pada mode TRANSFER) dan `updateCurrentInvoice` (pada mode CORRECTION) selalu diset `true` secara otomatis di latar belakang.
+  - Tampilkan **Info Banner / Callout** informatif dengan ikon `Info` dan bahasa yang ramah orang awam:
+    - Mode TRANSFER (Ada selisih harga naik):
+      *"Informasi Selisih Biaya Kamar: Tagihan selisih kamar sebesar +Rp X akan otomatis dibuat untuk bulan ini. Tagihan bulan depan otomatis mengikuti tarif kamar baru (Rp Y)."*
+    - Mode TRANSFER (Tarif sama atau lebih terjangkau):
+      *"Tidak ada tagihan selisih biaya karena tarif kamar baru sama atau lebih terjangkau. Tarif baru otomatis berlaku mulai periode sewa berikutnya."*
+    - Mode CORRECTION:
+      *"Tagihan bulan ini akan otomatis disesuaikan mengikuti harga kamar yang benar (Rp X ➔ Rp Y)."*
+
+### B. `/dashboard/engagement` (Persistensi Template Pesan)
+- **Masalah**: Form buat template pesan hanya tersimpan di React `useState` lokal, sehingga hilang saat reload. Selain itu belum ada pilihan kategori saat membuat template.
+- **Solusi**:
+  - Simpan template kustom ke `localStorage` (`homeekost_engagement_templates`) digabung dengan `DEFAULT_TEMPLATES`.
+  - Tambahkan dropdown pilihan Kategori (`Sambutan`, `Pembayaran`, `Ulang Tahun`, `Kerja Bakti`, `Umum`) pada `EngagementTemplateDialog` agar template kustom langsung memicu filter penerima yang tepat di kolom kiri.
+
+### C. `/dashboard/engagement` (Pembersihan Emoji Selector & Label Cabang)
+- **Masalah**: Dropdown di `EngagementEventDialog` masih menggunakan emoji (`📢`, `🏠`, `🧹`, `🔧`, `🎉`) dan label `"📢 Semua Cabang Kos (Global)"`.
+- **Solusi**:
+  - Hapus semua emoji dari string label.
+  - Gunakan Lucide icons (`Building2`, `Megaphone`, `Sparkles`, `Wrench`, `PartyPopper`) yang konsisten dengan Sage Design System.
+  - Ganti teks label menjadi **`Semua Cabang`**.
+
+### D. `/dashboard/engagement` (Batasan RBAC Khusus Owner / SuperAdmin)
+- **Aturan**: Tombol "Buat Broadcast" dan dialog `EngagementEventDialog` hanya dimunculkan dan dapat diakses oleh **`SUPER_ADMIN`** (Owner).
+- Branch Manager (`ADMIN`) fokus pada pengelolaan operasional harian dan engagement penyewa di cabangnya masing-masing.
+
+---
+
+## 8. Rencana Verifikasi & Testing
 
 1. **Unit Testing**:
-   - Uji fungsi filter murni berdasarkan kriteria:
-     - Filter anak baru (30 hari terakhir).
-     - Filter ulang tahun (rentang 0–5 hari).
-     - Filter pembayaran tepat waktu (14 hari terakhir).
+   - Uji fungsi filter murni berdasarkan kriteria (anak baru 30 hari, ultah H-5, bayar tepat waktu).
    - Uji helper penggantian variabel personalisasi `{nama}`, `{kamar}`, `{kos}`.
 2. **TypeScript Strict Type Check**:
    - `npx tsc --noEmit` lolos 0 error.
@@ -143,3 +174,4 @@ Saat template dikirimkan ke masing-masing penerima (baik 1-per-1 maupun batch), 
    - Format dan linting bersih.
 4. **Fullstack Build Verification**:
    - `npm run build` sukses tanpa kendala SSR/Vite.
+
