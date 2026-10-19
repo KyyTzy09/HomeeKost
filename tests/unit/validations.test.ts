@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
 	automationSettingsSchema,
+	broadcastToSelectedRecipientsSchema,
 	confirmPaymentSchema,
 	roomSchema,
+	sendSingleTemplateMessageSchema,
 	tenantSchema,
 	transactionFormSchema,
 	updateTenantSchema,
@@ -279,4 +281,53 @@ describe("Zod Validation Schemas", () => {
 			);
 		});
 	});
+
+	describe("sendSingleTemplateMessageSchema", () => {
+		it("harus meloloskan input template personal yang valid", () => {
+			const valid = {
+				tenantId: "tenant_123",
+				templateContent: "Halo {nama}, selamat datang di {kos}!",
+			};
+			const result = sendSingleTemplateMessageSchema.safeParse(valid);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak jika tenantId atau templateContent kosong", () => {
+			expect(
+				sendSingleTemplateMessageSchema.safeParse({
+					tenantId: "",
+					templateContent: "Halo",
+				}).success,
+			).toBe(false);
+
+			expect(
+				sendSingleTemplateMessageSchema.safeParse({
+					tenantId: "tenant_123",
+					templateContent: "",
+				}).success,
+			).toBe(false);
+		});
+	});
+
+	describe("broadcastToSelectedRecipientsSchema", () => {
+		it("harus meloloskan payload broadcast selektif yang valid", () => {
+			const valid = {
+				tenantIds: ["tenant_1", "tenant_2"],
+				templateContent: "Pemberitahuan untuk {nama} di kamar {kamar}",
+				title: "Info Kebersihan",
+			};
+			const result = broadcastToSelectedRecipientsSchema.safeParse(valid);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak jika daftar tenantIds kosong", () => {
+			const invalid = {
+				tenantIds: [],
+				templateContent: "Pemberitahuan",
+			};
+			const result = broadcastToSelectedRecipientsSchema.safeParse(invalid);
+			expect(result.success).toBe(false);
+		});
+	});
 });
+

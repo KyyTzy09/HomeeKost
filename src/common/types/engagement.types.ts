@@ -42,3 +42,27 @@ export interface AnnouncementItem {
 	sentAt?: string | null;
 	createdAt?: string;
 }
+
+export interface EngagementRecipient {
+	tenantId: string;
+	name: string;
+	phone: string;
+	roomNumber: string;
+	propertyId: string;
+	propertyName: string;
+	startDate: string; // ISO date string mulai sewa
+	birthDate?: string | null;
+	daysRemaining?: number | null;
+	relativeBirthdayLabel?: string | null;
+	lastPaymentDate?: string | null;
+	isOnTimePayment?: boolean;
+	isSentToday?: boolean;
+}
+
+export interface EngagementDashboardData {
+	recipients: EngagementRecipient[];
+	upcomingBirthdays: UpcomingBirthdayItem[];
+	recentAnnouncements: AnnouncementItem[];
+	recentLogs: unknown[];
+	totalUpcomingBirthdays: number;
+}

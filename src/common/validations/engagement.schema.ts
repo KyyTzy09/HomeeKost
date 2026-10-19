@@ -57,3 +57,22 @@ export const engagementTemplateSchema = z.object({
 export type EngagementTemplateFormValues = z.infer<
 	typeof engagementTemplateSchema
 >;
+
+export const sendSingleTemplateMessageSchema = z.object({
+	tenantId: z.string().min(1, "ID Penyewa wajib diisi"),
+	templateContent: z.string().min(1, "Konten pesan wajib diisi"),
+});
+
+export type SendSingleTemplateMessageInput = z.infer<
+	typeof sendSingleTemplateMessageSchema
+>;
+
+export const broadcastToSelectedRecipientsSchema = z.object({
+	tenantIds: z.array(z.string().min(1)).min(1, "Pilih minimal 1 penerima"),
+	templateContent: z.string().min(1, "Konten pesan wajib diisi"),
+	title: z.string().optional(),
+});
+
+export type BroadcastToSelectedRecipientsInput = z.infer<
+	typeof broadcastToSelectedRecipientsSchema
+>;

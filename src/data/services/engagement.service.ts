@@ -1,5 +1,9 @@
 import type { SessionUser } from "../../common/types/index.ts";
-import type { BroadcastAnnouncementInput } from "../../common/validations/index.ts";
+import type {
+	BroadcastAnnouncementInput,
+	BroadcastToSelectedRecipientsInput,
+	SendSingleTemplateMessageInput,
+} from "../../common/validations/index.ts";
 import type {
 	AnnouncementCategory,
 	NotificationStatus,
@@ -52,14 +56,16 @@ export class EngagementService {
 		const propertyIds =
 			isAdmin && userPropertyId ? [userPropertyId] : undefined;
 
-		const [upcomingBirthdays, recentAnnouncements, recentLogs] =
+		const [recipients, upcomingBirthdays, recentAnnouncements, recentLogs] =
 			await Promise.all([
+				this.repo.getActiveTenantsWithEngagementMetadata(propertyIds),
 				this.repo.getUpcomingBirthdays(propertyIds, 30),
 				this.repo.getRecentAnnouncements(propertyIds, 10),
 				this.repo.getNotificationLogs(15),
 			]);
 
 		return {
+			recipients,
 			upcomingBirthdays,
 			recentAnnouncements,
 			recentLogs,
@@ -241,6 +247,197 @@ export class EngagementService {
 	async deleteAnnouncement(id: string, _user?: SessionUser) {
 		await this.repo.deleteAnnouncement(id);
 		return { success: true, id };
+	}
+
+	/**
+	 * Kirim Pesan Berdasarkan Template ke Satu Penyewa Spesifik
+	 */
+	async sendSingleTemplateMessage(
+		input: SendSingleTemplateMessageInput,
+		user?: SessionUser,
+	) {
+		const tenant = await this.tenantRepo.findById(input.tenantId);
+		if (!tenant) {
+			throw new Error("Data penyewa tidak ditemukan.");
+		}
+
+		// Cari kontrak aktif dan relasi kamar & kos
+		const activeContract = tenant.rentalContracts?.find(
+			(c) => c.status === "ACTIVE",
+		);
+		if (!activeContract) {
+			throw new Error("Penyewa tidak memiliki kontrak sewa aktif.");
+		}
+
+		const propertyName = activeContract.room?.property?.name || "HomeeKost";
+		const propertyId = activeContract.room?.property?.id;
+		const roomNumber = activeContract.room?.roomNumber || "-";
+
+		// Validasi RBAC untuk Admin
+		if (
+			user?.role?.name === "ADMIN" &&
+			user?.assignedPropertyId &&
+			propertyId &&
+			propertyId !== user.assignedPropertyId
+		) {
+			throw new Error(
+				"Anda hanya dapat mengirimkan pesan ke penyewa di cabang kos Anda.",
+			);
+		}
+
+		const phone = tenant.whatsappNumber || tenant.phoneNumber;
+		if (!phone) {
+			throw new Error("Nomor WhatsApp penyewa tidak tersedia.");
+		}
+
+		const sanitizedPhone = sanitizePhoneNumber(phone);
+		if (!sanitizedPhone) {
+			throw new Error("Nomor WhatsApp penyewa tidak valid.");
+		}
+
+		// Personalisasi placeholder {nama}, {kamar}, {kos}
+		const message = input.templateContent
+			.replace(/{nama}/gi, tenant.name)
+			.replace(/{kamar}/gi, roomNumber)
+			.replace(/{kos}/gi, propertyName)
+			.replace(/{kost}/gi, propertyName);
+
+		const apiRes = await this.fonnte.sendText({
+			target: sanitizedPhone,
+			message,
+		});
+
+		const status: NotificationStatus = apiRes.status ? "SENT" : "FAILED";
+		const log = await this.repo.recordNotificationLog(
+			sanitizedPhone,
+			"ANNOUNCEMENT",
+			status,
+			`Pesan Template ke ${tenant.name} (${propertyName}) — ${apiRes.detail || (apiRes.status ? "Success" : "Failed")}`,
+		);
+
+		return {
+			success: apiRes.status,
+			message,
+			detail: apiRes.detail,
+			logId: log.id,
+		};
+	}
+
+	/**
+	 * Broadcast Pesan / Pengumuman Terseleksi ke Daftar Tenant Tertentu (Multi-Select)
+	 */
+	async broadcastToSelectedRecipients(
+		input: BroadcastToSelectedRecipientsInput,
+		user?: SessionUser,
+	) {
+		if (!input.tenantIds || input.tenantIds.length === 0) {
+			throw new Error("Pilih minimal 1 penyewa tujuan broadcast.");
+		}
+
+		const isAdmin = user?.role?.name === "ADMIN";
+		const userPropertyId = user?.assignedPropertyId;
+		const propertyIds =
+			isAdmin && userPropertyId ? [userPropertyId] : undefined;
+
+		// Ambil seluruh penyewa aktif dengan metadata untuk properti yang diizinkan
+		const allRecipients =
+			await this.repo.getActiveTenantsWithEngagementMetadata(propertyIds);
+
+		const selectedSet = new Set(input.tenantIds);
+		const targetRecipients = allRecipients.filter((r) =>
+			selectedSet.has(r.tenantId),
+		);
+
+		if (targetRecipients.length === 0) {
+			throw new Error(
+				"Tidak ada penyewa aktif yang cocok dengan pilihan tujuan broadcast.",
+			);
+		}
+
+		// Jika input.title disertakan, simpan juga sebagai catatan pengumuman
+		if (input.title) {
+			const targetPropertyId = isAdmin ? userPropertyId : null;
+			await this.repo.createAnnouncement({
+				propertyId: targetPropertyId,
+				title: input.title,
+				content: input.templateContent,
+				category: "UMUM",
+				isBroadcast: true,
+				sentAt: new Date(),
+			});
+		}
+
+		let sentCount = 0;
+		let failedCount = input.tenantIds.length - targetRecipients.length;
+
+		const notificationLogs: Array<{
+			recipientNumber: string;
+			messageType: NotificationType;
+			status: NotificationStatus;
+			notes?: string | null;
+		}> = [];
+
+		for (const r of targetRecipients) {
+			const sanitizedPhone = sanitizePhoneNumber(r.phone);
+			if (!sanitizedPhone) {
+				failedCount++;
+				continue;
+			}
+
+			const message = input.templateContent
+				.replace(/{nama}/gi, r.name)
+				.replace(/{kamar}/gi, r.roomNumber)
+				.replace(/{kos}/gi, r.propertyName)
+				.replace(/{kost}/gi, r.propertyName);
+
+			try {
+				const res = await this.fonnte.sendText({
+					target: sanitizedPhone,
+					message,
+				});
+
+				const status: NotificationStatus = res.status ? "SENT" : "FAILED";
+				notificationLogs.push({
+					recipientNumber: sanitizedPhone,
+					messageType: "ANNOUNCEMENT",
+					status,
+					notes: `Broadcast Selektif: ${input.title || "Pesan"} (Kamar ${r.roomNumber} - ${r.name})`,
+				});
+
+				if (res.status) {
+					sentCount++;
+				} else {
+					failedCount++;
+				}
+			} catch (err) {
+				console.error(
+					`[EngagementService] Gagal broadcast selektif ke ${sanitizedPhone}:`,
+					err,
+				);
+				notificationLogs.push({
+					recipientNumber: sanitizedPhone,
+					messageType: "ANNOUNCEMENT",
+					status: "FAILED",
+					notes: `Error Broadcast Selektif: ${input.title || "Pesan"} (Kamar ${r.roomNumber} - ${r.name})`,
+				});
+				failedCount++;
+			}
+
+			// Pacing jeda anti-ban Meta (~800ms - 1200ms) antar nomor WhatsApp
+			await sleepWithJitter(800, 400);
+		}
+
+		// Batch Insert semua log notifikasi broadcast sekaligus (Zero N+1 Query)
+		if (notificationLogs.length > 0) {
+			await this.repo.recordNotificationLogsBatch(notificationLogs);
+		}
+
+		return {
+			success: true,
+			sentCount,
+			failedCount,
+			totalRecipients: input.tenantIds.length,
+		};
 	}
 
 	/**

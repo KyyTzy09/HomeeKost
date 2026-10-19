@@ -2,9 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
 	type BroadcastAnnouncementInput,
+	type BroadcastToSelectedRecipientsInput,
 	broadcastAnnouncementSchema,
+	broadcastToSelectedRecipientsSchema,
 	type SendBirthdayWishInput,
+	type SendSingleTemplateMessageInput,
 	sendBirthdayWishSchema,
+	sendSingleTemplateMessageSchema,
 } from "../../common/validations/index.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { engagementService } from "../services/engagement.service.ts";
@@ -80,6 +84,51 @@ export const deleteAnnouncementServerFn = createServerFn({
 			},
 		);
 	});
+
+export const sendSingleTemplateMessageServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: SendSingleTemplateMessageInput) => {
+		return sendSingleTemplateMessageSchema.parse(input);
+	})
+	.handler(async ({ data }) => {
+		return executeWithLogging(
+			"sendSingleTemplateMessageServerFn",
+			data,
+			(session) =>
+				engagementService.sendSingleTemplateMessage(data, session.user),
+			{
+				method: "POST",
+				summary: (res) =>
+					`Kirim Pesan Template ke #${data.tenantId}: ${res.success ? "Berhasil" : "Gagal"}`,
+			},
+		);
+	});
+
+export const sendSingleTemplateMessageFn = sendSingleTemplateMessageServerFn;
+
+export const broadcastToSelectedRecipientsServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: BroadcastToSelectedRecipientsInput) => {
+		return broadcastToSelectedRecipientsSchema.parse(input);
+	})
+	.handler(async ({ data }) => {
+		return executeWithLogging(
+			"broadcastToSelectedRecipientsServerFn",
+			data,
+			(session) =>
+				engagementService.broadcastToSelectedRecipients(data, session.user),
+			{
+				method: "POST",
+				summary: (res) =>
+					`Broadcast Selektif: ${res.sentCount} terkirim, ${res.failedCount} gagal dari ${res.totalRecipients}`,
+			},
+		);
+	});
+
+export const broadcastToSelectedRecipientsFn =
+	broadcastToSelectedRecipientsServerFn;
 
 export const runDailyCronTasksServerFn = createServerFn({
 	method: "POST",
