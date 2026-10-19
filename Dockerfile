@@ -13,6 +13,7 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
+ENV DATABASE_URL=postgresql://postgres:secret@localhost:5432/homeekost?schema=public
 RUN bunx prisma generate
 RUN bun run build
 
