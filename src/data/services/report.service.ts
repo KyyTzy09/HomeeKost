@@ -10,6 +10,7 @@ import type {
 	SessionUser,
 } from "../../common/types/index.ts";
 import { generateAnnualFinancialCsv } from "../../lib/csv-exporter.ts";
+import { getTodayDateString } from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
 import { whatsappTemplates } from "../../lib/whatsapp-templates.ts";
 import {
@@ -361,13 +362,29 @@ export class ReportService {
 			targetYear,
 		);
 
-		// 4. Susun Payload Context untuk AI LLM
+		// 4. Susun Payload Context untuk AI LLM dengan Time Context Real-Time
+		const lastDayOfMonth = new Date(targetYear, targetMonth, 0).getDate();
+		const currentDayOfMonth = isClosedPeriod ? lastDayOfMonth : now.getDate();
+		const monthProgress = Math.min(
+			100,
+			Math.max(1, Math.round((currentDayOfMonth / lastDayOfMonth) * 100)),
+		);
+		const asOfDate = now.toLocaleDateString("id-ID", {
+			day: "numeric",
+			month: "long",
+			year: "numeric",
+		});
+
 		const aiPayload = {
 			period: {
 				month: targetMonth,
 				monthName,
 				year: targetYear,
 				isClosedPeriod,
+				asOfDate,
+				dayOfMonth: currentDayOfMonth,
+				totalDaysInMonth: lastDayOfMonth,
+				monthProgressPercentage: monthProgress,
 			},
 			property: {
 				id: effectivePropertyId,
@@ -504,11 +521,14 @@ export class ReportService {
 		propertyId?: string;
 		targetPhone?: string;
 		sendWhatsApp?: boolean;
+		month?: number;
+		year?: number;
+		idempotencyKey?: string;
 	}) {
 		const now = new Date();
-		// Default: Laporan untuk bulan sebelumnya (Tutup Buku) atau bulan berjalan
-		let month = now.getMonth(); // bulan lalu
-		let year = now.getFullYear();
+		// Default: Laporan untuk bulan sebelumnya (Tutup Buku) atau bulan berjalan jika dispesifikasi
+		let month = options?.month ?? now.getMonth();
+		let year = options?.year ?? now.getFullYear();
 		if (month === 0) {
 			month = 12;
 			year -= 1;
@@ -523,6 +543,34 @@ export class ReportService {
 			? properties.filter((p) => p.id === options.propertyId)
 			: properties;
 
+		const todayStr = getTodayDateString();
+		const startOfDay = new Date(now);
+		startOfDay.setHours(0, 0, 0, 0);
+		const endOfDay = new Date(now);
+		endOfDay.setHours(23, 59, 59, 999);
+
+		const sentReportTokensToday = new Set<string>();
+		try {
+			const todaySentLogs =
+				await this.engagementRepo.getTodaySentNotificationLogs(
+					startOfDay,
+					endOfDay,
+				);
+			for (const log of todaySentLogs) {
+				if (log.notes) {
+					const match = log.notes.match(/\[(TOKEN:REPORT:[^\]]+)\]/);
+					if (match) {
+						sentReportTokensToday.add(match[1]);
+					}
+				}
+			}
+		} catch (err) {
+			console.error(
+				"[Cron Report] Gagal membaca log idempotensi hari ini:",
+				err,
+			);
+		}
+
 		const results = [];
 		const notificationLogs: Array<{
 			recipientNumber: string;
@@ -530,6 +578,8 @@ export class ReportService {
 			status: "SENT" | "FAILED";
 			notes?: string | null;
 		}> = [];
+
+		let skippedCount = 0;
 
 		for (const prop of targetProperties) {
 			try {
@@ -542,6 +592,19 @@ export class ReportService {
 
 				// Kirim pengingat WhatsApp jika diaktifkan (Hanya Teks - Hemat Biaya Fonnte)
 				if (options?.sendWhatsApp && options?.targetPhone) {
+					const reportToken =
+						options.idempotencyKey ||
+						`TOKEN:REPORT:${prop.id}:${year}-${month}:${todayStr}`;
+
+					// Anti-Spam Idempotency Check: cegah spam berulang jika cron ditembak berkali-kali hari ini
+					if (sentReportTokensToday.has(reportToken)) {
+						console.log(
+							`[Cron Report] Lewati kirim WhatsApp untuk ${prop.name} karena sudah terkirim hari ini (${reportToken})`,
+						);
+						skippedCount++;
+						continue;
+					}
+
 					const message = whatsappTemplates.executiveReportReminder({
 						propertyName: report.propertyName,
 						periodMonth: report.periodMonth,
@@ -559,12 +622,19 @@ export class ReportService {
 						message,
 					});
 
+					const status = sendRes.status ? "SENT" : "FAILED";
+					const noteLabel = `[${reportToken}] Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${sendRes.detail || (sendRes.status ? "Success" : "Failed")}`;
+
 					notificationLogs.push({
 						recipientNumber: options.targetPhone,
 						messageType: "ANNOUNCEMENT",
-						status: sendRes.status ? "SENT" : "FAILED",
-						notes: `Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${sendRes.detail || "Success"}`,
+						status,
+						notes: noteLabel,
 					});
+
+					if (sendRes.status) {
+						sentReportTokensToday.add(reportToken);
+					}
 				}
 			} catch (err) {
 				console.error(
@@ -581,6 +651,7 @@ export class ReportService {
 		return {
 			success: true,
 			processedCount: results.length,
+			skippedCount,
 			period: { month, year },
 		};
 	}

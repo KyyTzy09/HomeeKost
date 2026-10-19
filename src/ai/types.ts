@@ -44,6 +44,10 @@ export interface FinancialContextPayload {
 		monthName: string;
 		year: number;
 		isClosedPeriod: boolean;
+		asOfDate?: string;
+		dayOfMonth?: number;
+		totalDaysInMonth?: number;
+		monthProgressPercentage?: number;
 	};
 	property: {
 		id?: string;

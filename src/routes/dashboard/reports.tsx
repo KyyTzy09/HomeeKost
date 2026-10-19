@@ -34,7 +34,6 @@ import {
 	propertiesQueryOptions,
 	useAnnualReportMatrix,
 	useDashboardContext,
-	useExportAnnualReportCsv,
 	useMonthlyReport,
 	useProperties,
 	useRegenerateAiInsight,
@@ -178,7 +177,6 @@ function ReportsPage() {
 
 	// 3. Mutations
 	const regenerateAiMutation = useRegenerateAiInsight();
-	const exportCsvMutation = useExportAnnualReportCsv();
 
 	const handleRegenerateAi = async () => {
 		if (monthlyReport && monthlyReport.canRefreshToday === false) {
@@ -205,7 +203,7 @@ function ReportsPage() {
 		}
 	};
 
-	// Export Excel & CSV State
+	// Export Excel State
 	const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
 
 	const handleExportAnnualExcel = async () => {
@@ -227,38 +225,6 @@ function ReportsPage() {
 			);
 		} finally {
 			setIsExportingExcel(false);
-		}
-	};
-
-	const handleExportAnnualCsv = async () => {
-		try {
-			const result = await exportCsvMutation.mutateAsync({
-				year: selectedYear.value,
-				propertyId: effectivePropertyId,
-			});
-
-			if (result?.csvContent) {
-				const blob = new Blob([result.csvContent], {
-					type: "text/csv;charset=utf-8;",
-				});
-				const url = URL.createObjectURL(blob);
-				const link = document.createElement("a");
-				link.setAttribute("href", url);
-				link.setAttribute("download", result.filename);
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				URL.revokeObjectURL(url);
-
-				showToast(
-					`File CSV ${result.filename} berhasil diunduh dan siap dibuka di Excel!`,
-				);
-			}
-		} catch (err) {
-			showToast(
-				err instanceof Error ? err.message : "Gagal mengekspor laporan CSV.",
-				"error",
-			);
 		}
 	};
 
@@ -298,15 +264,6 @@ function ReportsPage() {
 			{/* Page Header */}
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 print:hidden">
 				<div>
-					<div className="flex items-center gap-2 mb-1">
-						<span className="text-[11px] font-semibold text-[#4f6958] bg-[#eef3ee] px-2.5 py-0.5 rounded-md flex items-center gap-1.5 border border-[#d6dfd7]">
-							<Building2 className="w-3.5 h-3.5" />
-							{monthlyReport?.propertyName || selectedProperty.label}
-						</span>
-						<span className="text-[11px] text-[#737873]">
-							· Laporan Finansial
-						</span>
-					</div>
 					<h1 className="text-2xl font-bold text-[#252925] tracking-tight">
 						Laporan & AI Insight
 					</h1>
@@ -529,14 +486,12 @@ function ReportsPage() {
 							expenses={monthlyReport.expenseBreakdown}
 						/>
 
-						{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel/CSV */}
+						{/* Matriks Keuangan Tahunan (12 Bulan) & Ekspor Excel */}
 						<ReportAnnualMatrixCard
 							data={annualMatrix}
 							isLoading={isAnnualLoading}
 							onExportExcel={handleExportAnnualExcel}
 							isExportingExcel={isExportingExcel}
-							onExportCsv={handleExportAnnualCsv}
-							isExporting={exportCsvMutation.isPending}
 						/>
 
 						{/* Automasi Laporan Bulanan Card */}
