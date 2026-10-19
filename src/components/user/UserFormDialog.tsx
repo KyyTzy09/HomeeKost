@@ -1,6 +1,13 @@
 import { useForm } from "@tanstack/react-form";
-import { ShieldCheck, UserCog, UserPlus } from "lucide-react";
-import { useEffect } from "react";
+import {
+	Eye,
+	EyeOff,
+	Lock,
+	ShieldCheck,
+	UserCog,
+	UserPlus,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Dialog,
@@ -68,6 +75,8 @@ export function UserFormDialog({
 		})),
 	];
 
+	const [showPassword, setShowPassword] = useState(false);
+
 	const form = useForm({
 		defaultValues: {
 			name: editingUser?.name || "",
@@ -75,21 +84,37 @@ export function UserFormDialog({
 			role: (editingUser?.role || "ADMIN") as AppUserRole,
 			assignedProperty: editingUser?.assignedProperty || "Semua Kost",
 			status: (editingUser?.status || "ACTIVE") as AppUserStatus,
+			password: "",
 		},
 		validators: {
 			onSubmit: ({ value }) => {
+				const fieldErrors: Record<string, string> = {};
+
+				// Akun baru wajib memiliki password minimal 8 karakter
+				if (
+					!editingUser &&
+					(!value.password || value.password.trim().length < 8)
+				) {
+					fieldErrors.password =
+						"Password wajib diisi minimal 8 karakter untuk akun baru";
+				} else if (
+					value.password &&
+					value.password.trim().length > 0 &&
+					value.password.trim().length < 8
+				) {
+					fieldErrors.password = "Password minimal 8 karakter";
+				}
+
 				const res = userFormSchema.safeParse(value);
 				if (!res.success) {
-					const fieldErrors: Record<string, string> = {};
 					for (const issue of res.error.issues) {
 						const field = issue.path[0];
 						if (field && !fieldErrors[String(field)]) {
 							fieldErrors[String(field)] = issue.message;
 						}
 					}
-					return fieldErrors;
 				}
-				return undefined;
+				return Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined;
 			},
 		},
 		onSubmit: ({ value }) => {
@@ -100,12 +125,14 @@ export function UserFormDialog({
 
 	useEffect(() => {
 		if (open) {
+			setShowPassword(false);
 			if (editingUser) {
 				form.setFieldValue("name", editingUser.name);
 				form.setFieldValue("email", editingUser.email);
 				form.setFieldValue("role", editingUser.role);
 				form.setFieldValue("assignedProperty", editingUser.assignedProperty);
 				form.setFieldValue("status", editingUser.status);
+				form.setFieldValue("password", "");
 			} else {
 				form.reset();
 				form.setFieldValue("name", "");
@@ -116,6 +143,7 @@ export function UserFormDialog({
 					properties.length > 0 ? properties[0].name : "Semua Kost",
 				);
 				form.setFieldValue("status", "ACTIVE");
+				form.setFieldValue("password", "");
 			}
 		}
 	}, [open, editingUser, properties, form]);
@@ -208,6 +236,67 @@ export function UserFormDialog({
 									placeholder="budi@homeekost.id"
 									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]"
 								/>
+								{field.state.meta.errors.length > 0 && (
+									<p className="text-[11px] text-[#b66b68]">
+										{field.state.meta.errors[0]}
+									</p>
+								)}
+							</div>
+						)}
+					</form.Field>
+
+					{/* Password Akun */}
+					<form.Field name="password">
+						{(field) => (
+							<div className="space-y-1.5">
+								<div className="flex items-center justify-between">
+									<Label
+										htmlFor={field.name}
+										className="text-xs font-semibold text-[#252925] flex items-center gap-1.5"
+									>
+										<Lock className="w-3.5 h-3.5 text-[#526e5b]" />
+										{editingUser
+											? "Ganti Password (Opsional)"
+											: "Password Akun"}
+										{!editingUser && <span className="text-[#b66b68]">*</span>}
+									</Label>
+									<span className="text-[10.5px] text-[#737873]">
+										{editingUser
+											? "Kosongkan jika tidak diubah"
+											: "Minimal 8 karakter"}
+									</span>
+								</div>
+								<div className="relative">
+									<Input
+										id={field.name}
+										name={field.name}
+										type={showPassword ? "text" : "password"}
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										placeholder={
+											editingUser
+												? "Masukkan password baru jika ingin mereset..."
+												: "Masukkan password untuk login (min. 8 karakter)..."
+										}
+										className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594] pr-10"
+									/>
+									<button
+										type="button"
+										onClick={() => setShowPassword(!showPassword)}
+										className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737873] hover:text-[#252925] transition-colors p-0.5"
+										tabIndex={-1}
+										aria-label={
+											showPassword ? "Sembunyikan password" : "Lihat password"
+										}
+									>
+										{showPassword ? (
+											<EyeOff className="w-4 h-4" />
+										) : (
+											<Eye className="w-4 h-4" />
+										)}
+									</button>
+								</div>
 								{field.state.meta.errors.length > 0 && (
 									<p className="text-[11px] text-[#b66b68]">
 										{field.state.meta.errors[0]}

@@ -8,6 +8,7 @@ import {
 	tenantSchema,
 	transactionFormSchema,
 	updateTenantSchema,
+	userFormSchema,
 } from "../../src/common/validations/index.ts";
 
 describe("Zod Validation Schemas", () => {
@@ -329,5 +330,99 @@ describe("Zod Validation Schemas", () => {
 			expect(result.success).toBe(false);
 		});
 	});
+
+	describe("userFormSchema", () => {
+		it("harus meloloskan pembuatan akun pengguna dengan password valid", () => {
+			const validUser = {
+				name: "Staf Operasional Kos",
+				email: "staf.melati@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "HomeeKost Cabang Melati",
+				status: "ACTIVE" as const,
+				password: "password123",
+			};
+			const result = userFormSchema.safeParse(validUser);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.password).toBe("password123");
+			}
+		});
+
+		it("harus meloloskan edit akun pengguna dengan password kosong", () => {
+			const editUser = {
+				name: "Staf Operasional Kos",
+				email: "staf.melati@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "HomeeKost Cabang Melati",
+				status: "ACTIVE" as const,
+				password: "",
+			};
+			const result = userFormSchema.safeParse(editUser);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.password).toBe("");
+			}
+		});
+
+		it("harus meloloskan jika field password tidak disertakan (default ke string kosong)", () => {
+			const userWithoutPassword = {
+				name: "SuperAdmin Baru",
+				email: "owner2@homeekost.com",
+				role: "SUPER_ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+			};
+			const result = userFormSchema.safeParse(userWithoutPassword);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.password).toBe("");
+			}
+		});
+
+		it("harus menolak jika password kurang dari 8 karakter", () => {
+			const invalidPasswordUser = {
+				name: "Staf Melati",
+				email: "staf@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+				password: "12345",
+			};
+			const result = userFormSchema.safeParse(invalidPasswordUser);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0].message).toBe(
+					"Password minimal 8 karakter",
+				);
+			}
+		});
+
+		it("harus menolak jika format email tidak valid", () => {
+			const invalidEmailUser = {
+				name: "Staf Melati",
+				email: "bukan-email-valid",
+				role: "ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+				password: "password123",
+			};
+			const result = userFormSchema.safeParse(invalidEmailUser);
+			expect(result.success).toBe(false);
+		});
+
+		it("harus menolak jika nama pengguna kosong", () => {
+			const emptyNameUser = {
+				name: "",
+				email: "staf@homeekost.com",
+				role: "ADMIN" as const,
+				assignedProperty: "Semua Kost",
+				status: "ACTIVE" as const,
+				password: "password123",
+			};
+			const result = userFormSchema.safeParse(emptyNameUser);
+			expect(result.success).toBe(false);
+		});
+	});
 });
+
 

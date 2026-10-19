@@ -81,18 +81,36 @@ export class UserRepository {
 		email: string;
 		roleId: string;
 		assignedPropertyId?: string | null;
+		passwordHash?: string | null;
 	}) {
-		return this.db.user.create({
-			data: {
-				name: data.name,
-				email: data.email,
-				roleId: data.roleId,
-				assignedPropertyId: data.assignedPropertyId ?? null,
-			},
-			include: {
-				role: true,
-				assignedProperty: true,
-			},
+		return this.db.$transaction(async (tx) => {
+			const user = await tx.user.create({
+				data: {
+					name: data.name,
+					email: data.email,
+					roleId: data.roleId,
+					assignedPropertyId: data.assignedPropertyId ?? null,
+					passwordHash: data.passwordHash ?? null,
+				},
+				include: {
+					role: true,
+					assignedProperty: true,
+				},
+			});
+
+			if (data.passwordHash) {
+				await tx.account.create({
+					data: {
+						id: `acc_${user.id}`,
+						userId: user.id,
+						accountId: user.email,
+						providerId: "credential",
+						password: data.passwordHash,
+					},
+				});
+			}
+
+			return user;
 		});
 	}
 
@@ -103,22 +121,60 @@ export class UserRepository {
 			email?: string;
 			roleId?: string;
 			assignedPropertyId?: string | null;
+			passwordHash?: string | null;
 		},
 	) {
-		return this.db.user.update({
-			where: { id },
-			data: {
-				...(data.name !== undefined && { name: data.name }),
-				...(data.email !== undefined && { email: data.email }),
-				...(data.roleId !== undefined && { roleId: data.roleId }),
-				...(data.assignedPropertyId !== undefined && {
-					assignedPropertyId: data.assignedPropertyId,
-				}),
-			},
-			include: {
-				role: true,
-				assignedProperty: true,
-			},
+		return this.db.$transaction(async (tx) => {
+			const updated = await tx.user.update({
+				where: { id },
+				data: {
+					...(data.name !== undefined && { name: data.name }),
+					...(data.email !== undefined && { email: data.email }),
+					...(data.roleId !== undefined && { roleId: data.roleId }),
+					...(data.assignedPropertyId !== undefined && {
+						assignedPropertyId: data.assignedPropertyId,
+					}),
+					...(data.passwordHash !== undefined && {
+						passwordHash: data.passwordHash,
+					}),
+				},
+				include: {
+					role: true,
+					assignedProperty: true,
+				},
+			});
+
+			if (data.email) {
+				await tx.account.updateMany({
+					where: { userId: id, providerId: "credential" },
+					data: { accountId: data.email },
+				});
+			}
+
+			if (data.passwordHash) {
+				const existingAccount = await tx.account.findFirst({
+					where: { userId: id, providerId: "credential" },
+				});
+
+				if (existingAccount) {
+					await tx.account.update({
+						where: { id: existingAccount.id },
+						data: { password: data.passwordHash },
+					});
+				} else {
+					await tx.account.create({
+						data: {
+							id: `acc_${id}`,
+							userId: id,
+							accountId: updated.email,
+							providerId: "credential",
+							password: data.passwordHash,
+						},
+					});
+				}
+			}
+
+			return updated;
 		});
 	}
 
