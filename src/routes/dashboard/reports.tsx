@@ -107,8 +107,8 @@ const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
 	scheduleDay: 1,
 	scheduleTime: "08:00",
 	aiModel: "gemini-1.5-flash",
-	autoSendWhatsApp: true,
-	targetPhone: "081234567890",
+	autoSendWhatsApp: false,
+	targetPhone: "",
 };
 
 const loadStoredAutomationSettings = (): AutomationSettingsFormValues => {
@@ -117,9 +117,15 @@ const loadStoredAutomationSettings = (): AutomationSettingsFormValues => {
 		const stored = localStorage.getItem(AUTOMATION_STORAGE_KEY);
 		if (!stored) return DEFAULT_AUTOMATION_SETTINGS;
 		const parsed = JSON.parse(stored);
-		return parsed && typeof parsed === "object"
-			? { ...DEFAULT_AUTOMATION_SETTINGS, ...parsed }
-			: DEFAULT_AUTOMATION_SETTINGS;
+		if (parsed && typeof parsed === "object") {
+			// Bersihkan nomor dummy jika sebelumnya tersimpan
+			if (parsed.targetPhone === "081234567890") {
+				parsed.targetPhone = "";
+				parsed.autoSendWhatsApp = false;
+			}
+			return { ...DEFAULT_AUTOMATION_SETTINGS, ...parsed };
+		}
+		return DEFAULT_AUTOMATION_SETTINGS;
 	} catch {
 		return DEFAULT_AUTOMATION_SETTINGS;
 	}
@@ -260,12 +266,25 @@ function ReportsPage() {
 	// Cron Trigger Mutation
 	const triggerCronMutation = useTriggerMonthlyReportCron();
 
-	const handleTriggerCron = async () => {
+	const handleTriggerCron = async (
+		overrideSettings?: Partial<AutomationSettingsFormValues>,
+	) => {
+		const activeSettings = { ...automationSettings, ...overrideSettings };
+
+		if (activeSettings.autoSendWhatsApp && !activeSettings.targetPhone) {
+			showToast(
+				"Nomor WhatsApp penerima belum diisi. Silakan masukkan nomor WhatsApp pada pengaturan automasi.",
+				"error",
+			);
+			setIsSettingsOpen(true);
+			return;
+		}
+
 		try {
 			const res = await triggerCronMutation.mutateAsync({
 				propertyId: effectivePropertyId,
-				targetPhone: automationSettings.targetPhone,
-				sendWhatsApp: automationSettings.autoSendWhatsApp,
+				targetPhone: activeSettings.targetPhone || undefined,
+				sendWhatsApp: activeSettings.autoSendWhatsApp,
 				month: selectedMonth.value,
 				year: selectedYear.value,
 			});
@@ -275,8 +294,13 @@ function ReportsPage() {
 					? ` (${res.skippedCount} dilewati karena sudah terkirim hari ini)`
 					: "";
 
+			const waNote =
+				activeSettings.autoSendWhatsApp && activeSettings.targetPhone
+					? ` & terkirim ke WhatsApp (${activeSettings.targetPhone})`
+					: "";
+
 			showToast(
-				`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}${skippedNote}`,
+				`Cron Laporan Berhasil: ${res.processedCount} laporan bulanan diproses untuk periode ${selectedMonth.label} ${selectedYear.value}${skippedNote}${waNote}`,
 				"success",
 			);
 		} catch (err: unknown) {
@@ -472,7 +496,7 @@ function ReportsPage() {
 						type="button"
 						variant="outline"
 						className="border-[#e4e9e4] text-[#4f6958] hover:bg-[#f3f7f3] text-xs font-semibold px-3 h-9 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-						onClick={handleTriggerCron}
+						onClick={() => handleTriggerCron()}
 						disabled={triggerCronMutation.isPending}
 						title="Jalankan trigger cron laporan bulanan secara manual untuk pengujian dan otomasi"
 					>
@@ -574,7 +598,7 @@ function ReportsPage() {
 							scheduleDay={automationSettings.scheduleDay}
 							scheduleTime={automationSettings.scheduleTime}
 							onOpenSettings={() => setIsSettingsOpen(true)}
-							onTriggerCron={handleTriggerCron}
+							onTriggerCron={() => handleTriggerCron()}
 							isTriggeringCron={triggerCronMutation.isPending}
 						/>
 					</div>
@@ -587,7 +611,10 @@ function ReportsPage() {
 				onOpenChange={setIsSettingsOpen}
 				initialValues={automationSettings}
 				onSubmit={handleSaveAutomationSettings}
-				onTestTrigger={handleTriggerCron}
+				onTestTrigger={(values) => {
+					handleSaveAutomationSettings(values);
+					handleTriggerCron(values);
+				}}
 				isTestingTrigger={triggerCronMutation.isPending}
 			/>
 		</div>

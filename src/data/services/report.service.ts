@@ -12,6 +12,7 @@ import type {
 import { generateAnnualFinancialCsv } from "../../lib/csv-exporter.ts";
 import { getTodayDateString } from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
+import { sanitizePhoneNumber } from "../../lib/phone-sanitizer.ts";
 import { whatsappTemplates } from "../../lib/whatsapp-templates.ts";
 import {
 	type EngagementRepository,
@@ -591,7 +592,15 @@ export class ReportService {
 				results.push(report);
 
 				// Kirim pengingat WhatsApp jika diaktifkan (Hanya Teks - Hemat Biaya Fonnte)
-				if (options?.sendWhatsApp && options?.targetPhone) {
+				const targetNumber = options?.targetPhone
+					? sanitizePhoneNumber(options.targetPhone)
+					: "";
+
+				if (
+					options?.sendWhatsApp &&
+					targetNumber &&
+					targetNumber !== "6281234567890"
+				) {
 					const reportToken =
 						options.idempotencyKey ||
 						`TOKEN:REPORT:${prop.id}:${year}-${month}:${todayStr}`;
@@ -618,7 +627,7 @@ export class ReportService {
 					});
 
 					const sendRes = await this.fonnte.sendText({
-						target: options.targetPhone,
+						target: targetNumber,
 						message,
 					});
 
@@ -626,7 +635,7 @@ export class ReportService {
 					const noteLabel = `[${reportToken}] Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${sendRes.detail || (sendRes.status ? "Success" : "Failed")}`;
 
 					notificationLogs.push({
-						recipientNumber: options.targetPhone,
+						recipientNumber: targetNumber,
 						messageType: "ANNOUNCEMENT",
 						status,
 						notes: noteLabel,

@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Clock, Play, SlidersHorizontal } from "lucide-react";
+import { Clock, Loader2, Play, SlidersHorizontal } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
@@ -23,7 +23,7 @@ interface AutomationSettingsDialogProps {
 	onOpenChange: (open: boolean) => void;
 	initialValues: AutomationSettingsFormValues;
 	onSubmit: (values: AutomationSettingsFormValues) => void;
-	onTestTrigger?: () => void;
+	onTestTrigger?: (values: AutomationSettingsFormValues) => void;
 	isTestingTrigger?: boolean;
 }
 
@@ -61,6 +61,16 @@ export function AutomationSettingsDialog({
 			onOpenChange(false);
 		},
 	});
+
+	const handleTestTriggerClick = () => {
+		const res = automationSettingsSchema.safeParse(form.state.values);
+		if (!res.success) {
+			form.handleSubmit();
+			return;
+		}
+		onSubmit(res.data as AutomationSettingsFormValues);
+		onTestTrigger?.(res.data as AutomationSettingsFormValues);
+	};
 
 	useEffect(() => {
 		if (open) {
@@ -215,11 +225,20 @@ export function AutomationSettingsDialog({
 								type="button"
 								variant="outline"
 								className="border-[#cfdfd1] text-[#4f6958] hover:bg-[#e8f2ea] text-xs font-semibold px-3 h-9 flex items-center gap-1.5 cursor-pointer"
-								onClick={onTestTrigger}
+								onClick={handleTestTriggerClick}
 								disabled={isTestingTrigger}
 							>
-								<Play className="w-3.5 h-3.5" />
-								{isTestingTrigger ? "Menjalankan..." : "Test Trigger Cron"}
+								{isTestingTrigger ? (
+									<>
+										<Loader2 className="w-3.5 h-3.5 animate-spin" />
+										Menjalankan...
+									</>
+								) : (
+									<>
+										<Play className="w-3.5 h-3.5" />
+										Test Trigger Cron
+									</>
+								)}
 							</Button>
 						) : (
 							<div />

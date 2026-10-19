@@ -5,7 +5,9 @@ import { Button } from "../../common/shadcn/button.tsx";
 import type { AppUserRole, UserItem } from "../../common/types/index.ts";
 import type { UserFormValues } from "../../common/validations/index.ts";
 import {
+	type NewUserCredentialData,
 	UserAuditLogTable,
+	UserCredentialDialog,
 	UserDeleteDialog,
 	UserFormDialog,
 	UserTable,
@@ -64,6 +66,9 @@ function UsersPage() {
 	const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 	const [editingUser, setEditingUser] = useState<UserItem | null>(null);
 
+	const [createdCredential, setCreatedCredential] =
+		useState<NewUserCredentialData | null>(null);
+
 	const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
 	const [deletingUser, setDeletingUser] = useState<UserItem | null>(null);
 
@@ -107,6 +112,10 @@ function UsersPage() {
 				onSuccess: (created) => {
 					showToast(`Pengguna "${created.name}" berhasil ditambahkan`);
 					setIsFormOpen(false);
+					setCreatedCredential({
+						user: created,
+						rawPassword: values.password || "",
+					});
 				},
 				onError: (err) => {
 					showError(
@@ -221,7 +230,18 @@ function UsersPage() {
 				editingUser={editingUser}
 				properties={properties}
 				currentUserRole={currentUserRole}
+				isSubmitting={
+					createUserMutation.isPending || updateUserMutation.isPending
+				}
 				onSubmit={handleSaveUser}
+			/>
+
+			<UserCredentialDialog
+				open={!!createdCredential}
+				onOpenChange={(open) => {
+					if (!open) setCreatedCredential(null);
+				}}
+				credential={createdCredential}
 			/>
 
 			<UserDeleteDialog

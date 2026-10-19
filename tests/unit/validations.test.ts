@@ -281,6 +281,35 @@ describe("Zod Validation Schemas", () => {
 				false,
 			);
 		});
+
+		it("harus meloloskan jika autoSendWhatsApp dinonaktifkan meski targetPhone kosong", () => {
+			const validNoWa = {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: false,
+				targetPhone: "",
+			};
+			const result = automationSettingsSchema.safeParse(validNoWa);
+			expect(result.success).toBe(true);
+		});
+
+		it("harus menolak jika autoSendWhatsApp aktif tetapi nomor WhatsApp kosong atau kurang dari 10 digit", () => {
+			const emptyPhone = {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: true,
+				targetPhone: "",
+			};
+			expect(automationSettingsSchema.safeParse(emptyPhone).success).toBe(false);
+
+			const shortPhone = {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: true,
+				targetPhone: "08123",
+			};
+			expect(automationSettingsSchema.safeParse(shortPhone).success).toBe(false);
+		});
 	});
 
 	describe("sendSingleTemplateMessageSchema", () => {

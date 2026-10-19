@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import {
 	Eye,
 	EyeOff,
+	Loader2,
 	Lock,
 	ShieldCheck,
 	UserCog,
@@ -43,6 +44,7 @@ interface UserFormDialogProps {
 	editingUser: UserItem | null;
 	properties: PropertyItem[];
 	currentUserRole?: AppUserRole;
+	isSubmitting?: boolean;
 	onSubmit: (values: UserFormValues) => void;
 }
 
@@ -62,6 +64,7 @@ export function UserFormDialog({
 	editingUser,
 	properties = [],
 	currentUserRole = "SUPER_ADMIN",
+	isSubmitting = false,
 	onSubmit,
 }: UserFormDialogProps) {
 	const propertyOptions = [
@@ -119,7 +122,6 @@ export function UserFormDialog({
 		},
 		onSubmit: ({ value }) => {
 			onSubmit(value as UserFormValues);
-			onOpenChange(false);
 		},
 	});
 
@@ -448,16 +450,27 @@ export function UserFormDialog({
 						<Button
 							type="button"
 							variant="outline"
-							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9"
+							disabled={isSubmitting}
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 cursor-pointer"
 							onClick={() => onOpenChange(false)}
 						>
 							Batal
 						</Button>
 						<Button
 							type="submit"
-							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9"
+							disabled={isSubmitting}
+							className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-5 h-9 flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
 						>
-							{editingUser ? "Simpan Perubahan" : "Simpan Pengguna"}
+							{isSubmitting ? (
+								<>
+									<Loader2 className="w-3.5 h-3.5 animate-spin" />
+									<span>Menyimpan...</span>
+								</>
+							) : editingUser ? (
+								"Simpan Perubahan"
+							) : (
+								"Simpan Pengguna"
+							)}
 						</Button>
 					</DialogFooter>
 				</form>
