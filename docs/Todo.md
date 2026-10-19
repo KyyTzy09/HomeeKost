@@ -307,7 +307,7 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 - [x] 🟢 Halaman User Management (`SUPER_ADMIN` Only Guard):
   - Tabel Daftar Pengguna: Nama, Email, Role Badge (`SUPER_ADMIN` / `ADMIN` / `STAFF`), Cabang Kos yang Dikelola, Tanggal Terdaftar, Status Akun
   - Segmented Filter Role (`Semua`, `SuperAdmin`, `Admin`, `Staff`) dengan live counter badge & Search
-  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) terintegrasi dinamis dengan data real database cabang properti (`useProperties`)
+  - Modal Form Tambah & Edit Pengguna (`UserFormDialog`) terintegrasi dinamis dengan data real database cabang properti (`useProperties`), dilengkapi input Password (wajib min. 8 karakter saat buat akun baru, opsional saat edit) dengan toggle show/hide mata dan sinkronisasi otomatis ke akun Better-Auth (`Account` credential)
   - Modal Konfirmasi Hapus Pengguna (`UserDeleteDialog`)
   - Tabel Riwayat Perubahan & Audit Trail Log terintegrasi live dari database PostgreSQL
   - Integrasi End-to-End dengan TanStack Query Hooks (`useUsers`, `useUserAuditLogs`, `useCreateUser`, `useUpdateUser`, `useDeleteUser`) & Server Functions (`user.fn.ts`)
