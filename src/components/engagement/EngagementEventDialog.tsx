@@ -1,5 +1,12 @@
 import { useForm } from "@tanstack/react-form";
-import { Lock, Megaphone } from "lucide-react";
+import {
+	Building2,
+	Lock,
+	Megaphone,
+	PartyPopper,
+	Sparkles,
+	Wrench,
+} from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
@@ -36,11 +43,15 @@ interface EngagementEventDialogProps {
 	isLoading?: boolean;
 }
 
-const CATEGORY_OPTIONS: { label: string; value: AnnouncementCategory }[] = [
-	{ label: "📢 Umum / Informasi", value: "UMUM" },
-	{ label: "🧹 Kerja Bakti & Kebersihan", value: "KERJA_BAKTI" },
-	{ label: "🔧 Maintenance & Fasilitas", value: "MAINTENANCE" },
-	{ label: "🎉 Acara / Kegiatan Bersama", value: "ACARA" },
+const CATEGORY_OPTIONS: {
+	label: string;
+	value: AnnouncementCategory;
+	icon: React.ComponentType<{ className?: string }>;
+}[] = [
+	{ label: "Umum / Informasi", value: "UMUM", icon: Megaphone },
+	{ label: "Kerja Bakti & Kebersihan", value: "KERJA_BAKTI", icon: Sparkles },
+	{ label: "Maintenance & Fasilitas", value: "MAINTENANCE", icon: Wrench },
+	{ label: "Acara / Kegiatan Bersama", value: "ACARA", icon: PartyPopper },
 ];
 
 export function EngagementEventDialog({
@@ -55,8 +66,8 @@ export function EngagementEventDialog({
 	const isAdmin = userRole === "ADMIN";
 
 	const propertyOptions = [
-		{ label: "📢 Semua Cabang Kos (Global)", value: "ALL" },
-		...properties.map((p) => ({ label: `🏠 ${p.name}`, value: p.id })),
+		{ label: "Semua Cabang", value: "ALL" },
+		...properties.map((p) => ({ label: p.name, value: p.id })),
 	];
 
 	const form = useForm({
@@ -193,8 +204,9 @@ export function EngagementEventDialog({
 											)}
 										</Label>
 										{isAdmin ? (
-											<div className="border border-[#e4e9e4] bg-[#f5f8f5] text-xs h-10 px-3 flex items-center rounded-md font-medium text-[#252925]">
-												🏠 {assignedPropertyName}
+											<div className="border border-[#e4e9e4] bg-[#f5f8f5] text-xs h-10 px-3 flex items-center gap-2 rounded-md font-medium text-[#252925]">
+												<Building2 className="w-3.5 h-3.5 text-[#5d7865]" />
+												<span>{assignedPropertyName}</span>
 											</div>
 										) : (
 											<Select
@@ -205,7 +217,14 @@ export function EngagementEventDialog({
 											>
 												<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
 													<SelectValue placeholder="Pilih Target Kos">
-														{selectedPropOption?.label}
+														{selectedPropOption ? (
+															<span className="flex items-center gap-2">
+																<Building2 className="w-3.5 h-3.5 text-[#5d7865]" />
+																<span>{selectedPropOption.label}</span>
+															</span>
+														) : (
+															"Pilih Target Kos"
+														)}
 													</SelectValue>
 												</SelectTrigger>
 												<SelectContent className="bg-white border-[#e4e9e4]">
@@ -215,7 +234,10 @@ export function EngagementEventDialog({
 															value={prop.value}
 															className="text-xs"
 														>
-															{prop.label}
+															<span className="flex items-center gap-2">
+																<Building2 className="w-3.5 h-3.5 text-[#5d7865]" />
+																<span>{prop.label}</span>
+															</span>
 														</SelectItem>
 													))}
 												</SelectContent>
@@ -247,19 +269,32 @@ export function EngagementEventDialog({
 										>
 											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
 												<SelectValue placeholder="Pilih Kategori">
-													{selectedCategoryOption?.label}
+													{selectedCategoryOption ? (
+														<span className="flex items-center gap-2">
+															<selectedCategoryOption.icon className="w-3.5 h-3.5 text-[#5d7865]" />
+															<span>{selectedCategoryOption.label}</span>
+														</span>
+													) : (
+														"Pilih Kategori"
+													)}
 												</SelectValue>
 											</SelectTrigger>
 											<SelectContent className="bg-white border-[#e4e9e4]">
-												{CATEGORY_OPTIONS.map((opt) => (
-													<SelectItem
-														key={opt.value}
-														value={opt.value}
-														className="text-xs"
-													>
-														{opt.label}
-													</SelectItem>
-												))}
+												{CATEGORY_OPTIONS.map((opt) => {
+													const CategoryIcon = opt.icon;
+													return (
+														<SelectItem
+															key={opt.value}
+															value={opt.value}
+															className="text-xs"
+														>
+															<span className="flex items-center gap-2">
+																<CategoryIcon className="w-3.5 h-3.5 text-[#5d7865]" />
+																<span>{opt.label}</span>
+															</span>
+														</SelectItem>
+													);
+												})}
 											</SelectContent>
 										</Select>
 									</div>

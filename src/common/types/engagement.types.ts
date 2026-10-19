@@ -4,11 +4,18 @@ export type AnnouncementCategory =
 	| "ACARA"
 	| "UMUM";
 
+export type EngagementTemplateCategory =
+	| "Sambutan"
+	| "Pembayaran"
+	| "Ulang Tahun"
+	| "Kerja Bakti"
+	| "Umum";
+
 export interface EngagementTemplateItem {
 	id: string | number;
 	name: string;
 	content: string;
-	category?: string;
+	category?: EngagementTemplateCategory | string;
 	icon?: string;
 }
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle2, MessageSquare, Play, Plus, Send } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import type {
@@ -87,10 +87,36 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 	},
 ];
 
+const TEMPLATE_STORAGE_KEY = "homeekost_engagement_templates";
+
+const CATEGORY_ICONS: Record<string, string> = {
+	Sambutan: "👋",
+	Pembayaran: "💳",
+	"Ulang Tahun": "🎂",
+	"Kerja Bakti": "🧹",
+	Umum: "💬",
+};
+
+const getCategoryIcon = (category?: string): string => {
+	if (!category) return "💬";
+	return CATEGORY_ICONS[category] || "💬";
+};
+
+const loadStoredTemplates = (): EngagementTemplateItem[] => {
+	if (typeof window === "undefined") return DEFAULT_TEMPLATES;
+	try {
+		const stored = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+		return stored ? JSON.parse(stored) : DEFAULT_TEMPLATES;
+	} catch {
+		return DEFAULT_TEMPLATES;
+	}
+};
+
 function EngagementPage() {
 	const dashboardContext = useDashboardContext();
 	const currentUser = dashboardContext.user;
 	const userRole = dashboardContext.userRole || "ADMIN";
+	const isSuperAdmin = dashboardContext.isSuperAdmin;
 	const userPropertyId = currentUser?.assignedPropertyId;
 
 	// Queries
@@ -108,6 +134,16 @@ function EngagementPage() {
 		useState<EngagementTemplateItem[]>(DEFAULT_TEMPLATES);
 	const [selectedTemplate, setSelectedTemplate] =
 		useState<EngagementTemplateItem | null>(DEFAULT_TEMPLATES[2] ?? null);
+
+	useEffect(() => {
+		const loaded = loadStoredTemplates();
+		setTemplates(loaded);
+		setSelectedTemplate((current) => {
+			if (!current) return loaded[0] ?? null;
+			const found = loaded.find((t) => t.id === current.id);
+			return found ?? loaded[0] ?? null;
+		});
+	}, []);
 
 	// Dialog & Toast states
 	const [isEventDialogOpen, setIsEventDialogOpen] = useState<boolean>(false);
@@ -195,13 +231,20 @@ function EngagementPage() {
 
 	// Template Action Handlers
 	const handleSaveTemplate = (values: EngagementTemplateFormValues) => {
+		const icon = getCategoryIcon(values.category);
+		let nextTemplates: EngagementTemplateItem[];
+
 		if (editingTemplate) {
-			setTemplates((prev) =>
-				prev.map((t) =>
-					t.id === editingTemplate.id
-						? { ...t, name: values.name, content: values.content }
-						: t,
-				),
+			nextTemplates = templates.map((t) =>
+				t.id === editingTemplate.id
+					? {
+							...t,
+							name: values.name,
+							category: values.category,
+							content: values.content,
+							icon,
+						}
+					: t,
 			);
 			showToast(`Template "${values.name}" berhasil diperbarui`);
 		} else {
@@ -209,19 +252,57 @@ function EngagementPage() {
 				id: `tpl-${Date.now()}`,
 				name: values.name,
 				content: values.content,
-				category: "Kustom",
-				icon: "💬",
+				category: values.category || "Umum",
+				icon,
 			};
-			setTemplates((prev) => [...prev, newTpl]);
+			nextTemplates = [...templates, newTpl];
 			showToast(`Template "${values.name}" berhasil dibuat`);
 		}
+
+		setTemplates(nextTemplates);
+		if (typeof window !== "undefined") {
+			try {
+				localStorage.setItem(
+					TEMPLATE_STORAGE_KEY,
+					JSON.stringify(nextTemplates),
+				);
+			} catch {
+				// Ignore write errors
+			}
+		}
+
+		if (
+			selectedTemplate &&
+			editingTemplate &&
+			selectedTemplate.id === editingTemplate.id
+		) {
+			setSelectedTemplate({
+				...selectedTemplate,
+				name: values.name,
+				category: values.category,
+				content: values.content,
+				icon,
+			});
+		}
+
 		setEditingTemplate(null);
 	};
 
 	const handleDeleteTemplate = (tpl: EngagementTemplateItem) => {
-		setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
+		const nextTemplates = templates.filter((t) => t.id !== tpl.id);
+		setTemplates(nextTemplates);
+		if (typeof window !== "undefined") {
+			try {
+				localStorage.setItem(
+					TEMPLATE_STORAGE_KEY,
+					JSON.stringify(nextTemplates),
+				);
+			} catch {
+				// Ignore write errors
+			}
+		}
 		if (selectedTemplate?.id === tpl.id) {
-			setSelectedTemplate(templates[0] ?? null);
+			setSelectedTemplate(nextTemplates[0] ?? null);
 		}
 		showToast(`Template "${tpl.name}" berhasil dihapus`);
 	};
@@ -328,15 +409,17 @@ function EngagementPage() {
 							: "Jalankan Cron Pagi"}
 					</Button>
 
-					<Button
-						type="button"
-						variant="outline"
-						className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 shadow-sm"
-						onClick={() => setIsEventDialogOpen(true)}
-					>
-						<Plus className="w-3.5 h-3.5 mr-1.5" />
-						Buat Broadcast
-					</Button>
+					{isSuperAdmin && (
+						<Button
+							type="button"
+							variant="outline"
+							className="border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] text-xs font-semibold px-4 h-9 shadow-sm"
+							onClick={() => setIsEventDialogOpen(true)}
+						>
+							<Plus className="w-3.5 h-3.5 mr-1.5" />
+							Buat Broadcast
+						</Button>
+					)}
 					<Button
 						type="button"
 						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 shadow-sm"
@@ -401,17 +484,19 @@ function EngagementPage() {
 							>
 								Lihat / Edit Detail
 							</Button>
-							<Button
-								type="button"
-								size="sm"
-								className="h-8 text-xs bg-[#4f6958] hover:bg-[#425949] text-white font-semibold flex items-center gap-1.5 shadow-sm"
-								onClick={() => {
-									setIsEventDialogOpen(true);
-								}}
-							>
-								<Send className="w-3 h-3" />
-								Gunakan untuk Broadcast
-							</Button>
+							{isSuperAdmin && (
+								<Button
+									type="button"
+									size="sm"
+									className="h-8 text-xs bg-[#4f6958] hover:bg-[#425949] text-white font-semibold flex items-center gap-1.5 shadow-sm"
+									onClick={() => {
+										setIsEventDialogOpen(true);
+									}}
+								>
+									<Send className="w-3 h-3" />
+									Gunakan untuk Broadcast
+								</Button>
+							)}
 						</div>
 					</div>
 

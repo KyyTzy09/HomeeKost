@@ -40,8 +40,17 @@ export const engagementEventSchema = z.object({
 
 export type EngagementEventFormValues = z.infer<typeof engagementEventSchema>;
 
+export const engagementTemplateCategoryEnum = z.enum([
+	"Sambutan",
+	"Pembayaran",
+	"Ulang Tahun",
+	"Kerja Bakti",
+	"Umum",
+]);
+
 export const engagementTemplateSchema = z.object({
 	name: z.string().min(1, "Nama template wajib diisi").default(""),
+	category: engagementTemplateCategoryEnum.default("Umum"),
 	content: z.string().min(1, "Isi template pesan wajib diisi").default(""),
 });
 

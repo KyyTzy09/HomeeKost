@@ -12,7 +12,17 @@ import {
 } from "../../common/shadcn/dialog.tsx";
 import { Input } from "../../common/shadcn/input.tsx";
 import { Label } from "../../common/shadcn/label.tsx";
-import type { EngagementTemplateItem } from "../../common/types/index.ts";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../../common/shadcn/select.tsx";
+import type {
+	EngagementTemplateCategory,
+	EngagementTemplateItem,
+} from "../../common/types/index.ts";
 import {
 	type EngagementTemplateFormValues,
 	engagementTemplateSchema,
@@ -25,6 +35,31 @@ interface EngagementTemplateDialogProps {
 	onSubmit: (values: EngagementTemplateFormValues) => void;
 }
 
+const TEMPLATE_CATEGORY_OPTIONS: {
+	value: EngagementTemplateCategory;
+	label: string;
+	icon: string;
+}[] = [
+	{ value: "Sambutan", label: "Sambutan Penghuni Baru", icon: "👋" },
+	{ value: "Pembayaran", label: "Apresiasi Bayar Tepat Waktu", icon: "💳" },
+	{ value: "Ulang Tahun", label: "Ucapan Selamat Ulang Tahun", icon: "🎂" },
+	{ value: "Kerja Bakti", label: "Kerja Bakti & Kebersihan", icon: "🧹" },
+	{ value: "Umum", label: "Pengumuman Umum", icon: "📢" },
+];
+
+const getValidCategory = (cat?: string): EngagementTemplateCategory => {
+	if (
+		cat === "Sambutan" ||
+		cat === "Pembayaran" ||
+		cat === "Ulang Tahun" ||
+		cat === "Kerja Bakti" ||
+		cat === "Umum"
+	) {
+		return cat;
+	}
+	return "Umum";
+};
+
 export function EngagementTemplateDialog({
 	open,
 	onOpenChange,
@@ -34,6 +69,7 @@ export function EngagementTemplateDialog({
 	const form = useForm({
 		defaultValues: {
 			name: editingTemplate?.name || "",
+			category: getValidCategory(editingTemplate?.category),
 			content: editingTemplate?.content || "",
 		},
 		validators: {
@@ -53,7 +89,11 @@ export function EngagementTemplateDialog({
 			},
 		},
 		onSubmit: ({ value }) => {
-			onSubmit(value as EngagementTemplateFormValues);
+			onSubmit({
+				name: value.name,
+				category: value.category,
+				content: value.content,
+			});
 			onOpenChange(false);
 		},
 	});
@@ -62,10 +102,15 @@ export function EngagementTemplateDialog({
 		if (open) {
 			if (editingTemplate) {
 				form.setFieldValue("name", editingTemplate.name);
+				form.setFieldValue(
+					"category",
+					getValidCategory(editingTemplate.category),
+				);
 				form.setFieldValue("content", editingTemplate.content);
 			} else {
 				form.reset();
 				form.setFieldValue("name", "");
+				form.setFieldValue("category", "Umum");
 				form.setFieldValue("content", "");
 			}
 		}
@@ -100,27 +145,84 @@ export function EngagementTemplateDialog({
 					}}
 					className="space-y-4 pt-2"
 				>
-					{/* Nama Template */}
-					<form.Field name="name">
-						{(field) => (
-							<div className="space-y-1.5">
-								<Label className="text-xs font-semibold text-[#252925]">
-									Nama Template
-								</Label>
-								<Input
-									placeholder="Contoh: Welcome Tenant, Ucapan Ulang Tahun"
-									value={field.state.value}
-									onChange={(e) => field.handleChange(e.target.value)}
-									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
-								/>
-								{field.state.meta.errors?.[0] && (
-									<p className="text-[11px] text-[#a65f5b]">
-										{field.state.meta.errors[0]}
-									</p>
-								)}
-							</div>
-						)}
-					</form.Field>
+					{/* Nama Template & Kategori */}
+					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+						<form.Field name="name">
+							{(field) => (
+								<div className="space-y-1.5">
+									<Label className="text-xs font-semibold text-[#252925]">
+										Nama Template
+									</Label>
+									<Input
+										placeholder="Contoh: Welcome Tenant, Ucapan Ulang Tahun"
+										value={field.state.value}
+										onChange={(e) => field.handleChange(e.target.value)}
+										className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
+									/>
+									{field.state.meta.errors?.[0] && (
+										<p className="text-[11px] text-[#a65f5b]">
+											{field.state.meta.errors[0]}
+										</p>
+									)}
+								</div>
+							)}
+						</form.Field>
+
+						<form.Field name="category">
+							{(field) => {
+								const selectedCategory = TEMPLATE_CATEGORY_OPTIONS.find(
+									(opt) => opt.value === field.state.value,
+								);
+
+								return (
+									<div className="space-y-1.5">
+										<Label className="text-xs font-semibold text-[#252925]">
+											Kategori Template
+										</Label>
+										<Select
+											value={field.state.value}
+											onValueChange={(val) => {
+												if (val)
+													field.handleChange(val as EngagementTemplateCategory);
+											}}
+										>
+											<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+												<SelectValue placeholder="Pilih Kategori">
+													{selectedCategory ? (
+														<span className="flex items-center gap-2">
+															<span>{selectedCategory.icon}</span>
+															<span>{selectedCategory.label}</span>
+														</span>
+													) : (
+														"Pilih Kategori"
+													)}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent className="bg-white border-[#e4e9e4]">
+												{TEMPLATE_CATEGORY_OPTIONS.map((opt) => (
+													<SelectItem
+														key={opt.value}
+														value={opt.value}
+														className="text-xs"
+													>
+														<span className="flex items-center gap-2">
+															<span>{opt.icon}</span>
+															<span>{opt.label}</span>
+														</span>
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										{field.state.meta.errors?.[0] && (
+											<p className="text-[11px] text-[#a65f5b]">
+												{field.state.meta.errors[0]}
+											</p>
+										)}
+									</div>
+								);
+							}}
+						</form.Field>
+					</div>
 
 					{/* Isi Pesan Template */}
 					<form.Field name="content">
