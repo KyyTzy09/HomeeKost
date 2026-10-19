@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	automationSettingsSchema,
 	confirmPaymentSchema,
 	roomSchema,
 	tenantSchema,
@@ -227,6 +228,55 @@ describe("Zod Validation Schemas", () => {
 			};
 			const result = confirmPaymentSchema.safeParse(invalidDate);
 			expect(result.success).toBe(false);
+		});
+	});
+
+	describe("automationSettingsSchema", () => {
+		it("harus meloloskan konfigurasi automasi laporan yang valid", () => {
+			const validSettings = {
+				scheduleDay: 5,
+				scheduleTime: "08:30",
+				autoSendWhatsApp: true,
+				targetPhone: "081298765432",
+			};
+			const result = automationSettingsSchema.safeParse(validSettings);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.scheduleDay).toBe(5);
+				expect(result.data.scheduleTime).toBe("08:30");
+				expect(result.data.aiModel).toBe("gemini-1.5-flash");
+			}
+		});
+
+		it("harus menolak jika tanggal di luar 1-28", () => {
+			const invalidDayZero = {
+				scheduleDay: 0,
+				scheduleTime: "08:00",
+				targetPhone: "081298765432",
+			};
+			expect(automationSettingsSchema.safeParse(invalidDayZero).success).toBe(
+				false,
+			);
+
+			const invalidDay29 = {
+				scheduleDay: 29,
+				scheduleTime: "08:00",
+				targetPhone: "081298765432",
+			};
+			expect(automationSettingsSchema.safeParse(invalidDay29).success).toBe(
+				false,
+			);
+		});
+
+		it("harus menolak jika format waktu eksekusi bukan HH:mm", () => {
+			const invalidTime = {
+				scheduleDay: 1,
+				scheduleTime: "8 pagi",
+				targetPhone: "081298765432",
+			};
+			expect(automationSettingsSchema.safeParse(invalidTime).success).toBe(
+				false,
+			);
 		});
 	});
 });

@@ -6,9 +6,17 @@ export const automationSettingsSchema = z.object({
 		.min(1, "Hari jadwal minimal tanggal 1")
 		.max(28, "Hari jadwal maksimal tanggal 28")
 		.default(1),
+	scheduleTime: z
+		.string()
+		.regex(
+			/^([01]\d|2[0-3]):([0-5]\d)$/,
+			"Format waktu harus HH:mm (contoh: 08:00)",
+		)
+		.default("08:00"),
 	aiModel: z
 		.enum(["gemini-1.5-flash", "gemini-3-flash", "llama-3.3-70b-versatile"])
-		.default("gemini-1.5-flash"),
+		.default("gemini-1.5-flash")
+		.optional(),
 	autoSendWhatsApp: z.boolean().default(true),
 	targetPhone: z
 		.string()

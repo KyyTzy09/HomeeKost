@@ -39,7 +39,6 @@ function getPageTitle(pathname: string): string {
 	if (pathname === "/dashboard/invoices") return "Invoice";
 	if (pathname === "/dashboard/finance") return "Keuangan";
 	if (pathname === "/dashboard/engagement") return "Engagement";
-	if (pathname === "/dashboard/cctv") return "CCTV";
 	if (pathname === "/dashboard/reports") return "Laporan & Insight";
 	if (pathname === "/dashboard/users") return "User Management";
 	if (pathname === "/dashboard/profile") return "Profil Admin";

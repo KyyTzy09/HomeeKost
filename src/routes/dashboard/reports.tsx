@@ -128,7 +128,8 @@ function ReportsPage() {
 	const [automationSettings, setAutomationSettings] =
 		useState<AutomationSettingsFormValues>({
 			scheduleDay: 1,
-			aiModel: "gemini-3-flash",
+			scheduleTime: "08:00",
+			aiModel: "gemini-1.5-flash",
 			autoSendWhatsApp: true,
 			targetPhone: "081234567890",
 		});
@@ -270,7 +271,7 @@ function ReportsPage() {
 	) => {
 		setAutomationSettings(values);
 		showToast(
-			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay})`,
+			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay} pukul ${values.scheduleTime || "08:00"} WIB)`,
 		);
 	};
 
@@ -541,7 +542,7 @@ function ReportsPage() {
 						{/* Automasi Laporan Bulanan Card */}
 						<ReportAutomationCard
 							scheduleDay={automationSettings.scheduleDay}
-							aiModel={automationSettings.aiModel}
+							scheduleTime={automationSettings.scheduleTime}
 							onOpenSettings={() => setIsSettingsOpen(true)}
 						/>
 					</div>

@@ -15,7 +15,6 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
-import { Route as DashboardCctvRouteImport } from './routes/dashboard/cctv'
 import { Route as DashboardEngagementRouteImport } from './routes/dashboard/engagement'
 import { Route as DashboardFinanceRouteImport } from './routes/dashboard/finance'
 import { Route as DashboardInvoicesRouteImport } from './routes/dashboard/invoices'
@@ -59,11 +58,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardCctvRoute = DashboardCctvRouteImport.update({
-  id: '/cctv',
-  path: '/cctv',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardEngagementRoute = DashboardEngagementRouteImport.update({
@@ -145,7 +139,6 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -167,7 +160,6 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -191,7 +183,6 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/dashboard/cctv': typeof DashboardCctvRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -216,7 +207,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -238,7 +228,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -261,7 +250,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/dashboard/cctv'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -332,13 +320,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/cctv': {
-      id: '/dashboard/cctv'
-      path: '/cctv'
-      fullPath: '/dashboard/cctv'
-      preLoaderRoute: typeof DashboardCctvRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/engagement': {
@@ -443,7 +424,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
-  DashboardCctvRoute: typeof DashboardCctvRoute
   DashboardEngagementRoute: typeof DashboardEngagementRoute
   DashboardFinanceRoute: typeof DashboardFinanceRoute
   DashboardInvoicesRoute: typeof DashboardInvoicesRoute
@@ -459,7 +439,6 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardCctvRoute: DashboardCctvRoute,
   DashboardEngagementRoute: DashboardEngagementRoute,
   DashboardFinanceRoute: DashboardFinanceRoute,
   DashboardInvoicesRoute: DashboardInvoicesRoute,

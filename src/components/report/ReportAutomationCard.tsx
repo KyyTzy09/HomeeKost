@@ -1,16 +1,16 @@
-import { Bot, CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, SlidersHorizontal } from "lucide-react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 
 interface ReportAutomationCardProps {
 	scheduleDay: number;
-	aiModel: string;
+	scheduleTime?: string;
 	onOpenSettings: () => void;
 }
 
 export function ReportAutomationCard({
 	scheduleDay,
-	aiModel,
+	scheduleTime = "08:00",
 	onOpenSettings,
 }: ReportAutomationCardProps) {
 	return (
@@ -22,8 +22,8 @@ export function ReportAutomationCard({
 						Automasi Laporan Bulanan
 					</h2>
 					<p className="text-[11px] text-[#737873] mt-0.5">
-						Laporan eksekutif dibuat otomatis setiap tanggal {scheduleDay} pukul
-						08:00 WIB
+						Laporan eksekutif dibuat otomatis setiap tanggal {scheduleDay} pukul{" "}
+						{scheduleTime} WIB
 					</p>
 				</div>
 
@@ -35,21 +35,14 @@ export function ReportAutomationCard({
 
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4">
 				<div className="space-y-1">
-					<div className="flex items-center gap-2">
-						<b className="text-xs text-[#252925]">
-							Engine RAG:{" "}
-							{aiModel === "gemini-1.5-flash"
-								? "Google Gemini 1.5 Flash"
-								: "Groq LLaMA 3.3 70B"}
-						</b>
-						<span className="text-[10px] text-[#4f6958] bg-[#f0f5f1] px-2 py-0.5 rounded font-medium">
-							Zero-Hallucination
-						</span>
-					</div>
+					<b className="text-xs text-[#252925] block">
+						Rekapitulasi Keuangan & Evaluasi Operasional Otomatis
+					</b>
 					<p className="text-[11px] text-[#737873] leading-relaxed max-w-2xl">
-						Data angka finansial dan okupansi dikalkulasi murni secara
-						deterministik dari database PostgreSQL. Model AI hanya merangkum
-						wawasan bisnis dan rekomendasi taktis tanpa rekayasa angka.
+						Sistem secara terjadwal merangkum data pemasukan sewa, pengeluaran
+						operasional, laba bersih, serta tingkat okupansi kamar untuk
+						dikirimkan langsung sebagai notifikasi ringkasan eksekutif ke
+						pengelola atau pemilik kos.
 					</p>
 				</div>
 
@@ -57,11 +50,11 @@ export function ReportAutomationCard({
 					type="button"
 					variant="outline"
 					size="sm"
-					className="h-8 text-xs border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] font-semibold shrink-0"
+					className="h-8 text-xs border-[#e4e9e4] text-[#252925] hover:bg-[#f3f7f3] font-semibold shrink-0 cursor-pointer"
 					onClick={onOpenSettings}
 				>
-					<Bot className="w-3.5 h-3.5 mr-1.5 text-[#4f6958]" />
-					Atur Automasi
+					<SlidersHorizontal className="w-3.5 h-3.5 mr-1.5 text-[#4f6958]" />
+					Atur Jadwal Automasi
 				</Button>
 			</div>
 		</Card>
