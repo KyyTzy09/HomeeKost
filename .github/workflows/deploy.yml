@@ -1,0 +1,54 @@
+name: CI/CD Pipeline - Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run TypeCheck & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "postgresql://postgres:secret@localhost:5432/homeekost?schema=public"
+        run: bunx prisma generate
+
+      - name: TypeScript Strict Check
+        run: bunx tsc --noEmit
+
+      - name: Run Unit Tests
+        run: bun run test:unit
+
+  deploy:
+    name: Deploy to Biznet GIO VPS
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute SSH Commands on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /var/www/homeekost
+            git pull origin main
+            sudo docker compose run --rm --build app bunx prisma db push
+            sudo docker compose up -d --build app
+            sudo docker image prune -f
