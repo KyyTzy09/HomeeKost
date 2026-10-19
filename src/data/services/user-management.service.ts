@@ -630,10 +630,12 @@ export class UserManagementService {
 			where: { id: verification.id },
 		});
 
+		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
+		const roleLabel = roleName === "SUPER_ADMIN" ? "SuperAdmin" : "Admin";
+
 		return {
 			success: true,
-			message:
-				"Kata sandi akun SuperAdmin berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.",
+			message: `Kata sandi akun ${roleLabel} berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru Anda.`,
 		};
 	}
 }
