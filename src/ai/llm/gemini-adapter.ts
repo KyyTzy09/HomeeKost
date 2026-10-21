@@ -36,7 +36,7 @@ export class GeminiAdapter {
 			this.explicitKeys = options.apiKeys;
 		}
 		this.model =
-			options?.model || process.env.GEMINI_MODEL || "gemini-3.5-flash";
+			options?.model || process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 	}
 
 	/**
@@ -196,6 +196,7 @@ export class GeminiAdapter {
 		const candidateModels = Array.from(
 			new Set([
 				this.model,
+				"gemini-3.5-flash-lite",
 				"gemini-3.5-flash",
 				"gemini-2.5-flash",
 				"gemini-1.5-flash",

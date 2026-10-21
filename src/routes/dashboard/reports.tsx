@@ -104,7 +104,7 @@ const AUTOMATION_STORAGE_KEY = "homeekost_report_automation_settings";
 const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
 	scheduleDay: 1,
 	scheduleTime: "08:00",
-	aiModel: "gemini-3.5-flash",
+	aiModel: "gemini-3.5-flash-lite",
 	autoSendWhatsApp: false,
 	targetPhone: "",
 };
