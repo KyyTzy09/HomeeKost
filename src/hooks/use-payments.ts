@@ -74,6 +74,11 @@ export function useConfirmPayment() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
+			queryClient.invalidateQueries({ queryKey: ["cost-composition"] });
+			queryClient.invalidateQueries({ queryKey: ["monthly-trends"] });
+			queryClient.invalidateQueries({ queryKey: ["profit-loss"] });
+			queryClient.invalidateQueries({ queryKey: ["annual-matrix"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 		},
 	});
@@ -130,6 +135,11 @@ export function useDeleteInvoice() {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_STATS_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 			queryClient.invalidateQueries({ queryKey: ["transactions"] });
+			queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
+			queryClient.invalidateQueries({ queryKey: ["cost-composition"] });
+			queryClient.invalidateQueries({ queryKey: ["monthly-trends"] });
+			queryClient.invalidateQueries({ queryKey: ["profit-loss"] });
+			queryClient.invalidateQueries({ queryKey: ["annual-matrix"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 			queryClient.invalidateQueries({ queryKey: ["cashflow-overview"] });

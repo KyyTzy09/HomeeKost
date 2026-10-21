@@ -121,6 +121,9 @@ export function useCreateTransaction(): UseMutationResult<
 			queryClient.invalidateQueries({ queryKey: DASHBOARD_CONTEXT_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["payment-stats"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 		},
 	});
 }
@@ -184,6 +187,9 @@ export function useDeleteTransaction(): UseMutationResult<
 			queryClient.invalidateQueries({ queryKey: DASHBOARD_CONTEXT_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["payments"] });
+			queryClient.invalidateQueries({ queryKey: ["payment-stats"] });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 		},
 	});
 }

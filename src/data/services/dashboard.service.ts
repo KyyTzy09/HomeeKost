@@ -118,35 +118,10 @@ export class DashboardService {
 		const occupancyRate =
 			totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
 
-		// 2. Agregasi Pendapatan Bulan Ini & Bulan Lalu (Fokus pada periode bulan berjalan)
-		const currentMonthInvoices = await this.db.invoice.findMany({
-			where: {
-				periodMonth: currentMonth,
-				periodYear: currentYear,
-				...(propertyIds
-					? { contract: { room: { propertyId: { in: propertyIds } } } }
-					: {}),
-			},
-			include: { transactions: true },
-		});
-
-		let currentMonthIncomeFromInvoices = 0;
-		for (const inv of currentMonthInvoices) {
-			if (inv.status === "PAID") {
-				currentMonthIncomeFromInvoices += Number(inv.amount);
-			} else {
-				const paid = inv.transactions
-					.filter((t) => t.type === "INCOME")
-					.reduce((sum, t) => sum + Number(t.amount), 0);
-				currentMonthIncomeFromInvoices += paid;
-			}
-		}
-
-		// Standalone income (tanpa invoice) yang tercatat di bulan ini
-		const currentMonthTxIncome = await this.db.transaction.aggregate({
+		// 2. Agregasi Pendapatan Bulan Ini & Bulan Lalu (100% Selaras dengan Halaman Keuangan / Arus Kas Riil)
+		const currentMonthIncomeAgg = await this.db.transaction.aggregate({
 			where: {
 				type: "INCOME",
-				invoiceId: null,
 				transactionDate: {
 					gte: startOfCurrentMonth,
 					lte: endOfCurrentMonth,
@@ -156,44 +131,17 @@ export class DashboardService {
 			_sum: { amount: true },
 		});
 
-		const currentMonthIncome =
-			currentMonthIncomeFromInvoices +
-			Number(currentMonthTxIncome._sum.amount ?? 0);
+		const currentMonthIncome = Number(currentMonthIncomeAgg._sum.amount ?? 0);
 
 		// Bulan lalu untuk growth %
 		const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
 		const lastYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-
-		const lastMonthInvoices = await this.db.invoice.findMany({
-			where: {
-				periodMonth: lastMonth,
-				periodYear: lastYear,
-				...(propertyIds
-					? { contract: { room: { propertyId: { in: propertyIds } } } }
-					: {}),
-			},
-			include: { transactions: true },
-		});
-
-		let lastMonthIncomeFromInvoices = 0;
-		for (const inv of lastMonthInvoices) {
-			if (inv.status === "PAID") {
-				lastMonthIncomeFromInvoices += Number(inv.amount);
-			} else {
-				const paid = inv.transactions
-					.filter((t) => t.type === "INCOME")
-					.reduce((sum, t) => sum + Number(t.amount), 0);
-				lastMonthIncomeFromInvoices += paid;
-			}
-		}
-
 		const { startDate: startOfLastMonth, endDate: endOfLastMonth } =
 			getMonthDateRange(lastMonth, lastYear);
 
-		const lastMonthTxIncome = await this.db.transaction.aggregate({
+		const lastMonthIncomeAgg = await this.db.transaction.aggregate({
 			where: {
 				type: "INCOME",
-				invoiceId: null,
 				transactionDate: {
 					gte: startOfLastMonth,
 					lte: endOfLastMonth,
@@ -203,8 +151,7 @@ export class DashboardService {
 			_sum: { amount: true },
 		});
 
-		const lastMonthIncome =
-			lastMonthIncomeFromInvoices + Number(lastMonthTxIncome._sum.amount ?? 0);
+		const lastMonthIncome = Number(lastMonthIncomeAgg._sum.amount ?? 0);
 
 		let incomeGrowth = "0%";
 		if (lastMonthIncome > 0) {
@@ -529,20 +476,17 @@ export class DashboardService {
 
 			const { startDate: s, endDate: e } = getMonthDateRange(m, y);
 
-			// Invoices paid in that month
-			const mInvoices = await this.db.invoice.findMany({
+			// Incomes in that month based on transactions (Cashflow)
+			const mIncomeAgg = await this.db.transaction.aggregate({
 				where: {
-					periodMonth: m,
-					periodYear: y,
-					status: "PAID",
-					...(propertyIds
-						? { contract: { room: { propertyId: { in: propertyIds } } } }
-						: {}),
+					type: "INCOME",
+					transactionDate: { gte: s, lte: e },
+					...(propertyIds ? { propertyId: { in: propertyIds } } : {}),
 				},
-				select: { amount: true },
+				_sum: { amount: true },
 			});
 
-			const mInc = mInvoices.reduce((acc, inv) => acc + Number(inv.amount), 0);
+			const mInc = Number(mIncomeAgg._sum.amount ?? 0);
 
 			// Expenses in that month
 			const mExpenseAgg = await this.db.transaction.aggregate({

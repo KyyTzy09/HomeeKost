@@ -407,7 +407,7 @@ export class CashflowService {
 			);
 		}
 
-		await this.transactionRepo.delete(id);
+		await this.transactionRepo.deleteWithCascade(id, existing);
 		return { success: true, id };
 	}
 

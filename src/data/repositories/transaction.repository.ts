@@ -222,6 +222,72 @@ export class TransactionRepository {
 		});
 	}
 
+	async deleteWithCascade(
+		id: string,
+		existing: {
+			invoiceId?: string | null;
+			type: string;
+			category: string;
+			description?: string | null;
+			propertyId?: string | null;
+			transactionDate: Date;
+		},
+	) {
+		return this.db.$transaction(async (tx) => {
+			let targetInvoiceId = existing.invoiceId;
+
+			// Jika invoiceId null, cari invoice terkait pembayaran sewa jika ada
+			if (
+				!targetInvoiceId &&
+				existing.type === "INCOME" &&
+				existing.category === "RENT" &&
+				existing.propertyId
+			) {
+				const txMonth = existing.transactionDate.getMonth() + 1;
+				const txYear = existing.transactionDate.getFullYear();
+				const match = existing.description?.match(/Kamar\s+([A-Za-z0-9_-]+)/i);
+				if (match) {
+					const roomNumber = match[1].trim();
+					const room = await tx.room.findFirst({
+						where: { roomNumber, propertyId: existing.propertyId },
+						select: { id: true },
+					});
+					if (room) {
+						const inv = await tx.invoice.findFirst({
+							where: {
+								contract: { roomId: room.id },
+								periodMonth: txMonth,
+								periodYear: txYear,
+							},
+							select: { id: true },
+						});
+						if (inv) {
+							targetInvoiceId = inv.id;
+						}
+					}
+				}
+			}
+
+			if (targetInvoiceId) {
+				// 1. Hapus semua transaksi kas masuk yang terikat ke invoice ini
+				await tx.transaction.deleteMany({
+					where: { invoiceId: targetInvoiceId },
+				});
+				// 2. Hapus invoice terkait (agar sinkron di halaman Pembayaran)
+				await tx.invoice
+					.delete({
+						where: { id: targetInvoiceId },
+					})
+					.catch(() => null);
+			}
+
+			// 3. Pastikan transaksi ini terhapus jika belum terhapus
+			await tx.transaction.deleteMany({
+				where: { id },
+			});
+		});
+	}
+
 	async aggregateAmounts(params: {
 		propertyIds?: string[];
 		type?: TransactionType;
