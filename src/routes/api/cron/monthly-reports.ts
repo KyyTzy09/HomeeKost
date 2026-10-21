@@ -57,7 +57,7 @@ async function handleMonthlyCronRequest(request: Request): Promise<Response> {
 		const month = monthParam ? Number.parseInt(monthParam, 10) : undefined;
 		const year = yearParam ? Number.parseInt(yearParam, 10) : undefined;
 		const sendWhatsApp =
-			sendWhatsAppParam !== null ? sendWhatsAppParam === "true" : true;
+			sendWhatsAppParam !== null ? sendWhatsAppParam === "true" : undefined;
 
 		const result = await reportService.runMonthlyReportCron({
 			propertyId,

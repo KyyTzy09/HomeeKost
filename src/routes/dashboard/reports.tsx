@@ -9,7 +9,7 @@ import {
 	RefreshCw,
 	Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Select,
@@ -32,11 +32,14 @@ import {
 	annualReportMatrixQueryOptions,
 	monthlyReportQueryOptions,
 	propertiesQueryOptions,
+	reportAutomationSettingsQueryOptions,
 	useAnnualReportMatrix,
 	useDashboardContext,
 	useMonthlyReport,
 	useProperties,
 	useRegenerateAiInsight,
+	useReportAutomationSettings,
+	useUpdateReportAutomationSettings,
 } from "../../hooks/index.ts";
 import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
@@ -55,7 +58,7 @@ export const Route = createFileRoute("/dashboard/reports")({
 		const month = now.getMonth() + 1;
 		const year = now.getFullYear();
 
-		await Promise.all([
+		const prefetchPromises: Promise<unknown>[] = [
 			context.queryClient.ensureQueryData(
 				monthlyReportQueryOptions(activePropertyId, month, year),
 			),
@@ -63,7 +66,20 @@ export const Route = createFileRoute("/dashboard/reports")({
 				annualReportMatrixQueryOptions(activePropertyId, year),
 			),
 			context.queryClient.ensureQueryData(propertiesQueryOptions()),
-		]);
+		];
+
+		if (
+			context.dashboard?.isSuperAdmin ||
+			context.dashboard?.role === "SUPER_ADMIN"
+		) {
+			prefetchPromises.push(
+				context.queryClient.ensureQueryData(
+					reportAutomationSettingsQueryOptions(),
+				),
+			);
+		}
+
+		await Promise.all(prefetchPromises);
 	},
 	component: ReportsPage,
 });
@@ -99,8 +115,6 @@ const YEARS: SelectOption<number>[] = [
 const DEFAULT_MONTH_OPTION = MONTHS[0];
 const DEFAULT_YEAR_OPTION = YEARS[2];
 
-const AUTOMATION_STORAGE_KEY = "homeekost_report_automation_settings";
-
 const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
 	scheduleDay: 1,
 	scheduleTime: "08:00",
@@ -109,30 +123,16 @@ const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
 	targetPhone: "",
 };
 
-const loadStoredAutomationSettings = (): AutomationSettingsFormValues => {
-	if (typeof window === "undefined") return DEFAULT_AUTOMATION_SETTINGS;
-	try {
-		const stored = localStorage.getItem(AUTOMATION_STORAGE_KEY);
-		if (!stored) return DEFAULT_AUTOMATION_SETTINGS;
-		const parsed = JSON.parse(stored);
-		if (parsed && typeof parsed === "object") {
-			// Bersihkan nomor dummy jika sebelumnya tersimpan
-			if (parsed.targetPhone === "081234567890") {
-				parsed.targetPhone = "";
-				parsed.autoSendWhatsApp = false;
-			}
-			return { ...DEFAULT_AUTOMATION_SETTINGS, ...parsed };
-		}
-		return DEFAULT_AUTOMATION_SETTINGS;
-	} catch {
-		return DEFAULT_AUTOMATION_SETTINGS;
-	}
-};
-
 function ReportsPage() {
 	const { user, userRole, isSuperAdmin, activeProperty } =
 		useDashboardContext();
 	const { data: properties } = useProperties();
+	const { data: dbAutomationSettings } = useReportAutomationSettings({
+		enabled: isSuperAdmin,
+	});
+	const updateSettingsMutation = useUpdateReportAutomationSettings();
+
+	const currentSettings = dbAutomationSettings || DEFAULT_AUTOMATION_SETTINGS;
 
 	const now = new Date();
 	const currentMonthNumber = now.getMonth() + 1;
@@ -152,15 +152,8 @@ function ReportsPage() {
 		value: "ALL",
 	});
 
-	// Automation settings state
+	// Automation settings dialog state
 	const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-	const [automationSettings, setAutomationSettings] =
-		useState<AutomationSettingsFormValues>(DEFAULT_AUTOMATION_SETTINGS);
-
-	useEffect(() => {
-		const loaded = loadStoredAutomationSettings();
-		setAutomationSettings(loaded);
-	}, []);
 
 	// Toast state
 	const [toastMessage, setToastMessage] = useState<{
@@ -261,20 +254,23 @@ function ReportsPage() {
 		window.print();
 	};
 
-	const handleSaveAutomationSettings = (
+	const handleSaveAutomationSettings = async (
 		values: AutomationSettingsFormValues,
 	) => {
-		setAutomationSettings(values);
-		if (typeof window !== "undefined") {
-			try {
-				localStorage.setItem(AUTOMATION_STORAGE_KEY, JSON.stringify(values));
-			} catch {
-				// Ignore write error
-			}
+		try {
+			await updateSettingsMutation.mutateAsync(values);
+			showToast(
+				`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay} pukul ${values.scheduleTime || "08:00"} WIB)`,
+				"success",
+			);
+		} catch (err) {
+			showToast(
+				err instanceof Error
+					? err.message
+					: "Gagal menyimpan pengaturan automasi",
+				"error",
+			);
 		}
-		showToast(
-			`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay} pukul ${values.scheduleTime || "08:00"} WIB)`,
-		);
 	};
 
 	const periodLabel = `${selectedMonth.label} ${selectedYear.label}`;
@@ -530,23 +526,25 @@ function ReportsPage() {
 							isExportingExcel={isExportingExcel}
 						/>
 
-						{/* Automasi Laporan Bulanan Card */}
-						<ReportAutomationCard
-							scheduleDay={automationSettings.scheduleDay}
-							scheduleTime={automationSettings.scheduleTime}
-							onOpenSettings={() => setIsSettingsOpen(true)}
-						/>
+						{/* Automasi Laporan Bulanan Card & Dialog (SuperAdmin Only) */}
+						{isSuperAdmin && (
+							<>
+								<ReportAutomationCard
+									scheduleDay={currentSettings.scheduleDay}
+									scheduleTime={currentSettings.scheduleTime}
+									onOpenSettings={() => setIsSettingsOpen(true)}
+								/>
+								<AutomationSettingsDialog
+									open={isSettingsOpen}
+									onOpenChange={setIsSettingsOpen}
+									initialValues={currentSettings}
+									onSubmit={handleSaveAutomationSettings}
+								/>
+							</>
+						)}
 					</div>
 				</>
 			)}
-
-			{/* Automation Settings Dialog */}
-			<AutomationSettingsDialog
-				open={isSettingsOpen}
-				onOpenChange={setIsSettingsOpen}
-				initialValues={automationSettings}
-				onSubmit={handleSaveAutomationSettings}
-			/>
 		</div>
 	);
 }

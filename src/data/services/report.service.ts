@@ -9,10 +9,12 @@ import type {
 	AnnualReportMatrixData,
 	SessionUser,
 } from "../../common/types/index.ts";
+import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import { generateAnnualFinancialCsv } from "../../lib/csv-exporter.ts";
 import { getTodayDateString } from "../../lib/date-utils.ts";
 import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
 import { sanitizePhoneNumber } from "../../lib/phone-sanitizer.ts";
+import { isReportScheduleDue } from "../../lib/schedule-utils.ts";
 import { whatsappTemplates } from "../../lib/whatsapp-templates.ts";
 import {
 	type EngagementRepository,
@@ -26,6 +28,10 @@ import {
 	type ReportRepository,
 	reportRepository,
 } from "../repositories/report.repository.ts";
+import {
+	type SystemSettingRepository,
+	systemSettingRepository,
+} from "../repositories/system-setting.repository.ts";
 
 const MONTH_NAMES = [
 	"Januari",
@@ -50,6 +56,7 @@ export class ReportService {
 		private readonly propertyRepo: PropertyRepository = propertyRepository,
 		private readonly engagementRepo: EngagementRepository = engagementRepository,
 		private readonly fonnte: FonnteClient = fonnteClient,
+		private readonly systemSettingRepo: SystemSettingRepository = systemSettingRepository,
 	) {}
 
 	/**
@@ -515,6 +522,52 @@ export class ReportService {
 	}
 
 	/**
+	 * Dapatkan pengaturan automasi laporan bulanan dari database (fallback ke default jika belum diset)
+	 */
+	async getAutomationSettings(): Promise<AutomationSettingsFormValues> {
+		const setting =
+			await this.systemSettingRepo.getSetting<AutomationSettingsFormValues>(
+				"report_automation_settings",
+			);
+		if (!setting) {
+			return {
+				scheduleDay: 1,
+				scheduleTime: "08:00",
+				autoSendWhatsApp: false,
+				targetPhone: "",
+				aiModel: "gemini-3.5-flash-lite",
+			};
+		}
+		return {
+			scheduleDay: setting.scheduleDay ?? 1,
+			scheduleTime: setting.scheduleTime || "08:00",
+			autoSendWhatsApp: setting.autoSendWhatsApp ?? false,
+			targetPhone: setting.targetPhone || "",
+			aiModel: setting.aiModel || "gemini-3.5-flash-lite",
+		};
+	}
+
+	/**
+	 * Simpan atau perbarui pengaturan automasi laporan bulanan.
+	 * Hanya SuperAdmin yang diperbolehkan mengubah pengaturan ini.
+	 */
+	async updateAutomationSettings(
+		values: AutomationSettingsFormValues,
+		user?: SessionUser,
+	): Promise<void> {
+		const userRole =
+			typeof user?.role === "string" ? user.role : user?.role?.name;
+		if (user && userRole !== "SUPER_ADMIN") {
+			throw new Error(
+				"Unauthorized: Hanya SuperAdmin yang berhak mengubah jadwal automasi laporan",
+			);
+		}
+		await this.systemSettingRepo.setSetting(
+			"report_automation_settings",
+			values,
+		);
+	}
+	/**
 	 * Cron Handler: Pembuatan Laporan AI Bulanan Terjadwal
 	 * Mengirim notifikasi reminder teks WhatsApp ke Pengelola/Owner (TANPA lampiran file PDF)
 	 */
@@ -539,6 +592,38 @@ export class ReportService {
 		console.log(
 			`[Cron Report] Menjalankan automasi Laporan AI untuk Periode ${month}/${year}...`,
 		);
+
+		const settings = await this.getAutomationSettings();
+
+		if (!options?.forceSend) {
+			if (!settings.autoSendWhatsApp && !options?.sendWhatsApp) {
+				return {
+					success: true,
+					processedCount: 0,
+					skippedCount: 0,
+					skipped: true,
+					reason: "Automasi WhatsApp dinonaktifkan di pengaturan sistem",
+					period: { month, year },
+				};
+			}
+
+			const isDue = isReportScheduleDue({
+				now,
+				scheduleDay: settings.scheduleDay,
+				scheduleTime: settings.scheduleTime,
+			});
+
+			if (!isDue) {
+				return {
+					success: true,
+					processedCount: 0,
+					skippedCount: 0,
+					skipped: true,
+					reason: `Bukan jadwal eksekusi (Jadwal: tgl ${settings.scheduleDay} jam ${settings.scheduleTime} WIB)`,
+					period: { month, year },
+				};
+			}
+		}
 
 		const properties = await this.propertyRepo.findAll();
 		const targetProperties = options?.propertyId
@@ -581,6 +666,17 @@ export class ReportService {
 
 		let skippedCount = 0;
 
+		const effectiveTargetPhone =
+			options?.targetPhone || settings.targetPhone || "";
+		const targetNumber = effectiveTargetPhone
+			? sanitizePhoneNumber(effectiveTargetPhone)
+			: "";
+
+		const shouldSendWhatsApp =
+			options?.sendWhatsApp !== undefined
+				? options.sendWhatsApp
+				: settings.autoSendWhatsApp;
+
 		for (const prop of targetProperties) {
 			try {
 				let report: AiMonthlyReportData;
@@ -596,14 +692,6 @@ export class ReportService {
 				results.push(report);
 
 				// Kirim pengingat WhatsApp jika diaktifkan (Hanya Teks - Hemat Biaya Fonnte)
-				const targetNumber = options?.targetPhone
-					? sanitizePhoneNumber(options.targetPhone)
-					: "";
-
-				const shouldSendWhatsApp =
-					options?.sendWhatsApp !== undefined
-						? options.sendWhatsApp
-						: Boolean(targetNumber);
 
 				if (targetNumber === "6281234567890") {
 					console.warn(
@@ -672,7 +760,7 @@ export class ReportService {
 					if (sendRes.status) {
 						sentReportTokensToday.add(reportToken);
 					}
-				} else if (options?.sendWhatsApp && !targetNumber) {
+				} else if (shouldSendWhatsApp && !targetNumber) {
 					console.warn(
 						"[Cron Report] Opsi kirim WhatsApp aktif tetapi nomor target pengelola belum diisi.",
 					);
@@ -699,7 +787,7 @@ export class ReportService {
 			period: { month, year },
 			whatsApp: {
 				attempted: notificationLogs.length > 0,
-				targetPhone: options?.targetPhone || null,
+				targetPhone: effectiveTargetPhone || null,
 				sentCount: sentLogs.length,
 				failedCount: failedLogs.length,
 				status:
@@ -712,9 +800,9 @@ export class ReportService {
 								: ("FAILED" as const),
 				detail:
 					notificationLogs.length === 0
-						? options?.sendWhatsApp === false
+						? shouldSendWhatsApp === false
 							? "Pengiriman WhatsApp dinonaktifkan."
-							: !options?.targetPhone
+							: !targetNumber
 								? "Nomor WhatsApp belum diisi."
 								: "WhatsApp tidak dikirim."
 						: notificationLogs[0]?.notes || null,

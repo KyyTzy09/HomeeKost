@@ -1,8 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	queryOptions,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import type { AutomationSettingsFormValues } from "../common/validations/index.ts";
 import {
 	exportAnnualCsvServerFn,
+	getReportAutomationSettingsServerFn,
 	regenerateAiInsightServerFn,
 	triggerMonthlyReportCronServerFn,
+	updateReportAutomationSettingsServerFn,
 } from "../data/servers/index.ts";
 
 import {
@@ -12,6 +20,7 @@ import {
 
 export const REPORT_KEYS = {
 	all: ["reports"] as const,
+	automationSettings: ["reports", "automation-settings"] as const,
 	monthly: (propertyId?: string, month?: number, year?: number) =>
 		[
 			"monthly-report",
@@ -102,6 +111,42 @@ export function useTriggerMonthlyReportCron() {
 		}) => triggerMonthlyReportCronServerFn({ data: input }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: REPORT_KEYS.all });
+		},
+	});
+}
+
+/**
+ * Query options untuk Pengaturan Automasi Laporan Bulanan
+ */
+export const reportAutomationSettingsQueryOptions = () =>
+	queryOptions({
+		queryKey: ["reports", "automation-settings"],
+		queryFn: () => getReportAutomationSettingsServerFn(),
+		staleTime: 5 * 60 * 1000,
+	});
+
+/**
+ * Hook untuk mengambil Pengaturan Automasi Laporan Bulanan
+ */
+export function useReportAutomationSettings(options?: { enabled?: boolean }) {
+	return useQuery({
+		...reportAutomationSettingsQueryOptions(),
+		...options,
+	});
+}
+
+/**
+ * Hook mutation untuk menyimpan/memperbarui Pengaturan Automasi Laporan Bulanan
+ */
+export function useUpdateReportAutomationSettings() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (values: AutomationSettingsFormValues) =>
+			updateReportAutomationSettingsServerFn({ data: values }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["reports", "automation-settings"],
+			});
 		},
 	});
 }
