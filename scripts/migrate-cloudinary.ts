@@ -2,7 +2,26 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import "dotenv/config";
-import { prisma } from "../src/db.ts";
+import fsSync from "node:fs";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+
+function getDatabaseConnectionString(): string {
+	let url = process.env.DATABASE_URL;
+	if (!url) {
+		throw new Error("DATABASE_URL belum diatur di environment.");
+	}
+	if (!fsSync.existsSync("/.dockerenv") && url.includes("@db:")) {
+		url = url.replace("@db:", "@127.0.0.1:");
+	}
+	return url;
+}
+
+const adapter = new PrismaPg({
+	connectionString: getDatabaseConnectionString(),
+});
+
+const prisma = new PrismaClient({ adapter });
 
 /**
  * ==============================================================================
