@@ -20,8 +20,13 @@ export class AiManager {
 		const startTime = Date.now();
 		const featurePrompt = buildFinancialFeaturePrompt(payload);
 
-		// 1. Coba Google Gemini API (Primary)
-		if (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY) {
+		// 1. Coba Google Gemini API (Primary) dengan Auto-Failover Multi-Key
+		if (
+			process.env.GEMINI_API_KEYS ||
+			process.env.GEMINI_API_KEY ||
+			process.env.GOOGLE_AI_KEY ||
+			geminiAdapter.getApiKeys().length > 0
+		) {
 			try {
 				const geminiResult =
 					await geminiAdapter.generateFinancialInsight(featurePrompt);
@@ -32,7 +37,7 @@ export class AiManager {
 				};
 			} catch (geminiErr) {
 				console.warn(
-					"[AiManager] Gemini API gagal, mencoba fallback ke Groq:",
+					"[AiManager] Seluruh key Gemini API gagal, mencoba fallback ke Groq:",
 					geminiErr instanceof Error ? geminiErr.message : geminiErr,
 				);
 			}

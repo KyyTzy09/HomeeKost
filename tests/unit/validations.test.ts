@@ -247,7 +247,7 @@ describe("Zod Validation Schemas", () => {
 			if (result.success) {
 				expect(result.data.scheduleDay).toBe(5);
 				expect(result.data.scheduleTime).toBe("08:30");
-				expect(result.data.aiModel).toBe("gemini-1.5-flash");
+				expect(result.data.aiModel).toBe("gemini-3.5-flash");
 			}
 		});
 
