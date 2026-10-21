@@ -15,8 +15,14 @@ export const automationSettingsSchema = z
 			)
 			.default("08:00"),
 		aiModel: z
-			.enum(["gemini-1.5-flash", "gemini-3-flash", "llama-3.3-70b-versatile"])
-			.default("gemini-1.5-flash")
+			.enum([
+				"gemini-3.5-flash",
+				"gemini-2.5-flash",
+				"gemini-1.5-flash",
+				"gemini-3-flash",
+				"llama-3.3-70b-versatile",
+			])
+			.default("gemini-3.5-flash")
 			.optional(),
 		autoSendWhatsApp: z.boolean().default(true),
 		targetPhone: z
