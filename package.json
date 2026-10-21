@@ -24,7 +24,8 @@
     "db:studio": "dotenv -e .env -- prisma studio",
     "db:seed": "dotenv -e .env -- prisma db seed",
     "db:seed:prod": "dotenv -e .env -- tsx prisma/seeders/production.seed.ts",
-    "db:reset-data": "dotenv -e .env -- tsx prisma/seeders/reset-data.ts"
+    "db:reset-data": "dotenv -e .env -- tsx prisma/seeders/reset-data.ts",
+    "migrate:cloudinary": "dotenv -e .env -- tsx scripts/migrate-cloudinary.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
