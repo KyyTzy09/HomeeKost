@@ -32,24 +32,24 @@
 ## Tasks
 
 ### Task 1: Database Model & System Setting Repository
-- [ ] Add `SystemSetting` model in `fullstack/prisma/schema.prisma` (`id`, `key`, `value`, `createdAt`, `updatedAt`).
-- [ ] Run `bunx prisma generate` in `fullstack`.
-- [ ] Create `fullstack/src/data/repositories/system-setting.repository.ts` with `getSetting<T>` and `setSetting<T>`.
-- [ ] Run `npx tsc --noEmit` and Biome format.
-- [ ] Commit: `feat(db): add SystemSetting model and repository`
+- [x] Add `SystemSetting` model in `fullstack/prisma/schema.prisma` (`id`, `key`, `value`, `createdAt`, `updatedAt`).
+- [x] Run `bunx prisma generate` in `fullstack`.
+- [x] Create `fullstack/src/data/repositories/system-setting.repository.ts` with `getSetting<T>` and `setSetting<T>`.
+- [x] Run `npx tsc --noEmit` and Biome format.
+- [x] Commit: `feat(db): add SystemSetting model and repository`
 
 ### Task 2: Service Schedule Matching Logic & Unit Tests
-- [ ] Create pure helper utility for schedule matching in `src/lib/schedule-utils.ts` (checks if given timestamp in WIB matches `scheduleDay` and `scheduleTime`).
-- [ ] Write unit test `tests/unit/report-automation-scheduler.test.ts` covering:
+- [x] Create pure helper utility for schedule matching in `src/lib/schedule-utils.ts` (checks if given timestamp in WIB matches `scheduleDay` and `scheduleTime`).
+- [x] Write unit test `tests/unit/report-automation-scheduler.test.ts` covering:
   - Exact match of date & hour -> returns `true`.
   - Mismatched day -> returns `false`.
   - Mismatched hour -> returns `false`.
   - Timezone UTC vs WIB offset (+7h) handled accurately.
-- [ ] Verify unit tests pass: `npm run test:unit`.
-- [ ] Implement `getAutomationSettings`, `updateAutomationSettings`, and time-matching logic in `ReportService.runMonthlyReportCron()`.
-- [ ] Update `src/routes/api/cron/monthly-reports.ts` to surface skipped vs executed status.
-- [ ] Run `npx tsc --noEmit` and Biome check.
-- [ ] Commit: `feat(report): implement persistent automation settings and hourly schedule matcher`
+- [x] Verify unit tests pass: `npm run test:unit`.
+- [x] Implement `getAutomationSettings`, `updateAutomationSettings`, and time-matching logic in `ReportService.runMonthlyReportCron()`.
+- [x] Update `src/routes/api/cron/monthly-reports.ts` to surface skipped vs executed status.
+- [x] Run `npx tsc --noEmit` and Biome check.
+- [x] Commit: `feat(report): implement persistent automation settings and hourly schedule matcher`
 
 ### Task 3: Server Functions & React Query Hooks
 - [ ] In `src/data/servers/report.fn.ts`, add:
