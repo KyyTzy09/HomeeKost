@@ -171,7 +171,20 @@ export const getReportAutomationSettingsServerFn = createServerFn({
 	return executeWithLogging(
 		"getReportAutomationSettingsServerFn",
 		{},
-		() => reportService.getAutomationSettings(),
+		async (session) => {
+			const userRole =
+				typeof (session.user as any)?.role === "string"
+					? (session.user as any).role
+					: (session.user as any)?.role?.name;
+
+			if (userRole !== "SUPER_ADMIN") {
+				throw new Error(
+					"Akses ditolak: Hanya SuperAdmin yang berhak melihat pengaturan automasi laporan.",
+				);
+			}
+
+			return reportService.getAutomationSettings();
+		},
 		{
 			method: "GET",
 			summary: (res) =>

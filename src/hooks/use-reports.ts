@@ -128,8 +128,11 @@ export const reportAutomationSettingsQueryOptions = () =>
 /**
  * Hook untuk mengambil Pengaturan Automasi Laporan Bulanan
  */
-export function useReportAutomationSettings() {
-	return useQuery(reportAutomationSettingsQueryOptions());
+export function useReportAutomationSettings(options?: { enabled?: boolean }) {
+	return useQuery({
+		...reportAutomationSettingsQueryOptions(),
+		...options,
+	});
 }
 
 /**

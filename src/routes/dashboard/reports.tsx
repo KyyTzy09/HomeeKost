@@ -127,7 +127,9 @@ function ReportsPage() {
 	const { user, userRole, isSuperAdmin, activeProperty } =
 		useDashboardContext();
 	const { data: properties } = useProperties();
-	const { data: dbAutomationSettings } = useReportAutomationSettings();
+	const { data: dbAutomationSettings } = useReportAutomationSettings({
+		enabled: isSuperAdmin,
+	});
 	const updateSettingsMutation = useUpdateReportAutomationSettings();
 
 	const currentSettings = dbAutomationSettings || DEFAULT_AUTOMATION_SETTINGS;

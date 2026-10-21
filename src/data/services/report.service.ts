@@ -555,7 +555,9 @@ export class ReportService {
 		values: AutomationSettingsFormValues,
 		user?: SessionUser,
 	): Promise<void> {
-		if (user && user.role?.name !== "SUPER_ADMIN") {
+		const userRole =
+			typeof user?.role === "string" ? user.role : user?.role?.name;
+		if (user && userRole !== "SUPER_ADMIN") {
 			throw new Error(
 				"Unauthorized: Hanya SuperAdmin yang berhak mengubah jadwal automasi laporan",
 			);
@@ -758,7 +760,7 @@ export class ReportService {
 					if (sendRes.status) {
 						sentReportTokensToday.add(reportToken);
 					}
-				} else if (options?.sendWhatsApp && !targetNumber) {
+				} else if (shouldSendWhatsApp && !targetNumber) {
 					console.warn(
 						"[Cron Report] Opsi kirim WhatsApp aktif tetapi nomor target pengelola belum diisi.",
 					);
