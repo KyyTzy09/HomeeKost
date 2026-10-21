@@ -16,9 +16,9 @@ describe("GeminiAdapter Key Management & Rotation", () => {
 		process.env = originalEnv;
 	});
 
-	it("harus menggunakan default model gemini-3.5-flash", () => {
+	it("harus menggunakan default model gemini-3.5-flash-lite", () => {
 		const adapter = new GeminiAdapter({ apiKey: "test-key" });
-		expect(adapter.getModel()).toBe("gemini-3.5-flash");
+		expect(adapter.getModel()).toBe("gemini-3.5-flash-lite");
 	});
 
 	it("harus menghormati GEMINI_MODEL dari environment", () => {
