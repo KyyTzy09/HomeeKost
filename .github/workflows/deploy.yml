@@ -54,3 +54,4 @@ jobs:
             sudo docker compose run --rm --build app bunx prisma db push
             sudo docker compose up -d --build app
             sudo docker image prune -f
+            sudo docker builder prune -af
