@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import {
+	type AutomationSettingsFormValues,
+	automationSettingsSchema,
+} from "../../common/validations/index.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { reportService } from "../services/report.service.ts";
 
@@ -157,6 +161,54 @@ export const exportAnnualCsvServerFn = createServerFn({
 			{
 				method: "POST",
 				summary: (res) => `Ekspor CSV: ${res.filename}`,
+			},
+		);
+	});
+
+export const getReportAutomationSettingsServerFn = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<AutomationSettingsFormValues> => {
+	return executeWithLogging(
+		"getReportAutomationSettingsServerFn",
+		{},
+		() => reportService.getAutomationSettings(),
+		{
+			method: "GET",
+			summary: (res) =>
+				`Pengaturan automasi laporan: Tgl ${res.scheduleDay}, Jam ${res.scheduleTime}, WA: ${res.autoSendWhatsApp ? "Aktif" : "Nonaktif"}`,
+		},
+	);
+});
+
+export const updateReportAutomationSettingsServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: AutomationSettingsFormValues) => {
+		return automationSettingsSchema.parse(input);
+	})
+	.handler(async ({ data }): Promise<{ success: boolean }> => {
+		return executeWithLogging(
+			"updateReportAutomationSettingsServerFn",
+			data,
+			async (session) => {
+				const userRole =
+					typeof (session.user as any)?.role === "string"
+						? (session.user as any).role
+						: (session.user as any)?.role?.name;
+
+				if (userRole !== "SUPER_ADMIN") {
+					throw new Error(
+						"Akses ditolak: Hanya SuperAdmin yang berhak mengubah pengaturan automasi laporan.",
+					);
+				}
+
+				await reportService.updateAutomationSettings(data, session.user as any);
+				return { success: true };
+			},
+			{
+				method: "POST",
+				summary: () =>
+					`Perbarui pengaturan automasi laporan: Tgl ${data.scheduleDay}, Jam ${data.scheduleTime}`,
 			},
 		);
 	});
