@@ -52,27 +52,27 @@
 - [x] Commit: `feat(report): implement persistent automation settings and hourly schedule matcher`
 
 ### Task 3: Server Functions & React Query Hooks
-- [ ] In `src/data/servers/report.fn.ts`, add:
+- [x] In `src/data/servers/report.fn.ts`, add:
   - `getReportAutomationSettingsServerFn`: fetches current settings.
   - `updateReportAutomationSettingsServerFn`: validates with `automationSettingsSchema` and checks `user.role?.name === "SUPER_ADMIN"`.
-- [ ] In `src/hooks/use-reports.ts`, add:
+- [x] In `src/hooks/use-reports.ts`, add:
   - `useReportAutomationSettings()`
   - `useUpdateReportAutomationSettings()`
-- [ ] Run `npx tsc --noEmit` and Biome check.
-- [ ] Commit: `feat(servers): add server functions and hooks for report automation settings`
+- [x] Run `npx tsc --noEmit` and Biome check.
+- [x] Commit: `feat(servers): add server functions and hooks for report automation settings`
 
 ### Task 4: UI Integration & SuperAdmin Guard in `/dashboard/reports`
-- [ ] In `src/routes/dashboard/reports.tsx`:
+- [x] In `src/routes/dashboard/reports.tsx`:
   - Fetch settings via `useReportAutomationSettings()`.
   - Replace `handleSaveAutomationSettings` to trigger `updateMutation.mutateAsync(values)` with toast notification.
   - Wrap `<ReportAutomationCard>` and `<AutomationSettingsDialog>` with `{isSuperAdmin && (...)}`.
   - Remove `AUTOMATION_STORAGE_KEY` and legacy `localStorage` read/write calls.
-- [ ] Run `npx tsc --noEmit` and Biome check.
-- [ ] Commit: `feat(ui): connect report automation settings to DB and guard with SuperAdmin role`
+- [x] Run `npx tsc --noEmit` and Biome check.
+- [x] Commit: `feat(ui): connect report automation settings to DB and guard with SuperAdmin role`
 
 ### Task 5: Static Analysis, Pure Unit Tests & Crontab Documentation
-- [ ] Run complete unit test suite: `npm run test:unit`.
-- [ ] Run TypeScript compile check: `npx tsc --noEmit`.
-- [ ] Run Biome lint & format: `npm run check`.
-- [ ] Update `fullstack/docs/Todo.md` to reflect dynamic report cron completion.
-- [ ] Commit: `chore: verify type safety, tests, and documentation`
+- [x] Run complete unit test suite: `npm run test:unit`.
+- [x] Run TypeScript compile check: `npx tsc --noEmit`.
+- [x] Run Biome lint & format: `npm run check`.
+- [x] Update `fullstack/docs/Todo.md` to reflect dynamic report cron completion.
+- [x] Commit: `chore: verify type safety, tests, and documentation`

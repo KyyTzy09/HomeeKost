@@ -365,3 +365,5 @@ Sistem Pengelolaan Kos Multi-Cabang (*HomeeKost*) — Monolith Server-Side Rende
 - [x] 🟢 Konfigurasi Docker Compose 2-Tier (`app` + `db` PostgreSQL 16 Alpine dengan healthcheck otomatis)
 - [x] 🟢 Konfigurasi Environment Variable (`.env.example`) lengkap untuk Fonnte WhatsApp, Google Gemini GenAI SDK, Groq Cloud OpenAI SDK, dan Better-Auth Secret
 - [x] 🟢 Validasi static type compile (`tsc --noEmit`) dan code formatting Biome 100% (0 error)
+- [x] 🟢 **Dynamic Report Automation Scheduler**: Persistensi jadwal dan nomor WA di tabel `system_settings` PostgreSQL, hourly cron schedule matching (WIB UTC+7), dan SuperAdmin RBAC isolation.
+
