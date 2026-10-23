@@ -1,4 +1,3 @@
-import { PieChart } from "lucide-react";
 import { Card } from "../../common/shadcn/card.tsx";
 import type { CategoryCostItem } from "../../common/types/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
@@ -19,20 +18,13 @@ export function FinanceCostComposition({
 	return (
 		<Card className="p-5 bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] flex flex-col justify-between">
 			<div>
-				<div className="flex items-start justify-between pb-3 border-b border-[#e4e9e4]">
-					<div>
-						<h2 className="text-sm font-bold text-[#252925]">
-							Komposisi Biaya
-						</h2>
-						<p className="text-[11px] text-[#737873]">
-							Berdasarkan kategori pengeluaran operasional & perbaikan
-						</p>
-					</div>
-
-					<div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f3f7f3] text-[#4f6958] rounded-lg text-xs font-semibold">
-						<PieChart className="w-3.5 h-3.5" />
-						<span>Total {formatRupiah(totalExpense)}</span>
-					</div>
+				<div className="pb-3 border-b border-[#e4e9e4]">
+					<h2 className="text-sm font-bold text-[#252925]">
+						Komposisi Biaya
+					</h2>
+					<p className="text-[11px] text-[#737873]">
+						Berdasarkan kategori pengeluaran operasional & perbaikan
+					</p>
 				</div>
 
 				{/* Progress Bars Breakdown */}
@@ -76,6 +68,14 @@ export function FinanceCostComposition({
 						))
 					)}
 				</div>
+			</div>
+
+			{/* Total Pengeluaran di Bagian Bawah Card (Tanpa Badge) */}
+			<div className="mt-6 pt-3 border-t border-[#e4e9e4] flex items-center justify-between text-xs">
+				<span className="text-[#737873] font-medium">Total Pengeluaran</span>
+				<span className="text-sm font-bold text-[#252925]">
+					{formatRupiah(totalExpense)}
+				</span>
 			</div>
 		</Card>
 	);

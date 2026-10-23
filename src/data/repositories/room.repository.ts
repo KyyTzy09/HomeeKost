@@ -59,6 +59,9 @@ export class RoomRepository {
 				propertyId,
 				roomNumber,
 			},
+			include: {
+				property: true,
+			},
 		});
 	}
 

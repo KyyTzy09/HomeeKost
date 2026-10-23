@@ -1,3 +1,4 @@
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 import { prisma } from "../../db.ts";
 import type {
 	InvoiceStatus,
@@ -566,6 +567,13 @@ export class InvoiceRepository {
 				room: {
 					select: {
 						price: true,
+						roomNumber: true,
+						property: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
 					},
 				},
 				invoices: {
@@ -625,9 +633,12 @@ export class InvoiceRepository {
 				continue;
 			}
 
-			const monthPadded = String(periodMonth).padStart(2, "0");
-			const invoiceNumber = `INV-${periodYear}${monthPadded}-${timestamp}${String(i + 1).padStart(3, "0")}`;
 			const dueDate = new Date(periodYear, periodMonth - 1, dueDateDay);
+			const invoiceNumber = formatDeterministicInvoiceNumber({
+				date: dueDate,
+				roomNumber: contract.room.roomNumber,
+				property: contract.room.property,
+			});
 			const amount = Number(contract.room.price);
 
 			toCreate.push({

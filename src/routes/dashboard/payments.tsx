@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MessageSquare } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PaymentItem } from "../../common/types/index.ts";
 import type {
 	ConfirmPaymentInput,
@@ -36,6 +36,11 @@ import {
 import { getMonthName } from "../../lib/date-utils.ts";
 
 export const Route = createFileRoute("/dashboard/payments")({
+	validateSearch: (search: Record<string, unknown>): { status?: string } => {
+		return {
+			status: typeof search.status === "string" ? search.status : undefined,
+		};
+	},
 	head: () => ({
 		meta: [
 			{
@@ -117,10 +122,30 @@ function PaymentsPage() {
 	}, [periodFilter]);
 
 	// Filter and Sort states
+	const search = Route.useSearch();
+	const initialStatus = useMemo(() => {
+		if (!search.status) return DEFAULT_PAYMENT_STATUS_OPTION;
+		return (
+			PAYMENT_STATUS_OPTIONS.find((opt) => opt.value === search.status) ||
+			DEFAULT_PAYMENT_STATUS_OPTION
+		);
+	}, [search.status]);
+
 	const [searchQuery, setSearchQuery] = useState<string>("");
 	const [statusFilter, setStatusFilter] = useState<PaymentFilterOption>(
-		DEFAULT_PAYMENT_STATUS_OPTION,
+		initialStatus,
 	);
+
+	useEffect(() => {
+		if (search.status) {
+			const matched = PAYMENT_STATUS_OPTIONS.find(
+				(opt) => opt.value === search.status,
+			);
+			if (matched) {
+				setStatusFilter(matched);
+			}
+		}
+	}, [search.status]);
 	const [sortBy, setSortBy] = useState<"dueDate" | "amount" | "createdAt">(
 		"dueDate",
 	);

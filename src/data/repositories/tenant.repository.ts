@@ -1,3 +1,4 @@
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 import { prisma } from "../../db.ts";
 import type {
 	BillingCycle,
@@ -544,7 +545,11 @@ export class TenantRepository {
 
 						const pMonth = effectiveStartDate.getMonth() + 1;
 						const pYear = effectiveStartDate.getFullYear();
-						const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+						const invNum = formatDeterministicInvoiceNumber({
+							date: effectiveStartDate,
+							roomNumber: effectiveRoom.roomNumber,
+							property: effectiveRoom.property,
+						});
 
 						const newInvoice = await tx.invoice.create({
 							data: {
@@ -708,7 +713,12 @@ export class TenantRepository {
 
 							// Jika harga naik dan flag createDifferenceInvoice !== false, terbitkan invoice selisih bulan ini
 							if (priceDiff > 0 && data.createDifferenceInvoice !== false) {
-								const invNumber = `INV-DIFF-${currentYear}${currentMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
+								const invNumber = formatDeterministicInvoiceNumber({
+									date: now,
+									roomNumber: effectiveRoom.roomNumber,
+									property: effectiveRoom.property,
+									sequence: 2,
+								});
 
 								await tx.invoice.create({
 									data: {
@@ -874,22 +884,31 @@ export class TenantRepository {
 	async deleteTenant(id: string) {
 		return this.db.$transaction(
 			async (tx) => {
-				// Find active contracts
-				const activeContracts = await tx.rentalContract.findMany({
-					where: {
-						tenantId: id,
-						status: "ACTIVE",
-					},
+				// 1. Ambil seluruh kontrak dari tenant ini (aktif maupun non-aktif)
+				const tenantContracts = await tx.rentalContract.findMany({
+					where: { tenantId: id },
+					select: { id: true, roomId: true, status: true },
 				});
+				const contractIds = tenantContracts.map((c) => c.id);
 
-				// Release all rooms
+				// 2. Hapus tagihan/invoice sewa agar tidak menggantung di halaman Pembayaran & Invoice
+				// Seluruh catatan riwayat transaksi kas di tabel Transaction TETAP AMAN & ABADI (onDelete: SetNull pada invoiceId)
+				if (contractIds.length > 0) {
+					await tx.invoice.deleteMany({
+						where: {
+							contractId: { in: contractIds },
+						},
+					});
+				}
+
+				// 3. Lepaskan status kamar kembali ke Kosong (VACANT) & TERMINATED-kan kontrak aktif
+				const activeContracts = tenantContracts.filter((c) => c.status === "ACTIVE");
 				for (const contract of activeContracts) {
 					await tx.room.update({
 						where: { id: contract.roomId },
 						data: { status: "VACANT" },
 					});
 
-					// Pastikan seluruh kontrak aktif pada kamar ini benar-benar TERMINATED agar kamar kembali kosong
 					await tx.rentalContract.updateMany({
 						where: {
 							roomId: contract.roomId,
@@ -899,7 +918,7 @@ export class TenantRepository {
 					});
 				}
 
-				// Mark tenant as INACTIVE
+				// 4. Mark tenant as INACTIVE
 				return tx.tenant.update({
 					where: { id },
 					data: { status: "INACTIVE" },

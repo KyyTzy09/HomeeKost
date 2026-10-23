@@ -190,9 +190,12 @@ export class DashboardService {
 					},
 					{ periodMonth: null },
 				],
-				...(propertyIds
-					? { contract: { room: { propertyId: { in: propertyIds } } } }
-					: {}),
+				contract: {
+					status: "ACTIVE",
+					...(propertyIds
+						? { room: { propertyId: { in: propertyIds } } }
+						: {}),
+				},
 			},
 			include: {
 				transactions: true,
@@ -208,6 +211,7 @@ export class DashboardService {
 						},
 						room: {
 							select: {
+								id: true,
 								roomNumber: true,
 								property: { select: { name: true } },
 							},
@@ -221,17 +225,30 @@ export class DashboardService {
 		const todayDate = new Date();
 		todayDate.setHours(0, 0, 0, 0);
 
-		let dueCount = 0;
 		let dueAmountRaw = 0;
+		const dueRoomsSet = new Set<string>();
 		const upcomingPaymentsList: UpcomingPaymentItem[] = [];
 
 		for (const inv of pendingInvoices) {
+			// Saring kontrak multi-bulan (Triwulan/Semesteran/Tahunan): jika masa sewa masih berjalan jauh di depan, lewati (Kamila #6)
+			if (
+				inv.contract.billingCycle !== "MONTHLY" &&
+				inv.contract.endDate
+			) {
+				const contractEnd = new Date(inv.contract.endDate);
+				const daysUntilEnd = (contractEnd.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24);
+				if (daysUntilEnd > 30 && inv.status !== "OVERDUE") {
+					continue;
+				}
+			}
+
 			const installmentSummary = calculateInstallmentSummary(
 				Number(inv.amount),
 				inv.transactions,
 			);
 			if (installmentSummary.remainingAmount > 0) {
-				dueCount++;
+				const roomId = inv.contract.room?.id || inv.contract.roomId || inv.contractId;
+				dueRoomsSet.add(roomId);
 				dueAmountRaw += installmentSummary.remainingAmount;
 
 				const due = new Date(inv.dueDate);
@@ -272,6 +289,9 @@ export class DashboardService {
 				});
 			}
 		}
+
+		// Hitung jatuh tempo berbasis KAMAR unik (bukan lembar invoice) per Kamila #3 & Hanna #5
+		const dueCount = dueRoomsSet.size;
 
 		// 5. Format Maksimal 6 Tagihan Mendekati Jatuh Tempo Bulan Ini
 		const upcomingPayments: UpcomingPaymentItem[] = upcomingPaymentsList.slice(
@@ -402,7 +422,7 @@ export class DashboardService {
 
 		const propertySummaries: DashboardPropertySummaryItem[] = await Promise.all(
 			allProperties.map(async (prop) => {
-				const propDueCount = await this.db.invoice.count({
+				const propInvoices = await this.db.invoice.findMany({
 					where: {
 						status: { in: ["PENDING", "OVERDUE"] },
 						dueDate: { lte: endOfCurrentMonth },
@@ -414,16 +434,45 @@ export class DashboardService {
 							},
 							{ periodMonth: null },
 						],
-						contract: { room: { propertyId: prop.id } },
+						contract: {
+							status: "ACTIVE",
+							room: { propertyId: prop.id },
+						},
+					},
+					include: {
+						contract: { select: { roomId: true, billingCycle: true, endDate: true } },
+						transactions: true,
 					},
 				});
+
+				const dueRoomsForProp = new Set<string>();
+				for (const inv of propInvoices) {
+					if (
+						inv.contract.billingCycle !== "MONTHLY" &&
+						inv.contract.endDate
+					) {
+						const contractEnd = new Date(inv.contract.endDate);
+						const daysUntilEnd = (contractEnd.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24);
+						if (daysUntilEnd > 30 && inv.status !== "OVERDUE") {
+							continue;
+						}
+					}
+					const installmentSummary = calculateInstallmentSummary(
+						Number(inv.amount),
+						inv.transactions,
+					);
+					if (installmentSummary.remainingAmount > 0) {
+						dueRoomsForProp.add(inv.contract.roomId);
+					}
+				}
+				const propDueCount = dueRoomsForProp.size;
 
 				return {
 					id: prop.id,
 					name: prop.name,
 					rooms: `${prop.rooms.length} kamar`,
 					dueBadge:
-						propDueCount > 0 ? `${propDueCount} mendekati` : "Semua lunas",
+						propDueCount > 0 ? `${propDueCount} kamar mendekati` : "Semua lunas",
 					badgeColor: propDueCount > 0 ? "amber" : "green",
 				};
 			}),

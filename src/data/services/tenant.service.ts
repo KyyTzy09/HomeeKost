@@ -1,3 +1,4 @@
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 import type {
 	OccupationStatus,
 	RentDuration,
@@ -538,7 +539,7 @@ export class TenantService {
 					: ("PENDING" as const);
 				const pMonth = cycleStart.getMonth() + 1;
 				const pYear = cycleStart.getFullYear();
-				const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-${c + 1}`;
+				const invNum = formatDeterministicInvoiceNumber({ date: cycleStart, roomNumber: room.roomNumber, property: room.property, sequence: c + 1 });
 
 				// 1 Invoice per Siklus Sewa (misal Rp 5.100.000 per Semester)
 				invoicesToCreate.push({
@@ -583,7 +584,11 @@ export class TenantService {
 			);
 			const pMonth = startDate.getMonth() + 1;
 			const pYear = startDate.getFullYear();
-			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+			const invNum = formatDeterministicInvoiceNumber({
+				date: startDate,
+				roomNumber: room.roomNumber,
+				property: room.property,
+			});
 
 			invoicesToCreate.push({
 				invoiceNumber: invNum,
@@ -623,7 +628,11 @@ export class TenantService {
 			);
 			const pMonth = startDate.getMonth() + 1;
 			const pYear = startDate.getFullYear();
-			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+			const invNum = formatDeterministicInvoiceNumber({
+				date: startDate,
+				roomNumber: room.roomNumber,
+				property: room.property,
+			});
 
 			transactionsToCreate.push({
 				propertyId: room.propertyId,
@@ -658,7 +667,11 @@ export class TenantService {
 			);
 			const pMonth = startDate.getMonth() + 1;
 			const pYear = startDate.getFullYear();
-			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+			const invNum = formatDeterministicInvoiceNumber({
+				date: startDate,
+				roomNumber: room.roomNumber,
+				property: room.property,
+			});
 
 			invoicesToCreate.push({
 				invoiceNumber: invNum,
