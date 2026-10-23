@@ -43,7 +43,6 @@ const TEMPLATE_CATEGORY_OPTIONS: {
 	{ value: "Sambutan", label: "Sambutan Penghuni Baru", icon: "👋" },
 	{ value: "Pembayaran", label: "Apresiasi Bayar Tepat Waktu", icon: "💳" },
 	{ value: "Ulang Tahun", label: "Ucapan Selamat Ulang Tahun", icon: "🎂" },
-	{ value: "Kerja Bakti", label: "Kerja Bakti & Kebersihan", icon: "🧹" },
 	{ value: "Umum", label: "Pengumuman Umum", icon: "📢" },
 ];
 
@@ -52,7 +51,6 @@ const getValidCategory = (cat?: string): EngagementTemplateCategory => {
 		cat === "Sambutan" ||
 		cat === "Pembayaran" ||
 		cat === "Ulang Tahun" ||
-		cat === "Kerja Bakti" ||
 		cat === "Umum"
 	) {
 		return cat;

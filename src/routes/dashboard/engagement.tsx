@@ -77,14 +77,6 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 		category: "Ulang Tahun",
 		icon: "🎂",
 	},
-	{
-		id: "tpl-4",
-		name: "Pemberitahuan Kerja Bakti",
-		content:
-			"Diberitahukan kepada seluruh penghuni, pada hari Minggu pagi pukul 08.00 WIB akan diadakan kerja bakti & pembersihan area bersama. Mohon partisipasi dan kerja samanya. Terima kasih! 🧹",
-		category: "Kerja Bakti",
-		icon: "🧹",
-	},
 ];
 
 const TEMPLATE_STORAGE_KEY = "homeekost_engagement_templates";
@@ -93,7 +85,6 @@ const CATEGORY_ICONS: Record<string, string> = {
 	Sambutan: "👋",
 	Pembayaran: "💳",
 	"Ulang Tahun": "🎂",
-	"Kerja Bakti": "🧹",
 	Umum: "💬",
 };
 

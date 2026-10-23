@@ -51,13 +51,17 @@
 
 ---
 
+### Menu Engagement
+- [x] **Hapus Kategori "Kerja Bakti"**:
+  - Menghapus opsi kategori *"Kerja Bakti"* pada dialog pembuatan pengumuman (`EngagementEventDialog`), dialog template pesan (`EngagementTemplateDialog`), serta daftar template bawaan.
+- [x] **Tombol Manual Apresiasi Bayar Tepat Waktu**:
+  - Menyediakan tombol aksi kirim manual perorangan (*"Kirim Apresiasi"*) serta kirim selektif bagi pengelola untuk apresiasi pembayaran tepat waktu di Engagement Hub (bukan dikirim otomatis secara blast).
+
+---
+
 ## 2. Belum Dikerjakan (To Do 📌)
 
-### Menu Engagement
-- [ ] **Hapus Kategori "Kerja Bakti"**:
-  - Menghapus opsi kategori *"Kerja Bakti"* pada dialog pembuatan pengumuman / event engagement.
-- [ ] **Tombol Manual Apresiasi Bayar Tepat Waktu**:
-  - Menyediakan tombol aksi kirim manual bagi pengelola untuk pesan apresiasi pembayaran tepat waktu (bukan dikirim otomatis secara blast).
+*(Semua daftar tugas revisi utama telah selesai dikerjakan ✅)*
 
 ---
 

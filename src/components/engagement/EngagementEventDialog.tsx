@@ -49,7 +49,6 @@ const CATEGORY_OPTIONS: {
 	icon: React.ComponentType<{ className?: string }>;
 }[] = [
 	{ label: "Umum / Informasi", value: "UMUM", icon: Megaphone },
-	{ label: "Kerja Bakti & Kebersihan", value: "KERJA_BAKTI", icon: Sparkles },
 	{ label: "Maintenance & Fasilitas", value: "MAINTENANCE", icon: Wrench },
 	{ label: "Acara / Kegiatan Bersama", value: "ACARA", icon: PartyPopper },
 ];
@@ -169,7 +168,7 @@ export function EngagementEventDialog({
 									Judul Pengumuman
 								</Label>
 								<Input
-									placeholder="Contoh: Kerja Bakti Lingkungan, Perbaikan Toren Air"
+									placeholder="Contoh: Pembersihan Toren Air, Perbaikan Jaringan Wi-Fi"
 									value={field.state.value}
 									onChange={(e) => field.handleChange(e.target.value)}
 									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus-visible:ring-[#8fa594]"
