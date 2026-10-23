@@ -16,6 +16,7 @@ export interface UserItem {
 export interface AuditLogItem {
 	id: string | number;
 	time: string;
+	rawDate?: string;
 	userName: string;
 	userRole: AuditActorRole;
 	activity: string;

@@ -128,8 +128,14 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 	const columns = useMemo(
 		() => [
 			columnHelper.accessor("time", {
+				id: "time",
 				header: "Waktu Aktivitas",
 				enableSorting: true,
+				sortingFn: (rowA, rowB) => {
+					const timeA = new Date(rowA.original.rawDate || rowA.original.time).getTime() || 0;
+					const timeB = new Date(rowB.original.rawDate || rowB.original.time).getTime() || 0;
+					return timeA - timeB;
+				},
 				cell: (info) => (
 					<div className="flex items-center gap-1.5 whitespace-nowrap">
 						<Clock className="w-3.5 h-3.5 text-[#8a958d] shrink-0" />
@@ -220,6 +226,9 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 			sorting,
 			pagination,
 		},
+		initialState: {
+			sorting: [{ id: "time", desc: true }],
+		},
 		onGlobalFilterChange: setGlobalFilter,
 		onSortingChange: setSorting,
 		onPaginationChange: setPagination,
@@ -241,6 +250,7 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 		setGlobalFilter("");
 		setRoleFilter("ALL");
 		setActivityTypeFilter("ALL");
+		setSorting([{ id: "time", desc: true }]);
 		table.setPageIndex(0);
 	};
 

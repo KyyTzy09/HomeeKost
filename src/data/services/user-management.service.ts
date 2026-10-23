@@ -502,7 +502,10 @@ export class UserManagementService {
 			// 3. Urutkan berdasarkan waktu transaksi/aktivitas terbaru
 			logs.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
 
-			return logs.slice(0, limit).map(({ rawDate, ...item }) => item);
+			return logs.slice(0, limit).map(({ rawDate, ...item }) => ({
+				...item,
+				rawDate: rawDate.toISOString(),
+			}));
 		} catch (err) {
 			console.error("Gagal mengambil data audit logs riil:", err);
 			return [];
