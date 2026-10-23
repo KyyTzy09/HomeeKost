@@ -560,6 +560,9 @@ export class InvoiceRepository {
 			select: {
 				id: true,
 				tenantId: true,
+				billingCycle: true,
+				startDate: true,
+				endDate: true,
 				room: {
 					select: {
 						price: true,
@@ -604,6 +607,16 @@ export class InvoiceRepository {
 
 		for (let i = 0; i < contracts.length; i++) {
 			const contract = contracts[i];
+			// Lewati jika kontrak multi-bulan (Triwulan, Semesteran, Tahunan) masih aktif mencakup periode ini
+			const targetPeriodStart = new Date(periodYear, periodMonth - 1, 1);
+			if (
+				contract.billingCycle !== "MONTHLY" &&
+				contract.endDate &&
+				targetPeriodStart < contract.endDate
+			) {
+				continue;
+			}
+
 			// Lewati jika sudah ada invoice untuk periode ini (di kontrak ini maupun kontrak sebelumnya)
 			if (
 				contract.invoices.length > 0 ||

@@ -791,6 +791,10 @@ export class TenantService {
 				? input.createDifferenceInvoice !== false
 				: true;
 		const newRentAmount = input.rent ? parseRupiah(input.rent) : undefined;
+		const contractUpdateScope =
+			"contractUpdateScope" in input && input.contractUpdateScope
+				? input.contractUpdateScope
+				: "CURRENT_ONLY";
 
 		await this.tenantRepo.updateTenantWithContract(id, {
 			name: input.name,
@@ -817,6 +821,7 @@ export class TenantService {
 			updatePendingInvoiceAmount,
 			createDifferenceInvoice,
 			newRentAmount,
+			contractUpdateScope,
 		});
 
 		const fullTenant = await this.getTenantById(id);

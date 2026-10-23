@@ -282,6 +282,7 @@ export function TenantFormDialog({
 		roomChangeMode?: "CORRECTION" | "TRANSFER";
 		updatePendingInvoiceAmount?: boolean;
 		createDifferenceInvoice?: boolean;
+		contractUpdateScope?: "ALL_HISTORY" | "CURRENT_ONLY";
 	}) => {
 		const autoDue =
 			val.dueDate ||
@@ -302,6 +303,7 @@ export function TenantFormDialog({
 			roomChangeMode: val.roomChangeMode || "CORRECTION",
 			updatePendingInvoiceAmount: val.updatePendingInvoiceAmount !== false,
 			createDifferenceInvoice: val.createDifferenceInvoice !== false,
+			contractUpdateScope: val.contractUpdateScope || "CURRENT_ONLY",
 		};
 	};
 
@@ -337,6 +339,7 @@ export function TenantFormDialog({
 			roomChangeMode: "CORRECTION" as "CORRECTION" | "TRANSFER",
 			updatePendingInvoiceAmount: true,
 			createDifferenceInvoice: true,
+			contractUpdateScope: "CURRENT_ONLY" as "ALL_HISTORY" | "CURRENT_ONLY",
 		},
 		validators: {
 			onSubmit: ({ value }) => {
@@ -456,6 +459,7 @@ export function TenantFormDialog({
 				form.setFieldValue("roomChangeMode", "CORRECTION");
 				form.setFieldValue("updatePendingInvoiceAmount", true);
 				form.setFieldValue("createDifferenceInvoice", true);
+				form.setFieldValue("contractUpdateScope", "CURRENT_ONLY");
 				setKtpPreview(null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -493,6 +497,7 @@ export function TenantFormDialog({
 				form.setFieldValue("agreement", true);
 				form.setFieldValue("roomChangeMode", "CORRECTION");
 				form.setFieldValue("createDifferenceInvoice", true);
+				form.setFieldValue("contractUpdateScope", "CURRENT_ONLY");
 				setKtpPreview(null);
 				setKtpFileName("");
 				setScanStatus("idle");
@@ -1512,8 +1517,24 @@ export function TenantFormDialog({
 								}}
 							</form.Subscribe>
 
-							{/* Lama Sewa Radio (Hanya Pendaftaran Baru) */}
-							{!isEditing && (
+							{/* Total Tarif Sewa Kamar (Kolom Info Readonly - Row 1 Col 2) */}
+							<form.Field name="rent">
+								{(field) => (
+									<div className="space-y-1">
+										<Label className="text-[11px] font-bold text-[#506257]">
+											Total Tarif Sewa
+										</Label>
+										<div className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 bg-[#f8faf8] flex items-center">
+											<span className="text-[12.5px] font-bold text-[#252925] font-mono">
+												{field.state.value || "Rp0"}
+											</span>
+										</div>
+									</div>
+								)}
+							</form.Field>
+
+							{/* Lama Sewa Radio (Row 2 - Full Width Col 1 & 2) */}
+							<div className="col-span-1 sm:col-span-2 space-y-1.5 pt-0.5">
 								<form.Field name="duration">
 									{(field) => {
 										const errorMsg =
@@ -1524,7 +1545,7 @@ export function TenantFormDialog({
 												<Label className="text-[11px] font-bold text-[#506257]">
 													Lama Sewa <span className="text-[#b66b68]">*</span>
 												</Label>
-												<div className="flex flex-wrap gap-3 py-1">
+												<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 													{(
 														[
 															"Bulanan",
@@ -1532,30 +1553,37 @@ export function TenantFormDialog({
 															"Semesteran",
 															"Tahunan",
 														] as const
-													).map((dur) => (
-														<label
-															key={dur}
-															className="flex items-center gap-1.5 text-[11.5px] text-[#34443a] cursor-pointer"
-														>
-															<input
-																type="radio"
-																name="duration"
-																value={dur}
-																checked={field.state.value === dur}
-																onChange={() => {
-																	clearFieldError("duration");
-																	handleChangeDuration(dur);
-																}}
-																className="accent-[#4f6958]"
-															/>
-															<span>
-																{dur}{" "}
-																<span className="text-[9.5px] text-[#8a958d]">
-																	({getDurationMonths(dur)} bln)
+													).map((dur) => {
+														const isChecked = field.state.value === dur;
+														return (
+															<label
+																key={dur}
+																className={`flex items-center gap-2 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																	isChecked
+																		? "bg-[#edf4ee] border-[#4f6958] text-[#24342b] font-semibold"
+																		: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+																}`}
+															>
+																<input
+																	type="radio"
+																	name="duration"
+																	value={dur}
+																	checked={isChecked}
+																	onChange={() => {
+																		clearFieldError("duration");
+																		handleChangeDuration(dur);
+																	}}
+																	className="accent-[#4f6958]"
+																/>
+																<span className="text-[11.5px]">
+																	{dur}{" "}
+																	<span className="text-[9.5px] text-[#78887d]">
+																		({getDurationMonths(dur)} bln)
+																	</span>
 																</span>
-															</span>
-														</label>
-													))}
+															</label>
+														);
+													})}
 												</div>
 												{hasError && (
 													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
@@ -1566,53 +1594,93 @@ export function TenantFormDialog({
 										);
 									}}
 								</form.Field>
-							)}
+							</div>
 
-							{/* Harga Total Sewa (Auto-calculated, Editable) */}
-							<form.Field
-								name="rent"
-								validators={{
-									onChange: ({ value }) =>
-										!value ? "Harga sewa wajib diisi" : undefined,
-								}}
-							>
-								{(field) => {
-									const errorMsg =
-										field.state.meta.errors[0] || formErrors.rent;
-									const hasError = Boolean(errorMsg);
-									return (
-										<div className="space-y-1">
-											<div className="flex items-center justify-between">
-												<Label className="text-[11px] font-bold text-[#506257]">
-													{isEditing ? "Tarif Sewa Kamar" : "Harga Total Sewa"}
+							{/* Pengaturan Penerapan Tagihan Saat Edit (Row 3 - Full Width Col 1 & 2) */}
+							{isEditing && (
+								<form.Subscribe
+									selector={(state) => [
+										state.values.duration,
+										state.values.rent,
+										state.values.startDate,
+									]}
+								>
+									{([currDuration, currRent, currStartDate]) => {
+										const isDurationOrPriceChanged =
+											currDuration !== editingTenant?.duration ||
+											currRent !== editingTenant?.rent ||
+											currStartDate !== toInputDateFormat(editingTenant?.startDate);
+
+										if (!isDurationOrPriceChanged) return null;
+
+										return (
+											<div className="col-span-1 sm:col-span-2 bg-[#fdfbf7] border border-[#d8e4da] rounded-[12px] p-3 space-y-2 shadow-xs animate-in fade-in duration-200">
+												<Label className="text-[11px] font-bold text-[#252925] block">
+													Pilih bagaimana perubahan nominal dan durasi sewa diterapkan:
 												</Label>
+
+												<form.Field name="contractUpdateScope">
+													{(scopeField) => (
+														<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+															{/* Opsi 1 */}
+															<label
+																className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																	scopeField.state.value === "ALL_HISTORY"
+																		? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
+																		: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+																}`}
+															>
+																<input
+																	type="radio"
+																	name="contractUpdateScope"
+																	value="ALL_HISTORY"
+																	checked={scopeField.state.value === "ALL_HISTORY"}
+																	onChange={() => scopeField.handleChange("ALL_HISTORY")}
+																	className="accent-[#4f6958] mt-0.5"
+																/>
+																<div className="space-y-0.5">
+																	<span className="text-[11.5px] font-bold block text-[#24342b]">
+																		Ubah Semua Nominal Kontrak
+																	</span>
+																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
+																		Perbarui seluruh riwayat tagihan kontrak ini.
+																	</p>
+																</div>
+															</label>
+
+															{/* Opsi 2 */}
+															<label
+																className={`flex items-start gap-2.5 p-2.5 rounded-[10px] border cursor-pointer transition-colors ${
+																	scopeField.state.value === "CURRENT_ONLY"
+																		? "bg-[#edf4ee] border-[#4f6958] text-[#24342b]"
+																		: "bg-white border-[#dfe7e0] text-[#4a554d] hover:bg-[#f8faf8]"
+																}`}
+															>
+																<input
+																	type="radio"
+																	name="contractUpdateScope"
+																	value="CURRENT_ONLY"
+																	checked={scopeField.state.value === "CURRENT_ONLY"}
+																	onChange={() => scopeField.handleChange("CURRENT_ONLY")}
+																	className="accent-[#4f6958] mt-0.5"
+																/>
+																<div className="space-y-0.5">
+																	<span className="text-[11.5px] font-bold block text-[#24342b]">
+																		Hanya Kontrak Berjalan
+																	</span>
+																	<p className="text-[10px] text-[#55695a] leading-tight m-0">
+																		Terapkan untuk periode aktif ke depan.
+																	</p>
+																</div>
+															</label>
+														</div>
+													)}
+												</form.Field>
 											</div>
-											<Input
-												value={field.state.value}
-												inputMode="numeric"
-												onChange={(e) => {
-													clearFieldError("rent");
-													const digits = e.target.value.replace(/[^0-9]/g, "");
-													field.handleChange(
-														digits ? formatRupiah(Number(digits)) : "",
-													);
-												}}
-												placeholder="Rp850.000"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] font-semibold text-[#252925] bg-[#fbfcfb] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
-											/>
-											{hasError && (
-												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{errorMsg}
-												</p>
-											)}
-										</div>
-									);
-								}}
-							</form.Field>
+										);
+									}}
+								</form.Subscribe>
+							)}
 
 							{/* Tanggal Mulai Sewa & Settlement Option & Due Date Preview (Hanya Pendaftaran Baru) */}
 							{!isEditing && (

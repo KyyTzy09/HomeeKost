@@ -30,7 +30,7 @@
 - [x] 🟢 **Badge Cicilan**: Untuk tagihan yang sudah dicicil sebagian namun belum selesai, tampilkan keterangan **"Cicilan"** dengan rincian sisa tagihan.
 
 ### 6. Manajemen Penghuni & Durasi Sewa
-- [ ] 🟡 **Pindah Opsi Durasi Sewa**: Pastikan opsi mengubah periode sewa (bulanan, triwulan, dll.) tersedia langsung di dialog **Edit Penghuni**.
+- [x] 🟡 **Pindah Opsi Durasi Sewa**: Pastikan opsi mengubah periode sewa (bulanan, triwulan, dll.) tersedia langsung di dialog **Edit Penghuni** beserta pilihan penanganan lingkup perubahan nominal & kontrak (`ALL_HISTORY` vs `CURRENT_ONLY`).
 - [ ] 🔴 **Otomatisasi Lunas Multi-Bulan**: Pendaftaran sewa berdurasi Triwulan, Semesteran, atau Tahunan langsung otomatis berstatus **Lunas** (`PAID`) dan tercatat di kas masuk tanpa perlu konfirmasi manual tambahan.
 
 ### 7. Filter & Tampilan Kamar
