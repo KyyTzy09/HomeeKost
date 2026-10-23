@@ -11,7 +11,6 @@ import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import {
 	type KtpExtractedData,
 	ktpOcrService,
-	storageService,
 	tenantService,
 } from "../services/index.ts";
 
@@ -160,21 +159,11 @@ export const scanKtpServerFn = createServerFn({
 				"scanKtpServerFn",
 				{ hasImage: Boolean(imageBase64) },
 				async () => {
-					let ktpUrl = "";
-					try {
-						const uploadRes = await storageService.uploadImage(imageBase64, {
-							folder: "homeekost/ktp",
-						});
-						ktpUrl = uploadRes.url;
-					} catch (uploadErr) {
-						console.warn("[scanKtpServerFn] Gagal simpan file KTP:", uploadErr);
-					}
-
+					// 100% In-Memory OCR Pass-Through: tidak menyimpan file fisik ke storage disk VPS
 					const ocrResult = await ktpOcrService.processKtpImage(imageBase64);
 
 					return {
 						success: ocrResult.success,
-						ktpUrl: ktpUrl || imageBase64,
 						data: ocrResult.data,
 						error: ocrResult.error,
 					};
@@ -183,7 +172,7 @@ export const scanKtpServerFn = createServerFn({
 					method: "POST",
 					summary: (res) =>
 						res.success
-							? `KTP berhasil dipindai: ${res.data?.name || "OK"}`
+							? `KTP berhasil dipindai (in-memory): ${res.data?.name || "OK"}`
 							: `KTP scan fallback: ${res.error || "Gagal"}`,
 				},
 			);

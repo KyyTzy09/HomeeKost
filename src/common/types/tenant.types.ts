@@ -1,6 +1,6 @@
 export type OccupationStatus = "Mahasiswa" | "Karyawan" | "Lainnya";
 export type RentDuration = "Bulanan" | "Triwulan" | "Semesteran" | "Tahunan";
-export type TenantPaymentStatus = "Lancar" | "Terlambat";
+export type TenantPaymentStatus = "Lunas" | "Belum Lunas" | "Terlambat";
 
 export interface TenantItem {
 	id: string;

@@ -84,6 +84,7 @@ export class TenantRepository {
 					include: {
 						room: true,
 						invoices: {
+							include: { transactions: true },
 							orderBy: { dueDate: "asc" },
 							take: 12,
 						},
@@ -108,6 +109,7 @@ export class TenantRepository {
 							},
 						},
 						invoices: {
+							include: { transactions: true },
 							orderBy: { dueDate: "asc" },
 							take: 12,
 						},

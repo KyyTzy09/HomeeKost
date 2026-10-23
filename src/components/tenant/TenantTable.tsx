@@ -142,13 +142,16 @@ export function TenantTable({
 				header: () => renderSortHeader("Pembayaran", "paymentStatus"),
 				cell: (info) => {
 					const status = info.getValue();
-					const isLancar = status === "Lancar";
+					const isLunas = status === "Lunas";
+					const isTerlambat = status === "Terlambat";
 					return (
 						<span
 							className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-bold ${
-								isLancar
+								isLunas
 									? "bg-[#e8f2ea] text-[#568062]"
-									: "bg-[#f7e9e8] text-[#a65f5b]"
+									: isTerlambat
+										? "bg-[#f7e9e8] text-[#a65f5b]"
+										: "bg-[#fbf4ea] text-[#99773d]"
 							}`}
 						>
 							{status}

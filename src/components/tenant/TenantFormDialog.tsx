@@ -60,6 +60,7 @@ interface TenantFormDialogProps {
 	roomOptions?: RoomOption[];
 	editingTenant: TenantItem | null;
 	onSubmit: (values: TenantFormValues | UpdateTenantFormValues) => void;
+	isSubmitting?: boolean;
 }
 
 /**
@@ -209,6 +210,7 @@ export function TenantFormDialog({
 	roomOptions = [],
 	editingTenant,
 	onSubmit,
+	isSubmitting = false,
 }: TenantFormDialogProps) {
 	const isEditing = Boolean(editingTenant);
 	const todayStr = useMemo(() => getTodayDateString(), []);
@@ -383,7 +385,6 @@ export function TenantFormDialog({
 			}
 			setFormErrors({});
 			onSubmit(result.data);
-			onOpenChange(false);
 		},
 	});
 
@@ -449,13 +450,13 @@ export function TenantFormDialog({
 					toInputDateFormat(editingTenant.registrationDate) || todayStr,
 				);
 				form.setFieldValue("notes", editingTenant.notes || "");
-				form.setFieldValue("ktpUrl", editingTenant.ktpUrl || "");
+				form.setFieldValue("ktpUrl", "");
 				form.setFieldValue("markPastPeriodsPaid", true);
 				form.setFieldValue("agreement", true);
 				form.setFieldValue("roomChangeMode", "CORRECTION");
 				form.setFieldValue("updatePendingInvoiceAmount", true);
 				form.setFieldValue("createDifferenceInvoice", true);
-				setKtpPreview(editingTenant.ktpUrl || null);
+				setKtpPreview(null);
 				setKtpFileName("");
 				setScanStatus("idle");
 				setScanFeedback("");
@@ -523,20 +524,15 @@ export function TenantFormDialog({
 				throw new Error("Gagal membaca file gambar.");
 			}
 
-			// Simpan preview & form value terlebih dahulu agar foto tetap terlampir apapun status AI
+			// Simpan preview sementara di browser untuk membantu pencocokan visual (tidak disimpan ke storage/database)
 			setKtpPreview(compressedBase64);
-			form.setFieldValue("ktpUrl", compressedBase64);
+			form.setFieldValue("ktpUrl", "");
 
 			// Panggil OCR AI di latar belakang secara non-blocking
 			try {
 				const res = await scanKtpMutation.mutateAsync({
 					imageBase64: compressedBase64,
 				});
-
-				// Jika server berhasil mengunggah ke storage cloud/lokal, gunakan URL resminya
-				if (res.ktpUrl) {
-					form.setFieldValue("ktpUrl", res.ktpUrl);
-				}
 
 				if (res.success && res.data) {
 					if (res.data.nik) form.setFieldValue("nik", res.data.nik);
@@ -559,21 +555,20 @@ export function TenantFormDialog({
 
 					setScanStatus("success");
 					setScanFeedback(
-						"Foto KTP berhasil disimpan dan data identitas terisi otomatis!",
+						"Data identitas berhasil dipindai dan terisi otomatis!",
 					);
 				} else {
-					// AI sedang busy/high demand atau OCR tidak jelas, tapi foto KTP SUDAH tersimpan
 					setScanStatus("warning");
 					setScanFeedback(
 						res.error ||
-							"Foto KTP berhasil dilampirkan. Layanan AI sedang sibuk (antrean tinggi), silakan lengkapi formulir secara manual.",
+							"Layanan AI sedang sibuk, silakan lengkapi data formulir secara manual.",
 					);
 				}
 			} catch (aiErr) {
 				console.warn("[TenantFormDialog] AI OCR fallback:", aiErr);
 				setScanStatus("warning");
 				setScanFeedback(
-					"Foto KTP berhasil dilampirkan. Layanan AI sedang sibuk (antrean tinggi), silakan lengkapi formulir secara manual.",
+					"Layanan AI sedang sibuk, silakan lengkapi data formulir secara manual.",
 				);
 			}
 		} catch (err) {
@@ -729,13 +724,13 @@ export function TenantFormDialog({
 						</div>
 					)}
 
-					{/* TOP SECTION: Upload & Scan KTP dengan Asisten AI */}
+					{/* TOP SECTION: Pindai KTP Otomatis */}
 					<div className="bg-gradient-to-br from-[#f8faf8] to-[#edf4ee] border border-[#d8e4da] rounded-[16px] p-4 mb-2">
 						<div className="flex items-center justify-between gap-3 mb-2.5">
 							<div className="flex items-center gap-2">
 								<div>
 									<h4 className="text-[12px] font-bold text-[#24342b] m-0">
-										Upload Foto KTP
+										Pindai KTP Otomatis
 									</h4>
 								</div>
 							</div>
@@ -798,7 +793,7 @@ export function TenantFormDialog({
 									/>
 									<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
 										<span className="text-white text-[10px] font-medium bg-black/60 px-2 py-0.5 rounded">
-											KTP Terlampir
+											Pratinjau KTP
 										</span>
 									</div>
 								</div>
@@ -2087,24 +2082,27 @@ export function TenantFormDialog({
 							Batal
 						</Button>
 						<form.Subscribe selector={(state) => [state.isSubmitting]}>
-							{([isSubmitting]) => (
-								<Button
-									type="submit"
-									disabled={isSubmitting}
-									className="h-[38px] px-5 rounded-[9px] bg-[#4f6958] hover:bg-[#425949] text-white font-semibold text-[12px] cursor-pointer"
-								>
-									{isSubmitting ? (
-										<span className="flex items-center gap-1.5">
-											<Loader2 className="w-3.5 h-3.5 animate-spin" />
-											Menyimpan...
-										</span>
-									) : isEditing ? (
-										"Simpan Perubahan"
-									) : (
-										"Simpan Pendaftaran"
-									)}
-								</Button>
-							)}
+							{([formSubmitting]) => {
+								const submitting = formSubmitting || isSubmitting;
+								return (
+									<Button
+										type="submit"
+										disabled={submitting}
+										className="h-[38px] px-5 rounded-[9px] bg-[#4f6958] hover:bg-[#425949] text-white font-semibold text-[12px] cursor-pointer"
+									>
+										{submitting ? (
+											<span className="flex items-center gap-1.5">
+												<Loader2 className="w-3.5 h-3.5 animate-spin" />
+												Menyimpan...
+											</span>
+										) : isEditing ? (
+											"Simpan Perubahan"
+										) : (
+											"Simpan Pendaftaran"
+										)}
+									</Button>
+								);
+							}}
 						</form.Subscribe>
 					</DialogFooter>
 				</form>

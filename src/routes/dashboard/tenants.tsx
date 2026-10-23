@@ -363,16 +363,30 @@ function TenantsPage() {
 									<button
 										type="button"
 										onClick={() => {
-											setStatusFilter("Lancar");
+											setStatusFilter("Lunas");
 											setShowFilterDropdown(false);
 										}}
 										className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
-											statusFilter === "Lancar"
+											statusFilter === "Lunas"
 												? "bg-[#e8f0ea] text-[#4f6958] font-bold"
 												: "text-[#59605b] hover:bg-[#f3f7f3]"
 										}`}
 									>
-										Lancar
+										Lunas
+									</button>
+									<button
+										type="button"
+										onClick={() => {
+											setStatusFilter("Belum Lunas");
+											setShowFilterDropdown(false);
+										}}
+										className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-colors ${
+											statusFilter === "Belum Lunas"
+												? "bg-[#e8f0ea] text-[#4f6958] font-bold"
+												: "text-[#59605b] hover:bg-[#f3f7f3]"
+										}`}
+									>
+										Belum Lunas
 									</button>
 									<button
 										type="button"
@@ -449,6 +463,9 @@ function TenantsPage() {
 				roomOptions={roomOptions}
 				editingTenant={editingTenant}
 				onSubmit={handleSaveTenant}
+				isSubmitting={
+					createTenantMutation.isPending || updateTenantMutation.isPending
+				}
 			/>
 
 			{/* Delete Confirmation Dialog */}
