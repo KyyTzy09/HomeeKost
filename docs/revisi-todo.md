@@ -30,6 +30,13 @@
   - Mengubah label pengeluaran menjadi *"Laba Kas"*.
   - Menghapus badge pill dari header kartu Komposisi Biaya dan memindahkan total pengeluaran ke bagian bawah kartu dengan teks bersih.
 
+### Manajemen Pengguna & Keamanan
+- [x] **Badge "Sistem" & Kolom Peran Terpisah pada Riwayat Perubahan (Audit Log)**:
+  - Pada tabel riwayat log perubahan, Peran (Role) dipisahkan menjadi kolom tersendiri terpisah dari nama user.
+  - Aktivitas otomatisasi sistem menampilkan badge **"Sistem"** dengan ikon bot khusus, sementara role database akun pengguna tetap murni `SuperAdmin` dan `Admin`.
+- [x] **Slider Geser (Slide to Confirm) pada Reset Database**:
+  - Mengubah tombol konfirmasi hapus database pada popup `ResetDataDialog` menjadi slider geser interaktif horizontal (*Slide to Confirm*) untuk mencegah ketidaksengajaan.
+
 ---
 
 ## 2. Belum Dikerjakan (To Do 📌)
@@ -41,13 +48,6 @@
     - **Waspada**: Rasio beban kas `25% - 50%` (kategori tengah-tengah)
     - **Bahaya / Kritis**: Rasio beban kas `> 50%`
   - Menghapus status *"Sedang Berjalan"* sebagai label status akhir.
-
-### Manajemen Pengguna & Keamanan
-- [ ] **Badge "Sistem" pada Riwayat Perubahan (Audit Log)**:
-  - Pada tabel log riwayat perubahan, aktivitas yang dipicu otomatis oleh bot/cron sistem menampilkan nama/badge **"Sistem"** (bukan "Admin").
-  - Role akun pengguna di database tetap hanya `SuperAdmin` dan `Admin`.
-- [ ] **Slider Geser (Slide to Confirm) pada Reset Database**:
-  - Mengubah tombol konfirmasi hapus database pada popup `ResetDataDialog` dari tombol klik biasa menjadi tombol **geser (Slide to Confirm)** agar tidak sengaja tertekan.
 
 ### Menu Engagement
 - [ ] **Hapus Kategori "Kerja Bakti"**:

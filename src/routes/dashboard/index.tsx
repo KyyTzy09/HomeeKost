@@ -497,7 +497,7 @@ export function DashboardHomePage() {
 						</div>
 						<span
 							className="mini-link cursor-pointer"
-							onClick={() => navigate({ to: "/dashboard/invoices" })}
+							onClick={() => navigate({ to: "/dashboard/payments" })}
 						>
 							Lihat semua
 						</span>

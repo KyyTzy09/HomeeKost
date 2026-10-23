@@ -492,7 +492,7 @@ export class UserManagementService {
 					id: `notif-${n.id}`,
 					time: formatRelativeLogTime(n.sentAt),
 					userName: "Sistem Otomasi",
-					userRole: "ADMIN",
+					userRole: "SYSTEM",
 					activity,
 					detail: `${n.recipientNumber} · Status: ${n.status === "SENT" ? "Terkirim" : "Gagal"} ${n.notes ? `(${n.notes})` : ""}`,
 					rawDate: n.sentAt,

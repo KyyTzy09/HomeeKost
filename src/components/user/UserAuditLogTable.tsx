@@ -13,6 +13,7 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	Bot,
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
@@ -36,7 +37,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
-import type { AppUserRole, AuditLogItem } from "../../common/types/index.ts";
+import type { AppUserRole, AuditActorRole, AuditLogItem } from "../../common/types/index.ts";
 
 interface UserAuditLogTableProps {
 	data: AuditLogItem[];
@@ -46,7 +47,7 @@ const columnHelper = createColumnHelper<AuditLogItem>();
 
 export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 	const [globalFilter, setGlobalFilter] = useState<string>("");
-	const [roleFilter, setRoleFilter] = useState<"ALL" | AppUserRole>("ALL");
+	const [roleFilter, setRoleFilter] = useState<"ALL" | AuditActorRole>("ALL");
 	const [activityTypeFilter, setActivityTypeFilter] = useState<string>("ALL");
 	const [sorting, setSorting] = useState<SortingState>([
 		{ id: "time", desc: true },
@@ -101,7 +102,7 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 		});
 	}, [data, roleFilter, activityTypeFilter]);
 
-	const getRoleBadge = (role: AppUserRole) => {
+	const getRoleBadge = (role: AuditActorRole) => {
 		switch (role) {
 			case "SUPER_ADMIN":
 				return {
@@ -114,6 +115,12 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 					label: "Admin",
 					className: "bg-[#e6f0fa] text-[#2b6cb0] border-[#c2daf2]",
 					icon: UserCheck,
+				};
+			case "SYSTEM":
+				return {
+					label: "Sistem",
+					className: "bg-[#f4f7f4] text-[#55695a] border-[#d8e3d9]",
+					icon: Bot,
 				};
 		}
 	};
@@ -135,23 +142,27 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 			columnHelper.accessor("userName", {
 				header: "User Pengelola",
 				enableSorting: true,
+				cell: (info) => (
+					<b className="text-xs text-[#252925] whitespace-nowrap">
+						{info.getValue()}
+					</b>
+				),
+			}),
+			columnHelper.accessor("userRole", {
+				header: "Peran (Role)",
+				enableSorting: true,
 				cell: (info) => {
-					const role = info.row.original.userRole;
+					const role = info.getValue() as AuditActorRole;
 					const badge = getRoleBadge(role);
 					const RoleIcon = badge.icon;
 
 					return (
-						<div className="flex items-center gap-2">
-							<b className="text-xs text-[#252925] whitespace-nowrap">
-								{info.getValue()}
-							</b>
-							<span
-								className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border ${badge.className}`}
-							>
-								<RoleIcon className="w-3 h-3" />
-								{badge.label}
-							</span>
-						</div>
+						<span
+							className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${badge.className}`}
+						>
+							<RoleIcon className="w-3 h-3" />
+							{badge.label}
+						</span>
 					);
 				},
 			}),
@@ -323,22 +334,24 @@ export function UserAuditLogTable({ data }: UserAuditLogTableProps) {
 						value={roleFilter}
 						onValueChange={(val) => {
 							if (val) {
-								setRoleFilter(val as "ALL" | AppUserRole);
+								setRoleFilter(val as "ALL" | AuditActorRole);
 								table.setPageIndex(0);
 							}
 						}}
 					>
 						<SelectTrigger className="h-9 text-xs w-[150px] bg-white border-[#e4e9e4] rounded-lg">
 							<SelectValue>
-								{roleFilter === "ALL" && "Semua Role"}
+								{roleFilter === "ALL" && "Semua Peran"}
 								{roleFilter === "SUPER_ADMIN" && "SuperAdmin"}
 								{roleFilter === "ADMIN" && "Admin Kos"}
+								{roleFilter === "SYSTEM" && "Sistem"}
 							</SelectValue>
 						</SelectTrigger>
 						<SelectContent className="bg-white border-[#e4e9e4] text-xs">
-							<SelectItem value="ALL">Semua Role</SelectItem>
+							<SelectItem value="ALL">Semua Peran</SelectItem>
 							<SelectItem value="SUPER_ADMIN">SuperAdmin</SelectItem>
 							<SelectItem value="ADMIN">Admin Kos</SelectItem>
+							<SelectItem value="SYSTEM">Sistem</SelectItem>
 						</SelectContent>
 					</Select>
 
