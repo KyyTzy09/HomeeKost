@@ -112,9 +112,7 @@ function PaymentsPage() {
 		return {
 			selectedMonth: m,
 			selectedYear: y,
-			periodLabel: isCurrent
-				? `Bulan Ini (${getMonthName(m)} ${y})`
-				: `${getMonthName(m)} ${y}`,
+			periodLabel: isCurrent ? "Bulan Ini" : `${getMonthName(m)} ${y}`,
 		};
 	}, [periodFilter]);
 

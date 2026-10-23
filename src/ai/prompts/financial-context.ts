@@ -31,21 +31,21 @@ ${timeContext}
 ${statusRule}
 
 # RUBRIK PENILAIAN FINANCIAL HEALTH GRADE (MANDATORY)
-Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria berikut:
+Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria berikut (Prima -> Normal -> Waspada -> Bahaya):
 1. "PRIMA":
    - Margin Laba Bersih >= 60% DAN
    - Okupansi Kamar >= 85% DAN
    - Collection Rate (Ketepatan Bayar) >= 90%
-2. "SEHAT":
+2. "NORMAL":
    - Margin Laba Bersih 40% - 59.9% DAN
    - Okupansi Kamar >= 70%
 3. "WASPADA":
    - Margin Laba Bersih 15% - 39.9% ATAU
    - Okupansi Kamar < 70% ATAU
    - Biaya perbaikan/komplain menyerap > 20% dari total pengeluaran
-4. "KRITIS" (Hanya berlaku jika SUDAH TUTUP BUKU atau performa okupansi riil sangat hancur):
+4. "BAHAYA" (Hanya berlaku jika SUDAH TUTUP BUKU atau performa okupansi riil sangat hancur):
    - Periode telah TUTUP BUKU DAN (Margin Laba Bersih < 15% ATAU Collection Rate < 50%)
-   - Pengecualian pada bulan berjalan: Hanya boleh "KRITIS" jika okupansi kamar < 25% dan tidak ada penerimaan sama sekali.
+   - Pengecualian pada bulan berjalan: DILARANG menetapkan "BAHAYA" karena pencatatan sewa masih berproses. Batasi ke "WASPADA".
 
 # ATURAN PENULISAN ELEMEN OUTPUT:
 1. "executiveSummary":
@@ -71,7 +71,7 @@ Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria 
 # FORMAT OUTPUT JSON WAJIB (STRICT JSON ONLY)
 {
   "executiveSummary": "string (2-3 kalimat)",
-  "financialHealthGrade": "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS",
+  "financialHealthGrade": "PRIMA" | "NORMAL" | "WASPADA" | "BAHAYA",
   "keyHighlights": [
     "string poin 1 fakta beban terbesar",
     "string poin 2 fakta okupansi kamar",

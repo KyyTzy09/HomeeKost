@@ -14,8 +14,8 @@ export function generateDeterministicFinancialInsight(
 	const { period, property, metrics, occupancy, collection, topExpenses } =
 		payload;
 
-	// 1. Tentukan Financial Health Grade
-	let grade: AiFinancialInsightData["financialHealthGrade"] = "SEHAT";
+	// 1. Tentukan Financial Health Grade (Prima -> Normal -> Waspada -> Bahaya)
+	let grade: AiFinancialInsightData["financialHealthGrade"] = "NORMAL";
 
 	if (
 		metrics.profitMarginPercentage >= 60 &&
@@ -27,12 +27,13 @@ export function generateDeterministicFinancialInsight(
 		metrics.profitMarginPercentage >= 40 &&
 		occupancy.occupancyRatePercentage >= 70
 	) {
-		grade = "SEHAT";
+		grade = "NORMAL";
 	} else if (
 		metrics.profitMarginPercentage < 15 ||
 		collection.collectionRatePercentage < 50
 	) {
-		grade = "KRITIS";
+		// Guardrail: Pada bulan berjalan, cegah vonis keliru BAHAYA dan batasi ke WASPADA
+		grade = period.isClosedPeriod ? "BAHAYA" : "WASPADA";
 	} else {
 		grade = "WASPADA";
 	}
@@ -64,7 +65,7 @@ export function generateDeterministicFinancialInsight(
 			: `Okupansi unit mencapai kapasitas maksimal 100% (${occupancy.occupiedRooms} dari ${occupancy.totalRooms} kamar terisi), memaksimalkan perolehan pendapatan sewa.`;
 
 	const complaintCostImpact =
-		payload.complaintExpenses.totalCost > 0
+		payload.complaintExpenses && payload.complaintExpenses.totalCost > 0
 			? `Biaya penanganan komplain dan perbaikan fasilitas menyerap dana sebesar ${formatRupiah(payload.complaintExpenses.totalCost)} (${payload.complaintExpenses.percentageOfExpense.toFixed(1)}% dari total pengeluaran).`
 			: "Tidak tercatat pengeluaran biaya perbaikan kerusakan fasilitas yang signifikan pada periode ini.";
 

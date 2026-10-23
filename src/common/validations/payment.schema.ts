@@ -10,7 +10,7 @@ export const PAYMENT_STATUS = {
 
 export const paymentFilterSchema = z.object({
 	propertyId: z.string().optional(),
-	status: z.enum(["ALL", "PENDING", "PAID", "OVERDUE"]).optional(),
+	status: z.enum(["ALL", "PENDING", "PAID", "OVERDUE", "PARTIAL"]).optional(),
 	month: z.number().min(1).max(12).optional(),
 	year: z.number().min(2020).max(2050).optional(),
 	search: z.string().optional(),

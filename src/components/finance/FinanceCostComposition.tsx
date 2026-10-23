@@ -1,4 +1,4 @@
-import { PieChart, ShieldCheck } from "lucide-react";
+import { PieChart } from "lucide-react";
 import { Card } from "../../common/shadcn/card.tsx";
 import type { CategoryCostItem } from "../../common/types/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
@@ -76,21 +76,6 @@ export function FinanceCostComposition({
 						))
 					)}
 				</div>
-			</div>
-
-			{/* Health Indicator Footer */}
-			<div className="mt-5 pt-3 border-t border-[#e4e9e4] flex items-center justify-between text-[11px] text-[#737873]">
-				<div className="flex items-center gap-1.5 text-[#568062] font-semibold">
-					<ShieldCheck className="w-4 h-4" />
-					<span>
-						{expenseRatio <= 40
-							? "Beban Operasional Terkendali (Ideal < 40%)"
-							: "Beban Operasional Perlu Dipantau"}
-					</span>
-				</div>
-				<span className="font-medium text-[#252925]">
-					Rasio Beban: {expenseRatio}%
-				</span>
 			</div>
 		</Card>
 	);

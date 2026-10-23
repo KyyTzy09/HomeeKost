@@ -43,6 +43,8 @@ export function InvoiceDocPreview({
 	}
 
 	const isPaid = invoice.status === "PAID";
+	const isOverdue = invoice.status === "OVERDUE";
+	const isPartial = invoice.status === "PARTIAL";
 
 	const handlePrint = () => {
 		if (onDownloadPdf) {
@@ -61,7 +63,11 @@ export function InvoiceDocPreview({
 						className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
 							isPaid
 								? "bg-[#e8f2ea] text-[#568062]"
-								: "bg-[#fbf4e6] text-[#b18a4b]"
+								: isOverdue
+									? "bg-[#f7e9e8] text-[#a65f5b]"
+									: isPartial
+										? "bg-[#fef3c7] text-[#92400e]"
+										: "bg-[#fbf4e6] text-[#b18a4b]"
 						}`}
 					>
 						{isPaid ? (
@@ -69,7 +75,13 @@ export function InvoiceDocPreview({
 						) : (
 							<Clock className="w-3.5 h-3.5" />
 						)}
-						{isPaid ? "Status: LUNAS" : "Status: MENUNGGU PEMBAYARAN"}
+						{isPaid
+							? "Status: LUNAS"
+							: isOverdue
+								? "Status: TERLAMBAT"
+								: isPartial
+									? "Status: CICILAN"
+									: "Status: BELUM LUNAS"}
 					</span>
 				</div>
 

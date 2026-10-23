@@ -148,8 +148,8 @@ function ReportsPage() {
 	const [selectedProperty, setSelectedProperty] = useState<
 		SelectOption<string>
 	>({
-		label: "Semua Cabang Kos",
-		value: "ALL",
+		label: activeProperty?.name || "Semua Cabang Kos",
+		value: activeProperty?.id || "ALL",
 	});
 
 	// Automation settings dialog state
@@ -495,6 +495,8 @@ function ReportsPage() {
 							occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
 							totalRooms={monthlyReport.roomStatus.totalRooms}
 							periodLabel={periodLabel}
+							incomeGrowthPercent={monthlyReport.momGrowth?.incomeGrowthPercent}
+							expenseGrowthPercent={monthlyReport.momGrowth?.expenseGrowthPercent}
 						/>
 
 						{/* Executive AI Narrative Insight & Strategic Recommendations */}

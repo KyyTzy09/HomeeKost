@@ -18,6 +18,7 @@ import type {
 import { formatDate, formatRentalPeriod } from "../../lib/date-utils.ts";
 import {
 	calculateInstallmentSummary,
+	evaluateRentalPaymentStatus,
 	getEndOfMonthString,
 } from "../../lib/payment-utils.ts";
 import { getWhatsAppDirectUrl } from "../../lib/phone-sanitizer.ts";
@@ -61,15 +62,13 @@ export class PaymentService {
 		const limit = params.limit || 10;
 		const skip = (page - 1) * limit;
 
-		let statusEnum: InvoiceStatus | undefined;
-		if (params.status && params.status !== "ALL") {
-			statusEnum = params.status as InvoiceStatus;
-		}
+		const statusFilter =
+			params.status && params.status !== "ALL" ? params.status : undefined;
 
 		const [rawInvoices, totalCount] = await Promise.all([
 			this.invoiceRepo.findMany({
 				propertyIds,
-				status: statusEnum,
+				statusFilter,
 				month: params.month,
 				year: params.year,
 				search: params.search,
@@ -80,7 +79,7 @@ export class PaymentService {
 			}),
 			this.invoiceRepo.count({
 				propertyIds,
-				status: statusEnum,
+				statusFilter,
 				month: params.month,
 				year: params.year,
 				search: params.search,
@@ -112,7 +111,6 @@ export class PaymentService {
 				dueDate: inv.dueDate,
 			});
 
-			const isPaid = inv.status === "PAID";
 			const installmentSummary = calculateInstallmentSummary(
 				Number(inv.amount),
 				inv.transactions,
@@ -120,9 +118,24 @@ export class PaymentService {
 			const { paidAmount, remainingAmount, isPartial, installmentCount } =
 				installmentSummary;
 
+			const evaluated = evaluateRentalPaymentStatus({
+				totalAmount: Number(inv.amount),
+				paidAmount,
+				dueDate,
+				databaseStatus: inv.status,
+			});
+
+			const isPaid = evaluated.isSettled;
+
 			let status: PaymentStatus = inv.status as PaymentStatus;
-			if (!isPaid && isPartial) {
+			if (evaluated.isSettled) {
+				status = "PAID";
+			} else if (evaluated.isInstallment) {
 				status = "PARTIAL";
+			} else if (evaluated.statusKey === "OVERDUE") {
+				status = "OVERDUE";
+			} else {
+				status = "PENDING";
 			}
 
 			let dueStatusBadge: PaymentItem["dueStatusBadge"] = {
@@ -130,12 +143,12 @@ export class PaymentService {
 				variant: "gray",
 			};
 
-			if (isPaid) {
+			if (evaluated.isSettled) {
 				dueStatusBadge = { text: "Lunas", variant: "green" };
-			} else if (isPartial) {
+			} else if (evaluated.isInstallment) {
 				dueStatusBadge = {
-					text: `Dicicil (${installmentCount}x)`,
-					variant: "amber",
+					text: `Cicilan (${installmentCount}x)`,
+					variant: evaluated.badgeVariant,
 				};
 			} else if (dueDaysRemaining < 0) {
 				const daysLate = Math.abs(dueDaysRemaining);

@@ -93,7 +93,7 @@ export class ReportService {
 		const monthName = MONTH_NAMES[targetMonth - 1] || "Bulan";
 
 		// 1. Ambil Nama & Info Properti
-		let propertyName = "Semua Cabang Kos (Konsolidasi)";
+		let propertyName = "Semua Cabang Kos";
 		let propertyImageUrl: string | null = null;
 		let propertyAddress: string | null = null;
 
@@ -112,6 +112,35 @@ export class ReportService {
 			targetMonth,
 			targetYear,
 		);
+
+		// Hitung Metrik Bulan Lalu untuk Perbandingan Pertumbuhan (MoM)
+		const prevMonth = targetMonth === 1 ? 12 : targetMonth - 1;
+		const prevYear = targetMonth === 1 ? targetYear - 1 : targetYear;
+		const prevSummary = await this.reportRepo.getMonthlyFinancialSummary(
+			propertyIds,
+			prevMonth,
+			prevYear,
+		);
+
+		const calculateGrowth = (curr: number, prev: number) => {
+			if (prev === 0) return curr > 0 ? 100 : 0;
+			return Math.round(((curr - prev) / prev) * 100 * 10) / 10;
+		};
+
+		const momGrowth = {
+			incomeGrowthPercent: calculateGrowth(
+				summary.totalIncome,
+				prevSummary.totalIncome,
+			),
+			expenseGrowthPercent: calculateGrowth(
+				summary.totalExpense,
+				prevSummary.totalExpense,
+			),
+			profitGrowthPercent: calculateGrowth(
+				summary.netProfit,
+				prevSummary.netProfit,
+			),
+		};
 
 		// 3. Susun Payload Context
 		const aiPayload = {
@@ -247,6 +276,7 @@ export class ReportService {
 			investmentExpense: summary.investmentExpense,
 			netProfit: summary.netProfit,
 			profitMarginPercentage: summary.profitMarginPercentage,
+			momGrowth,
 			roomStatus: {
 				totalRooms: summary.roomStatus.totalRooms,
 				occupiedRooms: summary.roomStatus.occupiedRooms,
@@ -482,6 +512,7 @@ export class ReportService {
 			investmentExpense: summary.investmentExpense,
 			netProfit: summary.netProfit,
 			profitMarginPercentage: summary.profitMarginPercentage,
+			momGrowth,
 			roomStatus: {
 				totalRooms: summary.roomStatus.totalRooms,
 				occupiedRooms: summary.roomStatus.occupiedRooms,

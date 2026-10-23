@@ -19,7 +19,14 @@ export type StrategicRecommendation = z.infer<
  */
 export const AiFinancialInsightSchema = z.object({
 	executiveSummary: z.string().min(20),
-	financialHealthGrade: z.enum(["PRIMA", "SEHAT", "WASPADA", "KRITIS"]),
+	financialHealthGrade: z.enum([
+		"PRIMA",
+		"NORMAL",
+		"WASPADA",
+		"BAHAYA",
+		"SEHAT",
+		"KRITIS",
+	]),
 	keyHighlights: z.array(z.string()).min(2).max(4).optional().default([]),
 	trendAnalysis: z.object({
 		incomeTrend: z.string(),

@@ -53,6 +53,8 @@ interface FinanceProfitLossTableProps {
 	onYearChange: (value: DateOption) => void;
 	data: ProfitLossRow[];
 	isLoading?: boolean;
+	onExportExcel?: () => void;
+	isExportingExcel?: boolean;
 	onExportCsv?: () => void;
 	isExporting?: boolean;
 	propertyName?: string;
@@ -67,6 +69,8 @@ export function FinanceProfitLossTable({
 	onYearChange,
 	data,
 	isLoading = false,
+	onExportExcel,
+	isExportingExcel = false,
 	onExportCsv,
 	isExporting = false,
 	propertyName,
@@ -223,16 +227,18 @@ export function FinanceProfitLossTable({
 						</SelectContent>
 					</Select>
 
-					{onExportCsv && (
+					{(onExportExcel || onExportCsv) && (
 						<Button
 							type="button"
 							variant="outline"
-							onClick={onExportCsv}
-							disabled={isExporting}
+							onClick={onExportExcel || onExportCsv}
+							disabled={isExportingExcel || isExporting}
 							className="h-8.5 text-xs font-semibold px-3 border-[#e4e9e4] text-[#4f6958] hover:bg-[#e8f0ea]"
 						>
 							<FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-[#568062]" />
-							{isExporting ? "Mengunduh..." : "Ekspor CSV 12 Bulan"}
+							{isExportingExcel || isExporting
+								? "Mengunduh Excel..."
+								: "Ekspor Excel (.xlsx)"}
 						</Button>
 					)}
 				</div>

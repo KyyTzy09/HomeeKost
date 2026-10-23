@@ -55,7 +55,7 @@ export interface PaymentStats {
 
 export interface PaymentFilterParams {
 	propertyId?: string;
-	status?: "ALL" | "PENDING" | "PAID" | "OVERDUE";
+	status?: "ALL" | "PENDING" | "PAID" | "OVERDUE" | "PARTIAL";
 	month?: number;
 	year?: number;
 	search?: string;

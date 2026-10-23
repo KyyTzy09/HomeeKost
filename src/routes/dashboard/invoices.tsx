@@ -50,8 +50,9 @@ export const Route = createFileRoute("/dashboard/invoices")({
 
 const STATUS_OPTIONS = [
 	{ label: "Semua Dokumen", value: "ALL" },
-	{ label: "Menunggu Bayar", value: "PENDING" },
-	{ label: "Sudah Lunas", value: "PAID" },
+	{ label: "Lunas", value: "PAID" },
+	{ label: "Belum Lunas", value: "PENDING" },
+	{ label: "Cicilan", value: "PARTIAL" },
 	{ label: "Terlambat", value: "OVERDUE" },
 ];
 
@@ -85,7 +86,12 @@ function InvoicesPage() {
 	// Query invoices from database
 	const { data: paymentsData, isLoading: isLoadingInvoices } = usePayments({
 		propertyId: activePropertyId,
-		status: statusFilter.value as "ALL" | "PENDING" | "PAID" | "OVERDUE",
+		status: statusFilter.value as
+			| "ALL"
+			| "PENDING"
+			| "PAID"
+			| "OVERDUE"
+			| "PARTIAL",
 		search: searchQuery,
 		limit: 50,
 	});
@@ -105,7 +111,7 @@ function InvoicesPage() {
 			paidAt: p.paidAt,
 			description: `Biaya Sewa Kamar ${p.roomNumber}`,
 			amount: p.amount,
-			status: p.status === "PARTIAL" ? "PENDING" : p.status,
+			status: p.status,
 			facilitiesIncluded: ["Wi-Fi", "Air Bersih", "Keamanan 24 Jam"],
 		}));
 	}, [paymentsData]);
@@ -270,6 +276,7 @@ function InvoicesPage() {
 								const isSelected = selectedInvoice?.id === inv.id;
 								const isPaid = inv.status === "PAID";
 								const isOverdue = inv.status === "OVERDUE";
+								const isPartial = inv.status === "PARTIAL";
 
 								return (
 									<button
@@ -315,14 +322,18 @@ function InvoicesPage() {
 														? "bg-[#e8f2ea] text-[#568062]"
 														: isOverdue
 															? "bg-[#f7e9e8] text-[#a65f5b]"
-															: "bg-[#fbf4e6] text-[#b18a4b]"
+															: isPartial
+																? "bg-[#fef3c7] text-[#92400e]"
+																: "bg-[#fbf4e6] text-[#b18a4b]"
 												}`}
 											>
 												{isPaid
 													? "Lunas"
 													: isOverdue
 														? "Terlambat"
-														: "Menunggu"}
+														: isPartial
+															? "Cicilan"
+															: "Belum Lunas"}
 											</span>
 											<small className="block text-[#252925] font-bold text-xs mt-1.5">
 												{formatRupiah(inv.amount)}

@@ -15,7 +15,13 @@ interface ReportAiInsightPanelProps {
 	periodLabel: string;
 	propertyName: string;
 	isClosedPeriod: boolean;
-	financialHealthGrade?: "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS";
+	financialHealthGrade?:
+		| "PRIMA"
+		| "NORMAL"
+		| "WASPADA"
+		| "BAHAYA"
+		| "SEHAT"
+		| "KRITIS";
 	narrativeSummary: string;
 	keyHighlights?: string[];
 	trendAnalysis?: {
@@ -29,38 +35,58 @@ interface ReportAiInsightPanelProps {
 }
 
 export function getHealthGradeBadge(
-	grade?: "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS",
+	grade?: "PRIMA" | "NORMAL" | "WASPADA" | "BAHAYA" | "SEHAT" | "KRITIS",
+	isClosedPeriod = true,
 ) {
-	switch (grade) {
+	// Guardrail: Pada bulan berjalan, batasi status terendah ke WASPADA (cegah vonis keliru BAHAYA)
+	let effectiveGrade = grade;
+	if (
+		!isClosedPeriod &&
+		(effectiveGrade === "BAHAYA" || effectiveGrade === "KRITIS")
+	) {
+		effectiveGrade = "WASPADA";
+	}
+
+	switch (effectiveGrade) {
 		case "PRIMA":
 			return {
-				label: "Kesehatan Finansial: PRIMA 🌟",
+				label: isClosedPeriod
+					? "Status Finansial: PRIMA 🌟"
+					: "Status: PRIMA (Bulan Berjalan) 🌟",
 				className: "bg-[#e8f2ea] text-[#3e724d] border-[#b9dbbf]",
 				icon: CheckCircle2,
 			};
+		case "NORMAL":
 		case "SEHAT":
 			return {
-				label: "Kesehatan Finansial: SEHAT ✨",
+				label: isClosedPeriod
+					? "Status Finansial: NORMAL ✨"
+					: "Status: NORMAL (Bulan Berjalan) ✨",
 				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
 				icon: Activity,
 			};
 		case "WASPADA":
 			return {
-				label: "Kesehatan Finansial: WASPADA ⚠️",
+				label: isClosedPeriod
+					? "Status Finansial: WASPADA ⚠️"
+					: "Status: WASPADA (Dalam Pemantauan) ⚠️",
 				className: "bg-[#fbf4e6] text-[#b18a4b] border-[#eed7b0]",
 				icon: AlertCircle,
 			};
+		case "BAHAYA":
 		case "KRITIS":
 			return {
-				label: "Kesehatan Finansial: KRITIS 🚨",
+				label: "Status Finansial: BAHAYA 🚨",
 				className: "bg-[#fceeed] text-[#b66b68] border-[#f0c3c1]",
 				icon: AlertCircle,
 			};
 		default:
 			return {
-				label: "Status Finansial Normal",
-				className: "bg-[#f3f7f3] text-[#55705d] border-[#dce6df]",
-				icon: Info,
+				label: isClosedPeriod
+					? "Status Finansial: NORMAL ✨"
+					: "Status: NORMAL (Bulan Berjalan) ✨",
+				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
+				icon: Activity,
 			};
 	}
 }
@@ -69,20 +95,14 @@ export function ReportAiInsightPanel({
 	periodLabel,
 	propertyName,
 	isClosedPeriod,
-	financialHealthGrade = "SEHAT",
+	financialHealthGrade = "NORMAL",
 	narrativeSummary,
 	keyHighlights = [],
 	trendAnalysis,
 	complaintCostImpact,
 	recommendations = [],
 }: ReportAiInsightPanelProps) {
-	const gradeBadge = !isClosedPeriod
-		? {
-				label: "Sedang Berjalan ⏳",
-				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
-				icon: Clock,
-			}
-		: getHealthGradeBadge(financialHealthGrade);
+	const gradeBadge = getHealthGradeBadge(financialHealthGrade, isClosedPeriod);
 	const GradeIcon = gradeBadge.icon;
 
 	return (
@@ -100,13 +120,18 @@ export function ReportAiInsightPanel({
 					</p>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 sm:gap-2">
 					<span
 						className={`text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border shadow-2xs ${gradeBadge.className}`}
 					>
 						<GradeIcon className="w-3.5 h-3.5" />
 						{gradeBadge.label}
 					</span>
+					{!isClosedPeriod && (
+						<span className="text-[10px] text-[#737873] italic">
+							* Data berkembang seiring proses penagihan
+						</span>
+					)}
 				</div>
 			</div>
 
