@@ -37,17 +37,21 @@
 - [x] **Slider Geser (Slide to Confirm) pada Reset Database**:
   - Mengubah tombol konfirmasi hapus database pada popup `ResetDataDialog` menjadi slider geser interaktif horizontal (*Slide to Confirm*) untuk mencegah ketidaksengajaan.
 
+### Laporan & AI Insight
+- [x] **Kalibrasi Ambang Batas Rasio Beban Kas & Status Finansial**:
+  - Menyelaraskan logika evaluasi kesehatan finansial di AI prompt & fallback engine berdasarkan rasio beban kas terhadap pemasukan:
+    - **Prima**: Rasio beban kas `< 25%` (Margin laba bersih `> 75%`)
+    - **Waspada**: Rasio beban kas `25% - 50%` (kategori tengah-tengah)
+    - **Bahaya / Kritis**: Rasio beban kas `> 50%` (dengan guardrail: pada bulan berjalan dibatasi ke `WASPADA`)
+  - Menghapus label *"Sedang Berjalan"* sebagai nama grade status akhir (periode berjalan tetap sebagai konteks waktu/data).
+- [x] **Otomatisasi Laporan Harian & Pembersihan Pengaturan Jadwal**:
+  - Menghapus broadcast pesan WhatsApp laporan bulanan ke pengelola agar nomor WA tidak terganggu.
+  - Menghapus kartu *Automasi Laporan Bulanan* dan dialog *Pengaturan Jadwal Automasi* dari tampilan Laporan sehingga UI bersih dan fokus pada data finansial.
+  - Menjadwalkan pembaruan snapshot data laporan & AI wawasan secara otomatis setiap hari via cron harian (sangat hemat kuota API).
+
 ---
 
 ## 2. Belum Dikerjakan (To Do 📌)
-
-### Laporan & AI Insight
-- [ ] **Kalibrasi Ambang Batas Rasio Beban Kas**:
-  - Menyelaraskan logika evaluasi kesehatan finansial di AI prompt & fallback engine berdasarkan rasio beban kas terhadap pemasukan:
-    - **Prima**: Rasio beban kas `< 25%`
-    - **Waspada**: Rasio beban kas `25% - 50%` (kategori tengah-tengah)
-    - **Bahaya / Kritis**: Rasio beban kas `> 50%`
-  - Menghapus status *"Sedang Berjalan"* sebagai label status akhir.
 
 ### Menu Engagement
 - [ ] **Hapus Kategori "Kerja Bakti"**:

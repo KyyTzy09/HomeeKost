@@ -14,27 +14,31 @@ export function generateDeterministicFinancialInsight(
 	const { period, property, metrics, occupancy, collection, topExpenses } =
 		payload;
 
-	// 1. Tentukan Financial Health Grade (Prima -> Normal -> Waspada -> Bahaya)
-	let grade: AiFinancialInsightData["financialHealthGrade"] = "NORMAL";
+	// 1. Tentukan Financial Health Grade berbasis Rasio Beban Kas
+	// Rasio Beban Kas = (Total Pengeluaran / Total Pemasukan) * 100%
+	const expenseRatio =
+		metrics.totalIncome > 0
+			? (metrics.totalExpense / metrics.totalIncome) * 100
+			: metrics.totalExpense > 0
+				? 100
+				: 0;
+
+	let grade: AiFinancialInsightData["financialHealthGrade"] = "WASPADA";
 
 	if (
-		metrics.profitMarginPercentage >= 60 &&
-		occupancy.occupancyRatePercentage >= 85 &&
-		collection.collectionRatePercentage >= 90
+		expenseRatio < 25 &&
+		occupancy.occupancyRatePercentage >= 80 &&
+		collection.collectionRatePercentage >= 85
 	) {
 		grade = "PRIMA";
 	} else if (
-		metrics.profitMarginPercentage >= 40 &&
-		occupancy.occupancyRatePercentage >= 70
-	) {
-		grade = "NORMAL";
-	} else if (
-		metrics.profitMarginPercentage < 15 ||
+		expenseRatio > 50 ||
 		collection.collectionRatePercentage < 50
 	) {
-		// Guardrail: Pada bulan berjalan, cegah vonis keliru BAHAYA dan batasi ke WASPADA
+		// Guardrail: Pada bulan berjalan, cegah vonis keliru BAHAYA dan batasi maksimal ke WASPADA
 		grade = period.isClosedPeriod ? "BAHAYA" : "WASPADA";
 	} else {
+		// Rasio beban kas 25% - 50% (kategori tengah / wajar operasional)
 		grade = "WASPADA";
 	}
 

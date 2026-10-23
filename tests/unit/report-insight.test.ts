@@ -109,4 +109,112 @@ describe("Financial Health Grade & Mid-Month Guardrail", () => {
 		const resultClosed = generateDeterministicFinancialInsight(mockPayloadClosed);
 		expect(resultClosed.financialHealthGrade).toBe("BAHAYA");
 	});
+
+	it("Deterministic Fallback Engine: should assign PRIMA when expense ratio is < 25%", () => {
+		const mockPayloadPrima: FinancialContextPayload = {
+			period: {
+				month: 10,
+				monthName: "Oktober",
+				year: 2026,
+				isClosedPeriod: true,
+			},
+			property: {
+				id: "prop-1",
+				name: "HomeeKost",
+				isMultiProperty: false,
+			},
+			metrics: {
+				totalIncome: 10000000,
+				totalExpense: 2000000, // Expense ratio 20% (< 25%)
+				operationalExpense: 2000000,
+				investmentExpense: 0,
+				netProfit: 8000000,
+				profitMarginPercentage: 80,
+			},
+			occupancy: {
+				totalRooms: 10,
+				occupiedRooms: 9,
+				vacantRooms: 1,
+				maintenanceRooms: 0,
+				occupancyRatePercentage: 90,
+			},
+			collection: {
+				totalInvoices: 9,
+				paidInvoices: 9,
+				pendingInvoices: 0,
+				overdueInvoices: 0,
+				collectionRatePercentage: 100,
+				totalOutstandingAmount: 0,
+			},
+			topExpenses: [
+				{
+					category: "Operasional Rutin",
+					amount: 2000000,
+					percentageOfTotalExpense: 100,
+				},
+			],
+			complaintExpenses: {
+				totalCost: 0,
+				percentageOfExpense: 0,
+				complaintCount: 0,
+			},
+		};
+
+		const resultPrima = generateDeterministicFinancialInsight(mockPayloadPrima);
+		expect(resultPrima.financialHealthGrade).toBe("PRIMA");
+	});
+
+	it("Deterministic Fallback Engine: should assign WASPADA for middle-tier expense ratio (25% - 50%)", () => {
+		const mockPayloadWaspada: FinancialContextPayload = {
+			period: {
+				month: 10,
+				monthName: "Oktober",
+				year: 2026,
+				isClosedPeriod: true,
+			},
+			property: {
+				id: "prop-1",
+				name: "HomeeKost",
+				isMultiProperty: false,
+			},
+			metrics: {
+				totalIncome: 10000000,
+				totalExpense: 3500000, // Expense ratio 35% (between 25% and 50%)
+				operationalExpense: 3500000,
+				investmentExpense: 0,
+				netProfit: 6500000,
+				profitMarginPercentage: 65,
+			},
+			occupancy: {
+				totalRooms: 10,
+				occupiedRooms: 9,
+				vacantRooms: 1,
+				maintenanceRooms: 0,
+				occupancyRatePercentage: 90,
+			},
+			collection: {
+				totalInvoices: 9,
+				paidInvoices: 9,
+				pendingInvoices: 0,
+				overdueInvoices: 0,
+				collectionRatePercentage: 100,
+				totalOutstandingAmount: 0,
+			},
+			topExpenses: [
+				{
+					category: "Operasional Rutin",
+					amount: 3500000,
+					percentageOfTotalExpense: 100,
+				},
+			],
+			complaintExpenses: {
+				totalCost: 0,
+				percentageOfExpense: 0,
+				complaintCount: 0,
+			},
+		};
+
+		const resultWaspada = generateDeterministicFinancialInsight(mockPayloadWaspada);
+		expect(resultWaspada.financialHealthGrade).toBe("WASPADA");
+	});
 });

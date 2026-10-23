@@ -599,8 +599,8 @@ export class ReportService {
 		);
 	}
 	/**
-	 * Cron Handler: Pembuatan Laporan AI Bulanan Terjadwal
-	 * Mengirim notifikasi reminder teks WhatsApp ke Pengelola/Owner (TANPA lampiran file PDF)
+	 * Cron Handler: Pembaruan Data Laporan AI Bulanan Terjadwal
+	 * Memperbarui data laporan keuangan di database tanpa broadcast WhatsApp
 	 */
 	async runMonthlyReportCron(options?: {
 		propertyId?: string;
@@ -621,92 +621,15 @@ export class ReportService {
 		}
 
 		console.log(
-			`[Cron Report] Menjalankan automasi Laporan AI untuk Periode ${month}/${year}...`,
+			`[Cron Report] Menjalankan pembaruan Laporan AI untuk Periode ${month}/${year}...`,
 		);
-
-		const settings = await this.getAutomationSettings();
-
-		if (!options?.forceSend) {
-			if (!settings.autoSendWhatsApp && !options?.sendWhatsApp) {
-				return {
-					success: true,
-					processedCount: 0,
-					skippedCount: 0,
-					skipped: true,
-					reason: "Automasi WhatsApp dinonaktifkan di pengaturan sistem",
-					period: { month, year },
-				};
-			}
-
-			const isDue = isReportScheduleDue({
-				now,
-				scheduleDay: settings.scheduleDay,
-				scheduleTime: settings.scheduleTime,
-			});
-
-			if (!isDue) {
-				return {
-					success: true,
-					processedCount: 0,
-					skippedCount: 0,
-					skipped: true,
-					reason: `Bukan jadwal eksekusi (Jadwal: tgl ${settings.scheduleDay} jam ${settings.scheduleTime} WIB)`,
-					period: { month, year },
-				};
-			}
-		}
 
 		const properties = await this.propertyRepo.findAll();
 		const targetProperties = options?.propertyId
 			? properties.filter((p) => p.id === options.propertyId)
 			: properties;
 
-		const todayStr = getTodayDateString();
-		const startOfDay = new Date(`${todayStr}T00:00:00+07:00`);
-		const endOfDay = new Date(`${todayStr}T23:59:59.999+07:00`);
-
-		const sentReportTokensToday = new Set<string>();
-		try {
-			const todaySentLogs =
-				await this.engagementRepo.getTodaySentNotificationLogs(
-					startOfDay,
-					endOfDay,
-				);
-			for (const log of todaySentLogs) {
-				if (log.notes) {
-					const match = log.notes.match(/\[(TOKEN:REPORT:[^\]]+)\]/);
-					if (match) {
-						sentReportTokensToday.add(match[1]);
-					}
-				}
-			}
-		} catch (err) {
-			console.error(
-				"[Cron Report] Gagal membaca log idempotensi hari ini:",
-				err,
-			);
-		}
-
 		const results = [];
-		const notificationLogs: Array<{
-			recipientNumber: string;
-			messageType: "ANNOUNCEMENT";
-			status: "SENT" | "FAILED";
-			notes?: string | null;
-		}> = [];
-
-		let skippedCount = 0;
-
-		const effectiveTargetPhone =
-			options?.targetPhone || settings.targetPhone || "";
-		const targetNumber = effectiveTargetPhone
-			? sanitizePhoneNumber(effectiveTargetPhone)
-			: "";
-
-		const shouldSendWhatsApp =
-			options?.sendWhatsApp !== undefined
-				? options.sendWhatsApp
-				: settings.autoSendWhatsApp;
 
 		for (const prop of targetProperties) {
 			try {
@@ -721,81 +644,6 @@ export class ReportService {
 					report = await this.getMonthlyReport(prop.id, month, year);
 				}
 				results.push(report);
-
-				// Kirim pengingat WhatsApp jika diaktifkan (Hanya Teks - Hemat Biaya Fonnte)
-
-				if (targetNumber === "6281234567890") {
-					console.warn(
-						"[Cron Report] Nomor target adalah dummy contoh (081234567890), pengiriman WhatsApp dilewati.",
-					);
-					notificationLogs.push({
-						recipientNumber: targetNumber,
-						messageType: "ANNOUNCEMENT",
-						status: "FAILED",
-						notes:
-							"Nomor tujuan adalah nomor dummy contoh (081234567890). Harap gunakan nomor WhatsApp asli Anda.",
-					});
-				} else if (shouldSendWhatsApp && targetNumber) {
-					const reportToken =
-						options?.idempotencyKey ||
-						`TOKEN:REPORT:${prop.id}:${year}-${month}:${todayStr}`;
-
-					// Anti-Spam Idempotency Check: cegah spam berulang jika cron ditembak berkali-kali hari ini (dapat di-bypass dengan forceSend)
-					if (!options?.forceSend && sentReportTokensToday.has(reportToken)) {
-						console.log(
-							`[Cron Report] Lewati kirim WhatsApp untuk ${prop.name} karena sudah terkirim hari ini (${reportToken})`,
-						);
-						skippedCount++;
-						continue;
-					}
-
-					console.log(
-						`[Cron Report] Mengirim ringkasan laporan ke WhatsApp ${targetNumber}...`,
-					);
-
-					const message = whatsappTemplates.executiveReportReminder({
-						propertyName: report.propertyName,
-						periodMonth: report.periodMonth,
-						periodYear: report.periodYear,
-						totalIncome: report.totalIncome,
-						totalExpense: report.totalExpense,
-						netProfit: report.netProfit,
-						profitMarginPercentage: report.profitMarginPercentage,
-						occupancyRate: report.roomStatus.occupancyRate,
-						financialHealthGrade: report.financialHealthGrade || "SEHAT",
-					});
-
-					const sendRes = await this.fonnte.sendText({
-						target: targetNumber,
-						message,
-					});
-
-					console.log(
-						`[Cron Report] Respon pengiriman WhatsApp (${targetNumber}): status=${sendRes.status}, detail=${sendRes.detail || sendRes.reason || "Success"}`,
-					);
-
-					const status = sendRes.status ? "SENT" : "FAILED";
-					const errorReason =
-						sendRes.reason ||
-						sendRes.detail ||
-						(sendRes.status ? "Success" : "Failed");
-					const noteLabel = `[${reportToken}] Pengingat Laporan AI ${report.propertyName} (${report.periodMonth} ${report.periodYear}) — ${errorReason}`;
-
-					notificationLogs.push({
-						recipientNumber: targetNumber,
-						messageType: "ANNOUNCEMENT",
-						status,
-						notes: noteLabel,
-					});
-
-					if (sendRes.status) {
-						sentReportTokensToday.add(reportToken);
-					}
-				} else if (shouldSendWhatsApp && !targetNumber) {
-					console.warn(
-						"[Cron Report] Opsi kirim WhatsApp aktif tetapi nomor target pengelola belum diisi.",
-					);
-				}
 			} catch (err) {
 				console.error(
 					`[Cron Report] Gagal memproses laporan untuk properti ${prop.name}:`,
@@ -804,40 +652,107 @@ export class ReportService {
 			}
 		}
 
-		if (notificationLogs.length > 0) {
-			await this.engagementRepo.recordNotificationLogsBatch(notificationLogs);
+		// Update konsolidasi (Semua Cabang) jika tidak memfilter properti tertentu
+		if (!options?.propertyId) {
+			try {
+				try {
+					const allReport = await this.generateOrRefreshAiReport(
+						undefined,
+						month,
+						year,
+					);
+					results.push(allReport);
+				} catch {
+					const allReport = await this.getMonthlyReport(
+						undefined,
+						month,
+						year,
+					);
+					results.push(allReport);
+				}
+			} catch (err) {
+				console.error("[Cron Report] Gagal memproses laporan agregat:", err);
+			}
 		}
-
-		const sentLogs = notificationLogs.filter((l) => l.status === "SENT");
-		const failedLogs = notificationLogs.filter((l) => l.status === "FAILED");
 
 		return {
 			success: true,
 			processedCount: results.length,
-			skippedCount,
 			period: { month, year },
-			whatsApp: {
-				attempted: notificationLogs.length > 0,
-				targetPhone: effectiveTargetPhone || null,
-				sentCount: sentLogs.length,
-				failedCount: failedLogs.length,
-				status:
-					notificationLogs.length === 0
-						? ("NOT_ATTEMPTED" as const)
-						: failedLogs.length === 0
-							? ("SENT" as const)
-							: sentLogs.length > 0
-								? ("PARTIAL" as const)
-								: ("FAILED" as const),
-				detail:
-					notificationLogs.length === 0
-						? shouldSendWhatsApp === false
-							? "Pengiriman WhatsApp dinonaktifkan."
-							: !targetNumber
-								? "Nomor WhatsApp belum diisi."
-								: "WhatsApp tidak dikirim."
-						: notificationLogs[0]?.notes || null,
-			},
+		};
+	}
+
+	/**
+	 * Cron Harian: Pembaruan Data Laporan AI Bulan Berjalan
+	 * Menjalankan kalkulasi keuangan & wawasan AI untuk seluruh cabang kos secara otomatis (tanpa broadcast WA).
+	 */
+	async runDailyReportUpdateCron() {
+		const now = new Date();
+		const currentMonth = now.getMonth() + 1;
+		const currentYear = now.getFullYear();
+
+		console.log(
+			`[Cron Report] Memperbarui snapshot Laporan AI harian untuk Periode ${currentMonth}/${currentYear}...`,
+		);
+
+		const properties = await this.propertyRepo.findAll();
+		const results: Array<{
+			propertyId: string;
+			status: "UPDATED" | "FALLBACK" | "FAILED";
+		}> = [];
+
+		// 1. Update data tiap cabang kos
+		for (const prop of properties) {
+			try {
+				try {
+					await this.generateOrRefreshAiReport(
+						prop.id,
+						currentMonth,
+						currentYear,
+					);
+					results.push({ propertyId: prop.id, status: "UPDATED" });
+				} catch (aiErr) {
+					console.warn(
+						`[Cron Report] Refresh AI dilewati untuk ${prop.name}, memuat snapshot deterministik:`,
+						aiErr instanceof Error ? aiErr.message : aiErr,
+					);
+					await this.getMonthlyReport(prop.id, currentMonth, currentYear);
+					results.push({ propertyId: prop.id, status: "FALLBACK" });
+				}
+			} catch (err) {
+				console.error(
+					`[Cron Report] Gagal memperbarui laporan untuk ${prop.name}:`,
+					err,
+				);
+				results.push({ propertyId: prop.id, status: "FAILED" });
+			}
+		}
+
+		// 2. Update data konsolidasi (Semua Cabang Kos)
+		try {
+			try {
+				await this.generateOrRefreshAiReport(
+					undefined,
+					currentMonth,
+					currentYear,
+				);
+				results.push({ propertyId: "ALL", status: "UPDATED" });
+			} catch {
+				await this.getMonthlyReport(undefined, currentMonth, currentYear);
+				results.push({ propertyId: "ALL", status: "FALLBACK" });
+			}
+		} catch (err) {
+			console.error("[Cron Report] Gagal memperbarui laporan konsolidasi:", err);
+			results.push({ propertyId: "ALL", status: "FAILED" });
+		}
+
+		return {
+			success: true,
+			updatedCount: results.filter(
+				(r) => r.status === "UPDATED" || r.status === "FALLBACK",
+			).length,
+			period: { month: currentMonth, year: currentYear },
+			details: results,
 		};
 	}
 

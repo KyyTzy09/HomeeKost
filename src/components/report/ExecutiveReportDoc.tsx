@@ -28,9 +28,10 @@ export function ExecutiveReportDoc({
 					color: "text-[#3e724d]",
 					border: "border-[#b9dbbf]",
 				};
+			case "NORMAL":
 			case "SEHAT":
 				return {
-					text: "SEHAT",
+					text: "NORMAL",
 					bg: "bg-[#edf4ee]",
 					color: "text-[#4f6958]",
 					border: "border-[#cde0d1]",
@@ -42,19 +43,20 @@ export function ExecutiveReportDoc({
 					color: "text-[#b18a4b]",
 					border: "border-[#eed7b0]",
 				};
+			case "BAHAYA":
 			case "KRITIS":
 				return {
-					text: "KRITIS",
+					text: "BAHAYA",
 					bg: "bg-[#fceeed]",
 					color: "text-[#b66b68]",
 					border: "border-[#f0c3c1]",
 				};
 			default:
 				return {
-					text: "NORMAL",
-					bg: "bg-[#f3f7f3]",
-					color: "text-[#55705d]",
-					border: "border-[#dce6df]",
+					text: "WASPADA",
+					bg: "bg-[#fbf4e6]",
+					color: "text-[#b18a4b]",
+					border: "border-[#eed7b0]",
 				};
 		}
 	};

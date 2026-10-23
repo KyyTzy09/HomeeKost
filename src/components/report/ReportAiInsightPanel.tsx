@@ -50,18 +50,14 @@ export function getHealthGradeBadge(
 	switch (effectiveGrade) {
 		case "PRIMA":
 			return {
-				label: isClosedPeriod
-					? "Status Finansial: PRIMA 🌟"
-					: "Status: PRIMA (Bulan Berjalan) 🌟",
+				label: "Status Finansial: PRIMA 🌟",
 				className: "bg-[#e8f2ea] text-[#3e724d] border-[#b9dbbf]",
 				icon: CheckCircle2,
 			};
 		case "NORMAL":
 		case "SEHAT":
 			return {
-				label: isClosedPeriod
-					? "Status Finansial: NORMAL ✨"
-					: "Status: NORMAL (Bulan Berjalan) ✨",
+				label: "Status Finansial: NORMAL ✨",
 				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
 				icon: Activity,
 			};
@@ -69,7 +65,7 @@ export function getHealthGradeBadge(
 			return {
 				label: isClosedPeriod
 					? "Status Finansial: WASPADA ⚠️"
-					: "Status: WASPADA (Dalam Pemantauan) ⚠️",
+					: "Status Finansial: WASPADA (Dalam Pemantauan) ⚠️",
 				className: "bg-[#fbf4e6] text-[#b18a4b] border-[#eed7b0]",
 				icon: AlertCircle,
 			};
@@ -82,11 +78,9 @@ export function getHealthGradeBadge(
 			};
 		default:
 			return {
-				label: isClosedPeriod
-					? "Status Finansial: NORMAL ✨"
-					: "Status: NORMAL (Bulan Berjalan) ✨",
-				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
-				icon: Activity,
+				label: "Status Finansial: WASPADA ⚠️",
+				className: "bg-[#fbf4e6] text-[#b18a4b] border-[#eed7b0]",
+				icon: AlertCircle,
 			};
 	}
 }
@@ -116,7 +110,7 @@ export function ReportAiInsightPanel({
 					</h2>
 					<p className="text-[11px] text-[#737873] mt-0.5">
 						Analisis operasional & performa bisnis {periodLabel}
-						{isClosedPeriod ? " (Tutup Buku)" : " (Sedang Berjalan)"}
+						{isClosedPeriod ? " (Tutup Buku)" : " (Bulan Berjalan)"}
 					</p>
 				</div>
 

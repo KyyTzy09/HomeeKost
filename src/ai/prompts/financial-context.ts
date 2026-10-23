@@ -31,21 +31,18 @@ ${timeContext}
 ${statusRule}
 
 # RUBRIK PENILAIAN FINANCIAL HEALTH GRADE (MANDATORY)
-Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria berikut (Prima -> Normal -> Waspada -> Bahaya):
+Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan Rasio Beban Kas (Total Pengeluaran / Total Pendapatan):
 1. "PRIMA":
-   - Margin Laba Bersih >= 60% DAN
-   - Okupansi Kamar >= 85% DAN
-   - Collection Rate (Ketepatan Bayar) >= 90%
-2. "NORMAL":
-   - Margin Laba Bersih 40% - 59.9% DAN
-   - Okupansi Kamar >= 70%
-3. "WASPADA":
-   - Margin Laba Bersih 15% - 39.9% ATAU
+   - Rasio Beban Kas < 25% (Margin Laba Bersih > 75%) DAN
+   - Okupansi Kamar >= 80% DAN
+   - Collection Rate (Ketepatan Bayar) >= 85%
+2. "WASPADA" (Kategori Tengah / Perhatian Operasional):
+   - Rasio Beban Kas 25% - 50% (Margin Laba Bersih 50% - 75%) ATAU
    - Okupansi Kamar < 70% ATAU
    - Biaya perbaikan/komplain menyerap > 20% dari total pengeluaran
-4. "BAHAYA" (Hanya berlaku jika SUDAH TUTUP BUKU atau performa okupansi riil sangat hancur):
-   - Periode telah TUTUP BUKU DAN (Margin Laba Bersih < 15% ATAU Collection Rate < 50%)
-   - Pengecualian pada bulan berjalan: DILARANG menetapkan "BAHAYA" karena pencatatan sewa masih berproses. Batasi ke "WASPADA".
+3. "BAHAYA" (Hanya berlaku jika SUDAH TUTUP BUKU):
+   - Periode telah TUTUP BUKU DAN (Rasio Beban Kas > 50% / Margin Laba Bersih < 50% ATAU Collection Rate < 50%)
+   - Pengecualian pada bulan berjalan: DILARANG menetapkan "BAHAYA" karena pencatatan sewa masih berproses. Batasi maksimal ke "WASPADA".
 
 # ATURAN PENULISAN ELEMEN OUTPUT:
 1. "executiveSummary":
