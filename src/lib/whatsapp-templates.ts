@@ -109,7 +109,7 @@ export const whatsappTemplates = {
 
 Berikut rincian tagihan sewa kos untuk periode *${p.period}*:
 
-🏠 *Properti:* ${p.propertyName}
+🏠 *${p.propertyName}*
 🚪 *Kamar:* ${p.roomNumber}
 📄 *No. Invoice:* ${p.invoiceNumber}
 📅 *Jatuh Tempo:* ${p.dueDate}
@@ -120,8 +120,10 @@ Berikut rincian tagihan sewa kos untuk periode *${p.period}*:
 - No. Rekening: *${p.bankAccount || "8735081290"}*
 - Atas Nama: *${p.accountHolder || "Bude Frisda"}*
 ${docSection}
-Mohon lakukan pembayaran sebelum tanggal jatuh tempo dan kirimkan bukti transfer ke nomor ini. Terima kasih! 🙏✨
-_— Pengelola ${p.propertyName}_`;
+Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini ya Kak.
+
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kost ${p.propertyName}_`;
 	},
 
 	/**
@@ -144,11 +146,11 @@ _— Pengelola ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice:* ${p.documentUrl}\n`
 			: "";
 
-		return `Halo Kak *${p.tenantName}*,
+		return `Halo Kak *${p.tenantName}*! 👋
 
 ${statusHeadline}
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Nominal:* *${formatRupiah(p.amount)}*
 
@@ -157,7 +159,8 @@ ${docSection}
 Pembayaran dapat ditransfer ke rekening:
 🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 
-Jika sudah melakukan transfer, abaikan pesan ini atau kirimkan bukti pembayaran kepada kami. Terima kasih! 🙏`;
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kost ${p.propertyName}_`;
 	},
 
 	/**
@@ -168,22 +171,18 @@ Jika sudah melakukan transfer, abaikan pesan ini atau kirimkan bukti pembayaran 
 			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
 			: "";
 
-		return `Halo *${p.tenantName}*,
+		return `Halo Kak *${p.tenantName}*! 👋
 
-Hari ini sudah tanggal 1 ${p.period}. Jangan lupa untuk melakukan pembayaran tagihan sewa kos Anda:
+Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
-
-📅 *Masa Pembayaran:* Tanggal 1 s/d 5 ${p.period}
-⚠️ *Penting:* Batas waktu pembayaran adalah tanggal 5. Pembayaran yang melewati tanggal 5 akan dikenakan denda keterlambatan sesuai kebijakan kos.
 
 💳 *Pembayaran dapat ditransfer ke rekening:*
 🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 ${docSection}
-Jika Anda sudah melakukan transfer, silakan kirimkan bukti pembayaran ke nomor ini. Terima kasih! 🙏✨
-— Pengelola ${p.propertyName}`;
+Terima kasih banyak bagi yang sudah melakukan pembayaran tepat waktu, have a nice day Kak! 😊🙏
+_— Admin Kost ${p.propertyName}_`;
 	},
 
 	/**
@@ -196,26 +195,29 @@ Jika Anda sudah melakukan transfer, silakan kirimkan bukti pembayaran ke nomor i
 
 		const appreciationText =
 			p.isOnTime === true
-				? `Terima kasih banyak! Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi tepat waktu. Kami sangat mengapresiasi kedisiplinan dan kerja sama Anda! 🙏✨`
-				: `Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi.`;
+				? `Terima kasih banyak! Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima dan diverifikasi lunas. 🙏✨`
+				: `Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima dan diverifikasi lunas. 🙏✨`;
 
 		const closingText =
 			p.isOnTime === true
-				? `Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Semoga nyaman tinggal di *${p.propertyName}*! 🌿🏡`
-				: `Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Terima kasih atas kerja samanya. 🙏`;
+				? `Bukti pembayaran resmi ini tersimpan secara digital di sistem kami. Semoga selalu betah dan nyaman tinggal di *${p.propertyName}*! 🌿🏡`
+				: `Bukti pembayaran resmi ini tersimpan secara digital di sistem kami. Terima kasih atas kerja samanya. 🙏`;
 
 		return `🎉 *PEMBAYARAN DITERIMA & LUNAS* 🎉
 
-Halo *${p.tenantName}*,
+Halo Kak *${p.tenantName}*! 👋
 ${appreciationText}
 
 📄 *No. Kwitansi:* ${p.invoiceNumber}
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
 💳 *Metode Bayar:* ${p.paymentMethod}
 🗓️ *Tanggal Bayar:* ${p.paidDate}
 💵 *Jumlah Diterima:* *${formatRupiah(p.amount)}* (LUNAS)
 ${docSection}
-${closingText}`;
+${closingText}
+
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kost ${p.propertyName}_`;
 	},
 
 	/**
@@ -228,10 +230,10 @@ ${closingText}`;
 
 		return `🧾 *BUKTI PENERIMAAN CICILAN SEWA*
 
-Halo Kak *${p.tenantName}*,
-Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima:
+Halo Kak *${p.tenantName}*! 👋
+Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima:
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💳 *Metode Bayar:* ${p.paymentMethod}
 🗓️ *Tanggal Bayar:* ${p.paidDate}
@@ -242,8 +244,10 @@ Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima:
 - Total Terbayar: ${formatRupiah(p.totalPaid)}
 - ⚠️ *Sisa Tagihan:* *${formatRupiah(p.remainingAmount)}*
 ${docSection}
-Bukti pembayaran resmi ini tersimpan digital di sistem pengelola kos. Terima kasih! 🙏✨
-_— Pengelola ${p.propertyName}_`;
+Bukti pembayaran resmi ini tersimpan secara digital di sistem kami.
+
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kost ${p.propertyName}_`;
 	},
 
 	/**
@@ -256,10 +260,9 @@ _— Pengelola ${p.propertyName}_`;
 
 		return `🔔 *PENGINGAT SISA CICILAN SEWA*
 
-Halo Kak *${p.tenantName}*,
-Mengingatkan kembali perihal sisa tagihan sewa kos untuk periode *${p.period}*:
+Halo Kak *${p.tenantName}*! 👋
+Mengingatkan kembali perihal sisa tagihan sewa kos di *${p.propertyName}* (Kamar ${p.roomNumber}) untuk periode *${p.period}*:
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💵 *Total Tagihan:* ${formatRupiah(p.totalAmount)}
 ✅ *Sudah Dibayar:* ${formatRupiah(p.totalPaid)}
@@ -269,8 +272,8 @@ ${docSection}
 Pembayaran dapat ditransfer ke rekening:
 🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 
-Mohon lakukan pelunasan sisa tagihan sebelum tanggal tersebut. Terima kasih banyak atas kerjasamanya! 🙏✨
-_— Pengelola ${p.propertyName}_`;
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kost ${p.propertyName}_`;
 	},
 
 	/**
