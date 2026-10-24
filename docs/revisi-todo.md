@@ -51,6 +51,10 @@
 
 ---
 
+### Notifikasi & Template WhatsApp
+- [x] **Standardisasi Nama Pengirim Pesan**:
+  - Menyeragamkan penutup/signature pengirim di seluruh template WhatsApp (`src/lib/whatsapp-templates.ts`) menjadi format baku konsisten: `_— Admin Kos {nama kost}_`.
+
 ### Menu Engagement
 - [x] **Hapus Kategori "Kerja Bakti"**:
   - Menghapus opsi kategori *"Kerja Bakti"* pada dialog pembuatan pengumuman (`EngagementEventDialog`), dialog template pesan (`EngagementTemplateDialog`), serta daftar template bawaan.
@@ -70,4 +74,3 @@
 - [x] ❌ **Otomatisasi Lunas Paksa Multi-Bulan**: Dibatalkan karena sistem saat ini sudah tepat dengan mempertahankan fleksibilitas centang *"Tandai Lunas"* pada form pendaftaran sewa.
 - [x] ❌ **Kirim File Peraturan Kos Format JPG**: Dibatalkan langsung oleh klien saat pertemuan.
 - [x] ❌ **Form Konfirmasi 3 Lapis (Triple Confirmation)**: Dibatalkan (klien hanya menginginkan interaksi tombol digeser / slider).
-- [x] ❌ **Perubahan Draf Template WhatsApp**: Ditahan dan dikembalikan ke kode awal agar dapat dikerjakan secara terpisah.
