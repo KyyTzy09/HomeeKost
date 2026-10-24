@@ -7,5 +7,6 @@ export * from "./payment.types.ts";
 export * from "./property.types.ts";
 export * from "./report.types.ts";
 export * from "./room.types.ts";
+export * from "./system.types.ts";
 export * from "./tenant.types.ts";
 export * from "./user.types.ts";

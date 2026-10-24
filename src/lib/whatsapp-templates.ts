@@ -181,7 +181,35 @@ Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNu
 💳 *Pembayaran dapat ditransfer ke rekening:*
 🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 ${docSection}
+Masa pembayaran sewa adalah tanggal 1 s.d. 5 ya Kak. Pembayaran setelah tanggal 5 akan dikenakan denda keterlambatan sesuai ketentuan kost.
+
 Terima kasih banyak bagi yang sudah melakukan pembayaran tepat waktu, have a nice day Kak! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
+	},
+
+	/**
+	 * Template Pengingat Jatuh Tempo Tanggal 5 (Batas Akhir Bayar & Peringatan Denda)
+	 */
+	monthlyFifthReminder(p: MonthlyFirstReminderTemplateParams): string {
+		const docSection = p.documentUrl
+			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
+			: "";
+
+		return `Halo Kak *${p.tenantName}*! 👋
+
+⚠️ *PENGINGAT BATAS AKHIR PEMBAYARAN HARI INI*
+
+Mengingatkan kembali bahwa hari ini (Tanggal 5) adalah batas akhir pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
+
+📄 *No. Invoice:* ${p.invoiceNumber}
+💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
+
+💳 *Pembayaran dapat ditransfer ke rekening:*
+🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${docSection}
+Mohon melakukan pelunasan hari ini agar terhindar dari denda keterlambatan ya Kak. Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini.
+
+Terima kasih banyak atas perhatian dan kerja samanya Kak! 😊🙏
 _— Admin Kos ${p.propertyName}_`;
 	},
 

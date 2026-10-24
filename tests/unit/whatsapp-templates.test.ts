@@ -163,6 +163,32 @@ describe("WhatsApp Notification Message Templates", () => {
 		});
 	});
 
+	describe("monthlyFifthReminder Template", () => {
+		it("harus menyusun pengingat jatuh tempo tanggal 5 dengan sapaan Kak, batas akhir bayar, dan pengirim Admin Kos", () => {
+			const msg = (whatsappTemplates as any).monthlyFifthReminder({
+				tenantName: "Ahmad Priyadi",
+				propertyName: "Kost Harmoni",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202611-001",
+				period: "November 2026",
+				amount: 1500000,
+				bankAccount: "8735081290",
+				accountHolder: "Bude Frisda",
+				documentUrl: "http://localhost:3000/api/invoices/123/document",
+			});
+
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).toContain("PENGINGAT BATAS AKHIR PEMBAYARAN HARI INI");
+			expect(msg).toContain("Kost Harmoni");
+			expect(msg).toContain("A-01");
+			expect(msg).toContain("INV-202611-001");
+			expect(msg).toContain("Rp1.500.000");
+			expect(msg).toContain("8735081290");
+			expect(msg).toContain("Bude Frisda");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
+		});
+	});
+
 	describe("paymentReceipt Template on-time variation", () => {
 		it("harus menyertakan doa kenyamanan hunian dan pengirim Admin Kos jika tepat waktu", () => {
 			const msg = whatsappTemplates.paymentReceipt({
