@@ -1,7 +1,10 @@
-import { FileText, Plus } from "lucide-react";
+import { FileText, Pencil, Plus } from "lucide-react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
-import type { EngagementTemplateItem } from "../../common/types/index.ts";
+import {
+	type EngagementTemplateItem,
+	isCoreEngagementTemplate,
+} from "../../common/types/index.ts";
 
 interface EngagementTemplatePanelProps {
 	templates: EngagementTemplateItem[];
@@ -45,6 +48,7 @@ export function EngagementTemplatePanel({
 				<div className="space-y-2.5 mt-3">
 					{templates.map((tpl) => {
 						const isSelected = selectedTemplate?.id === tpl.id;
+						const isCore = isCoreEngagementTemplate(tpl);
 
 						return (
 							<button
@@ -61,15 +65,44 @@ export function EngagementTemplatePanel({
 									{tpl.icon || "💬"}
 								</div>
 								<div className="min-w-0 flex-1">
-									<div className="flex items-center justify-between">
-										<strong className="text-xs font-bold text-[#252925]">
-											{tpl.name}
-										</strong>
-										{isSelected && (
-											<span className="text-[10px] font-semibold text-[#4f6958] bg-[#e8f0ea] px-2 py-0.5 rounded">
-												Aktif
-											</span>
-										)}
+									<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center gap-1.5 min-w-0">
+											<strong className="text-xs font-bold text-[#252925] truncate">
+												{tpl.name}
+											</strong>
+											{isCore && (
+												<span className="text-[9px] font-semibold text-[#4f6958] bg-[#eef4ef] px-1.5 py-0.5 rounded border border-[#d8e4da] shrink-0">
+													Utama
+												</span>
+											)}
+										</div>
+										<div className="flex items-center gap-1.5 shrink-0">
+											{isSelected && (
+												<span className="text-[10px] font-semibold text-[#4f6958] bg-[#e8f0ea] px-2 py-0.5 rounded">
+													Aktif
+												</span>
+											)}
+											{onOpenDetail && (
+												<span
+													role="button"
+													tabIndex={0}
+													onClick={(e) => {
+														e.stopPropagation();
+														onOpenDetail(tpl);
+													}}
+													onKeyDown={(e) => {
+														if (e.key === "Enter" || e.key === " ") {
+															e.stopPropagation();
+															onOpenDetail(tpl);
+														}
+													}}
+													className="p-1 rounded-md text-[#737873] hover:text-[#252925] hover:bg-[#e4ece5] transition-colors cursor-pointer"
+													title="Lihat / Edit Template"
+												>
+													<Pencil className="w-3.5 h-3.5" />
+												</span>
+											)}
+										</div>
 									</div>
 									<p className="text-[11px] text-[#737873] mt-0.5 line-clamp-2">
 										{tpl.content}

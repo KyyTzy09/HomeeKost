@@ -1,4 +1,4 @@
-import { FileText, Pencil, Trash2 } from "lucide-react";
+import { FileText, Pencil, ShieldAlert, Trash2 } from "lucide-react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Dialog,
@@ -8,7 +8,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
-import type { EngagementTemplateItem } from "../../common/types/index.ts";
+import {
+	type EngagementTemplateItem,
+	isCoreEngagementTemplate,
+} from "../../common/types/index.ts";
 
 interface EngagementTemplateDetailDialogProps {
 	open: boolean;
@@ -26,6 +29,8 @@ export function EngagementTemplateDetailDialog({
 	onDelete,
 }: EngagementTemplateDetailDialogProps) {
 	if (!template) return null;
+
+	const isCore = isCoreEngagementTemplate(template);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,22 +67,29 @@ export function EngagementTemplateDetailDialog({
 				</div>
 
 				<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-between gap-2">
-					<Button
-						type="button"
-						variant="outline"
-						className="border-[#efd4d0] text-[#a45149] hover:bg-[#fff5f3] text-xs font-semibold px-4 h-9"
-						onClick={() => {
-							onOpenChange(false);
-							onDelete(template);
-						}}
-					>
-						<Trash2 className="w-3.5 h-3.5 mr-1.5" />
-						Hapus Template
-					</Button>
+					{isCore ? (
+						<div className="flex items-center gap-1.5 text-[11px] text-[#4f6958] font-medium bg-[#f0f5f1] border border-[#d8e4da] px-3 py-1.5 rounded-lg">
+							<ShieldAlert className="w-3.5 h-3.5 text-[#4f6958]" />
+							Template Utama (Tidak dapat dihapus)
+						</div>
+					) : (
+						<Button
+							type="button"
+							variant="outline"
+							className="border-[#efd4d0] text-[#a45149] hover:bg-[#fff5f3] text-xs font-semibold px-4 h-9 cursor-pointer"
+							onClick={() => {
+								onOpenChange(false);
+								onDelete(template);
+							}}
+						>
+							<Trash2 className="w-3.5 h-3.5 mr-1.5" />
+							Hapus Template
+						</Button>
+					)}
 
 					<Button
 						type="button"
-						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9"
+						className="bg-[#4f6958] hover:bg-[#425949] text-white text-xs font-semibold px-4 h-9 cursor-pointer"
 						onClick={() => {
 							onOpenChange(false);
 							onEdit(template);

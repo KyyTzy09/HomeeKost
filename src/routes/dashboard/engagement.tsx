@@ -3,10 +3,11 @@ import { CheckCircle2, MessageSquare, Plus, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
-import type {
-	AnnouncementItem,
-	EngagementRecipient,
-	EngagementTemplateItem,
+import {
+	type AnnouncementItem,
+	type EngagementRecipient,
+	type EngagementTemplateItem,
+	isCoreEngagementTemplate,
 } from "../../common/types/index.ts";
 import type {
 	BroadcastAnnouncementInput,
@@ -60,6 +61,7 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 			"Halo Kak! Selamat datang di HomeeKost. Semoga betah dan nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊🌿",
 		category: "Sambutan",
 		icon: "👋",
+		isCore: true,
 	},
 	{
 		id: "tpl-2",
@@ -68,6 +70,7 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 			"Terima kasih banyak sudah melakukan pembayaran sewa kos tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan dan berkah! ✨🙏",
 		category: "Pembayaran",
 		icon: "💳",
+		isCore: true,
 	},
 	{
 		id: "tpl-3",
@@ -76,6 +79,7 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 			"Selamat ulang tahun! 🎉🎂 Semoga senantiasa sehat, bahagia, dan sukses selalu dalam studi maupun pekerjaan. Terima kasih telah menjadi bagian berharga dari keluarga besar kami!",
 		category: "Ulang Tahun",
 		icon: "🎂",
+		isCore: true,
 	},
 ];
 
@@ -99,9 +103,25 @@ const loadStoredTemplates = (): EngagementTemplateItem[] => {
 		const stored = localStorage.getItem(TEMPLATE_STORAGE_KEY);
 		if (!stored) return DEFAULT_TEMPLATES;
 		const parsed = JSON.parse(stored);
-		return Array.isArray(parsed) && parsed.length > 0
-			? parsed
-			: DEFAULT_TEMPLATES;
+		if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_TEMPLATES;
+
+		const mapped: EngagementTemplateItem[] = parsed.map((item: any) => ({
+			...item,
+			isCore: isCoreEngagementTemplate(item),
+		}));
+
+		for (const def of DEFAULT_TEMPLATES) {
+			const hasTemplate = mapped.some(
+				(t) =>
+					String(t.id) === String(def.id) ||
+					(isCoreEngagementTemplate(t) && t.category === def.category),
+			);
+			if (!hasTemplate) {
+				mapped.unshift(def);
+			}
+		}
+
+		return mapped;
 	} catch {
 		return DEFAULT_TEMPLATES;
 	}
@@ -294,6 +314,13 @@ function EngagementPage() {
 	};
 
 	const handleDeleteTemplate = (tpl: EngagementTemplateItem) => {
+		if (isCoreEngagementTemplate(tpl)) {
+			showToast(
+				"Template utama (Sambutan, Apresiasi, dan Ulang Tahun) tidak dapat dihapus.",
+			);
+			return;
+		}
+
 		const nextTemplates = templates.filter((t) => t.id !== tpl.id);
 		setTemplates(nextTemplates);
 		if (typeof window !== "undefined") {
@@ -432,6 +459,10 @@ function EngagementPage() {
 					onOpenAddTemplate={() => {
 						setEditingTemplate(null);
 						setIsTemplateDialogOpen(true);
+					}}
+					onOpenDetail={(tpl) => {
+						setDetailTemplate(tpl);
+						setIsDetailDialogOpen(true);
 					}}
 				/>
 			</div>

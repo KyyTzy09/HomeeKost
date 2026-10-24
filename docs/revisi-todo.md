@@ -60,6 +60,13 @@
   - Menghapus opsi kategori *"Kerja Bakti"* pada dialog pembuatan pengumuman (`EngagementEventDialog`), dialog template pesan (`EngagementTemplateDialog`), serta daftar template bawaan.
 - [x] **Tombol Manual Apresiasi Bayar Tepat Waktu**:
   - Menyediakan tombol aksi kirim manual perorangan (*"Kirim Apresiasi"*) serta kirim selektif bagi pengelola untuk apresiasi pembayaran tepat waktu di Engagement Hub (bukan dikirim otomatis secara blast).
+- [x] **Proteksi 3 Template Utama Engagement**:
+  - 3 template utama (*Sambutan Anak Kos Baru*, *Apresiasi Pembayaran Tepat Waktu*, dan *Ucapan Selamat Ulang Tahun*) tidak dapat dihapus (tombol Hapus diganti badge proteksi), namun tetap dapat diedit kapan saja.
+  - Template kustom tambahan di luar 3 template utama dapat dihapus dan diedit secara bebas.
+
+### Profil & Pengaturan Akun
+- [x] **Pembersihan Input Password Baru Redundan di Profil**:
+  - Menghapus input formulir *"Password Baru (Opsional)"* dari tampilan profil (`ProfileInfoForm.tsx`) sehingga proses penggantian kata sandi terpusat dan aman melalui dialog *"Pengaturan Keamanan"* yang memverifikasi password lama.
 
 ---
 

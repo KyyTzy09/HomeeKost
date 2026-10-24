@@ -17,7 +17,23 @@ export interface EngagementTemplateItem {
 	content: string;
 	category?: EngagementTemplateCategory | string;
 	icon?: string;
+	isCore?: boolean;
 }
+
+export const isCoreEngagementTemplate = (
+	tpl: EngagementTemplateItem | null | undefined,
+): boolean => {
+	if (!tpl) return false;
+	if (tpl.isCore) return true;
+	const id = String(tpl.id);
+	if (["tpl-1", "tpl-2", "tpl-3"].includes(id)) return true;
+	const name = (tpl.name || "").toLowerCase().trim();
+	return (
+		name.includes("sambutan") ||
+		name.includes("apresiasi") ||
+		name.includes("ulang tahun")
+	);
+};
 
 export interface UpcomingBirthdayItem {
 	id: string | number;
