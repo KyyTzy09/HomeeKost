@@ -139,7 +139,7 @@ describe("WhatsApp Notification Message Templates", () => {
 	});
 
 	describe("monthlyFirstReminder Template", () => {
-		it("harus menyusun pengingat tagihan tanggal 1 tanpa kata 'Kak', menyebut masa bayar tanggal 1 s/d 5, dan klausul denda", () => {
+		it("harus menyusun pengingat tagihan tanggal 1 dengan sapaan Kak dan pengirim Admin Kos", () => {
 			const msg = (whatsappTemplates as any).monthlyFirstReminder({
 				tenantName: "Ahmad Priyadi",
 				propertyName: "Kost Harmoni",
@@ -152,19 +152,19 @@ describe("WhatsApp Notification Message Templates", () => {
 				documentUrl: "http://localhost:3000/api/invoices/123/document",
 			});
 
-			expect(msg).toContain("Halo *Ahmad Priyadi*");
-			expect(msg).not.toContain("Halo Kak");
-			expect(msg).toContain("Hari ini sudah tanggal 1 November 2026");
-			expect(msg).toContain("Tanggal 1 s/d 5 November 2026");
-			expect(msg).toContain("dikenakan denda keterlambatan");
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).toContain("Kost Harmoni");
+			expect(msg).toContain("A-01");
+			expect(msg).toContain("INV-202611-001");
 			expect(msg).toContain("Rp1.500.000");
 			expect(msg).toContain("8735081290");
 			expect(msg).toContain("Bude Frisda");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
 		});
 	});
 
 	describe("paymentReceipt Template on-time variation", () => {
-		it("harus menyertakan apresiasi kedisiplinan dan tanpa kata 'Kak' jika pembayaran tepat waktu", () => {
+		it("harus menyertakan doa kenyamanan hunian dan pengirim Admin Kos jika tepat waktu", () => {
 			const msg = whatsappTemplates.paymentReceipt({
 				tenantName: "Ahmad Priyadi",
 				propertyName: "Kost Harmoni",
@@ -177,13 +177,13 @@ describe("WhatsApp Notification Message Templates", () => {
 				isOnTime: true,
 			});
 
-			expect(msg).toContain("Halo *Ahmad Priyadi*");
-			expect(msg).not.toContain("Halo Kak");
-			expect(msg).toContain("tepat waktu");
-			expect(msg).toContain("mengapresiasi kedisiplinan");
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).toContain("telah kami terima dan diverifikasi lunas");
+			expect(msg).toContain("Semoga selalu betah dan nyaman tinggal");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
 		});
 
-		it("harus menggunakan konfirmasi formal standar jika pembayaran terlambat", () => {
+		it("harus menggunakan konfirmasi standar dan pengirim Admin Kos jika pembayaran terlambat", () => {
 			const msg = whatsappTemplates.paymentReceipt({
 				tenantName: "Ahmad Priyadi",
 				propertyName: "Kost Harmoni",
@@ -196,10 +196,10 @@ describe("WhatsApp Notification Message Templates", () => {
 				isOnTime: false,
 			});
 
-			expect(msg).toContain("Halo *Ahmad Priyadi*");
-			expect(msg).not.toContain("Halo Kak");
-			expect(msg).not.toContain("tepat waktu");
-			expect(msg).toContain("telah kami terima dan diverifikasi");
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).not.toContain("Semoga selalu betah dan nyaman tinggal");
+			expect(msg).toContain("Terima kasih atas kerja samanya");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
 		});
 	});
 

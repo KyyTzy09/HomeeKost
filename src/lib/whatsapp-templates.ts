@@ -123,7 +123,7 @@ ${docSection}
 Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini ya Kak.
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
-_— Admin Kost ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -160,7 +160,7 @@ Pembayaran dapat ditransfer ke rekening:
 🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
-_— Admin Kost ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -182,7 +182,7 @@ Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNu
 🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 ${docSection}
 Terima kasih banyak bagi yang sudah melakukan pembayaran tepat waktu, have a nice day Kak! 😊🙏
-_— Admin Kost ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -217,7 +217,7 @@ ${docSection}
 ${closingText}
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
-_— Admin Kost ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -247,7 +247,7 @@ ${docSection}
 Bukti pembayaran resmi ini tersimpan secara digital di sistem kami.
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
-_— Admin Kost ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -273,7 +273,7 @@ Pembayaran dapat ditransfer ke rekening:
 🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
-_— Admin Kost ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -287,7 +287,7 @@ Keluarga besar *${p.propertyName}* mengucapkan selamat bertambah usia! 🎈✨
 Semoga di usia yang baru ini senantiasa diberikan kesehatan, kebahagiaan, kemudahan dalam setiap urusan/pekerjaan, serta tercapai segala cita-cita yang diimpikan.
 
 Terima kasih telah menjadi bagian berharga dari keluarga hunian kami. Semoga betah dan selalu nyaman tinggal di *${p.propertyName}*! 🌿🏡
-_— Manajemen & Pengelola ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -305,6 +305,9 @@ _— Manajemen & Pengelola ${p.propertyName}_`;
 		const propertyBadge = p.propertyName
 			? `\n🏠 *Lokasi:* ${p.propertyName}`
 			: "";
+		const sender = p.propertyName
+			? `_— Admin Kos ${p.propertyName}_`
+			: "_— Admin Kos_";
 
 		return `*${categoryBadge}*
 ━━━━━━━━━━━━━━━━━━━━━
@@ -314,7 +317,7 @@ ${p.message}
 
 ━━━━━━━━━━━━━━━━━━━━━
 _Mohon diperhatikan oleh seluruh penghuni demi kenyamanan bersama. Terima kasih!_ 🙏
-_— Manajemen Pengelola Kos_`;
+${sender}`;
 	},
 
 	/**
