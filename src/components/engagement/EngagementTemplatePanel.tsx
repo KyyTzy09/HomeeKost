@@ -11,6 +11,7 @@ interface EngagementTemplatePanelProps {
 	selectedTemplate: EngagementTemplateItem | null;
 	onSelectTemplate: (template: EngagementTemplateItem) => void;
 	onOpenAddTemplate: () => void;
+	onOpenDetail?: (template: EngagementTemplateItem) => void;
 }
 
 export function EngagementTemplatePanel({
@@ -18,6 +19,7 @@ export function EngagementTemplatePanel({
 	selectedTemplate,
 	onSelectTemplate,
 	onOpenAddTemplate,
+	onOpenDetail,
 }: EngagementTemplatePanelProps) {
 	return (
 		<Card className="p-5 bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] flex flex-col justify-between">
