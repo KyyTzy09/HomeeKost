@@ -58,7 +58,7 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 		id: "tpl-1",
 		name: "Sambutan Anak Kos Baru",
 		content:
-			"Halo Kak! Selamat datang di HomeeKost. Semoga betah dan nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊🌿",
+			"Halo Kak *{nama}*! 👋\n\nSelamat datang di *{kos}* (Kamar {kamar}). Semoga betah dan nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊🌿\n\n_— Admin Kos {kos}_",
 		category: "Sambutan",
 		icon: "👋",
 		isCore: true,
@@ -67,7 +67,7 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 		id: "tpl-2",
 		name: "Apresiasi Pembayaran Tepat Waktu",
 		content:
-			"Terima kasih banyak sudah melakukan pembayaran sewa kos tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan dan berkah! ✨🙏",
+			"Halo Kak *{nama}*! 👋\n\nTerima kasih banyak sudah melakukan pembayaran sewa kos di *{kos}* tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan dan berkah selalu! ✨🙏\n\n_— Admin Kos {kos}_",
 		category: "Pembayaran",
 		icon: "💳",
 		isCore: true,
@@ -76,7 +76,7 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 		id: "tpl-3",
 		name: "Ucapan Selamat Ulang Tahun",
 		content:
-			"Selamat ulang tahun! 🎉🎂 Semoga senantiasa sehat, bahagia, dan sukses selalu dalam studi maupun pekerjaan. Terima kasih telah menjadi bagian berharga dari keluarga besar kami!",
+			"🎂🎉 *SELAMAT ULANG TAHUN, KAK {nama}!* 🎉🎂\n\nKeluarga besar *{kos}* mengucapkan selamat bertambah usia! 🎈✨\n\nSemoga di usia yang baru senantiasa diberikan kesehatan, kebahagiaan, dan kelancaran dalam segala urusan maupun pekerjaan. Terima kasih telah menjadi bagian berharga dari keluarga hunian kami! 🌿🏡\n\n_— Admin Kos {kos}_",
 		category: "Ulang Tahun",
 		icon: "🎂",
 		isCore: true,
@@ -105,10 +105,28 @@ const loadStoredTemplates = (): EngagementTemplateItem[] => {
 		const parsed = JSON.parse(stored);
 		if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_TEMPLATES;
 
-		const mapped: EngagementTemplateItem[] = parsed.map((item: any) => ({
-			...item,
-			isCore: isCoreEngagementTemplate(item),
-		}));
+		const mapped: EngagementTemplateItem[] = parsed.map((item: any) => {
+			const isCore = isCoreEngagementTemplate(item);
+			// Upgrade template inti jika di localStorage masih versi lama tanpa {nama}
+			if (isCore && String(item.id) === "tpl-2" && !item.content.includes("{nama}")) {
+				return {
+					...item,
+					content: DEFAULT_TEMPLATES[1].content,
+					isCore: true,
+				};
+			}
+			if (isCore && String(item.id) === "tpl-1" && !item.content.includes("{nama}")) {
+				return {
+					...item,
+					content: DEFAULT_TEMPLATES[0].content,
+					isCore: true,
+				};
+			}
+			return {
+				...item,
+				isCore,
+			};
+		});
 
 		for (const def of DEFAULT_TEMPLATES) {
 			const hasTemplate = mapped.some(

@@ -230,17 +230,55 @@ export function EngagementTemplateDialog({
 									Isi Template Pesan
 								</Label>
 								<textarea
-									rows={6}
+									rows={7}
 									placeholder="Tulis draf pesan WhatsApp yang siap dikirim..."
 									value={field.state.value}
 									onChange={(e) => field.handleChange(e.target.value)}
-									className="w-full border border-[#e4e9e4] rounded-xl p-3 text-xs bg-[#fbfcfb] outline-none focus:border-[#8fa594] resize-vertical leading-relaxed"
+									className="w-full border border-[#e4e9e4] rounded-xl p-3 text-xs bg-[#fbfcfb] outline-none focus:border-[#8fa594] resize-vertical leading-relaxed font-sans"
 								/>
 								{field.state.meta.errors?.[0] && (
 									<p className="text-[11px] text-[#a65f5b]">
 										{field.state.meta.errors[0]}
 									</p>
 								)}
+
+								{/* Chip Sisipkan Variabel Otomatis */}
+								<div className="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#737873]">
+									<span className="text-[10px] text-[#8a958d]">Sisipkan variabel:</span>
+									<button
+										type="button"
+										onClick={() => {
+											const cur = field.state.value;
+											field.handleChange(cur ? cur + " {nama}" : "{nama}");
+										}}
+										className="px-2 py-0.5 rounded-md bg-[#edf3ee] text-[#3d5645] hover:bg-[#dfeade] text-[10px] font-semibold transition-colors cursor-pointer border border-[#d8e4da]"
+										title="Sisipkan variabel Nama Penghuni"
+									>
+										+ {"{nama}"}
+									</button>
+									<button
+										type="button"
+										onClick={() => {
+											const cur = field.state.value;
+											field.handleChange(cur ? cur + " {kamar}" : "{kamar}");
+										}}
+										className="px-2 py-0.5 rounded-md bg-[#edf3ee] text-[#3d5645] hover:bg-[#dfeade] text-[10px] font-semibold transition-colors cursor-pointer border border-[#d8e4da]"
+										title="Sisipkan variabel Nomor Kamar"
+									>
+										+ {"{kamar}"}
+									</button>
+									<button
+										type="button"
+										onClick={() => {
+											const cur = field.state.value;
+											field.handleChange(cur ? cur + " {kos}" : "{kos}");
+										}}
+										className="px-2 py-0.5 rounded-md bg-[#edf3ee] text-[#3d5645] hover:bg-[#dfeade] text-[10px] font-semibold transition-colors cursor-pointer border border-[#d8e4da]"
+										title="Sisipkan variabel Nama Kos"
+									>
+										+ {"{kos}"}
+									</button>
+								</div>
 							</div>
 						)}
 					</form.Field>

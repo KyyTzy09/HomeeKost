@@ -60,9 +60,8 @@ export function EngagementTemplateDetailDialog({
 							{template.content}
 						</p>
 					</div>
-					<p className="text-[11px] text-[#737873]">
-						Template ini dapat disisipkan variabel nama penghuni dan dikirimkan
-						melalui WhatsApp Gateway Fonnte.
+					<p className="text-[11px] text-[#737873] leading-relaxed">
+						Variabel <code className="text-[#3d5645] bg-[#edf3ee] px-1 py-0.5 rounded font-mono text-[10px]">{"{nama}"}</code>, <code className="text-[#3d5645] bg-[#edf3ee] px-1 py-0.5 rounded font-mono text-[10px]">{"{kamar}"}</code>, dan <code className="text-[#3d5645] bg-[#edf3ee] px-1 py-0.5 rounded font-mono text-[10px]">{"{kos}"}</code> otomatis diganti menjadi data asli penghuni saat pesan dikirim via WhatsApp.
 					</p>
 				</div>
 
