@@ -24,7 +24,7 @@ export class PropertyService {
 				name: p.name,
 				address: p.address || "",
 				description: p.description || "",
-				bankAccountInfo: null,
+				bankAccountInfo: p.bankAccountInfo || null,
 				imageUrl: p.imageUrl || null,
 				rooms: totalRooms,
 				tenants: occupiedCount,
@@ -49,7 +49,7 @@ export class PropertyService {
 			name: p.name,
 			address: p.address || "",
 			description: p.description || "",
-			bankAccountInfo: null,
+			bankAccountInfo: p.bankAccountInfo || null,
 			imageUrl: p.imageUrl || null,
 			rooms: totalRooms,
 			tenants: occupiedCount,
@@ -61,6 +61,7 @@ export class PropertyService {
 			name: input.name,
 			address: input.address,
 			description: input.description,
+			bankAccountInfo: input.bankAccountInfo,
 			imageUrl: input.imageUrl,
 		});
 
@@ -74,7 +75,7 @@ export class PropertyService {
 			name: created.name,
 			address: created.address || "",
 			description: created.description || "",
-			bankAccountInfo: null,
+			bankAccountInfo: created.bankAccountInfo || null,
 			imageUrl: created.imageUrl || null,
 			rooms: 0,
 			tenants: 0,
@@ -89,6 +90,7 @@ export class PropertyService {
 			name: input.name,
 			address: input.address,
 			description: input.description,
+			bankAccountInfo: input.bankAccountInfo,
 			imageUrl: input.imageUrl,
 		});
 
@@ -106,7 +108,7 @@ export class PropertyService {
 			name: updated.name,
 			address: updated.address || "",
 			description: updated.description || "",
-			bankAccountInfo: null,
+			bankAccountInfo: updated.bankAccountInfo || null,
 			imageUrl: updated.imageUrl || null,
 			rooms: totalRooms,
 			tenants: occupiedCount,

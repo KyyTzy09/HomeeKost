@@ -357,6 +357,7 @@ function InvoicesPage() {
 						propertyName={activeProperty?.name || "HomeeKost Management"}
 						propertyImageUrl={activeProperty?.imageUrl}
 						propertyAddress={activeProperty?.address}
+						bankAccountInfo={activeProperty?.bankAccountInfo}
 						onDownloadPdf={handleDownloadPdf}
 					/>
 				</div>

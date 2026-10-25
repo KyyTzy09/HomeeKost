@@ -555,6 +555,7 @@ export class EngagementService {
 				period: string;
 				amount: number;
 				documentUrl: string;
+				bankAccountInfo?: string | null;
 			}
 		>();
 
@@ -591,6 +592,7 @@ export class EngagementService {
 					period,
 					amount: Number(inv.amount),
 					documentUrl,
+					bankAccountInfo: inv.contract.room.property.bankAccountInfo,
 				});
 			}
 		}
@@ -617,6 +619,7 @@ export class EngagementService {
 						bankName: "BCA",
 						bankAccount: "8735081290",
 						accountHolder: "Bude Frisda",
+						bankAccountInfo: rem.bankAccountInfo,
 						documentUrl: rem.documentUrl,
 					})
 				: whatsappTemplates.monthlyFirstReminder({
@@ -629,6 +632,7 @@ export class EngagementService {
 						bankName: "BCA",
 						bankAccount: "8735081290",
 						accountHolder: "Bude Frisda",
+						bankAccountInfo: rem.bankAccountInfo,
 						documentUrl: rem.documentUrl,
 					});
 

@@ -206,6 +206,7 @@ export class PaymentService {
 					totalPaid: paidAmount,
 					remainingAmount,
 					endOfMonthDate: endOfMonth,
+					bankAccountInfo: inv.contract.room.property.bankAccountInfo,
 					documentUrl,
 				});
 			} else {
@@ -218,6 +219,7 @@ export class PaymentService {
 					dueDate: formatDate(dueDate),
 					daysRemaining: dueDaysRemaining,
 					amount,
+					bankAccountInfo: inv.contract.room.property.bankAccountInfo,
 					documentUrl,
 				});
 			}
@@ -526,6 +528,7 @@ export class PaymentService {
 					period,
 					dueDate: formatDate(input.dueDate),
 					amount: input.amount,
+					bankAccountInfo: invoice.contract.room.property.bankAccountInfo,
 					documentUrl,
 				});
 				whatsappSent = waRes.success;
@@ -539,6 +542,7 @@ export class PaymentService {
 					period,
 					dueDate: formatDate(input.dueDate),
 					amount: input.amount,
+					bankAccountInfo: invoice.contract.room.property.bankAccountInfo,
 					documentUrl,
 				});
 				directWhatsAppUrl = getWhatsAppDirectUrl(tenantPhone, msg);
@@ -661,6 +665,7 @@ export class PaymentService {
 					totalPaid: installmentSummary.paidAmount,
 					remainingAmount: installmentSummary.remainingAmount,
 					endOfMonthDate: endOfMonth,
+					bankAccountInfo: invoice.contract.room.property.bankAccountInfo,
 					documentUrl,
 				});
 			}
@@ -682,6 +687,7 @@ export class PaymentService {
 				dueDate: formatDate(dueDate),
 				daysRemaining,
 				amount,
+				bankAccountInfo: invoice.contract.room.property.bankAccountInfo,
 				documentUrl,
 			});
 		}
@@ -695,6 +701,7 @@ export class PaymentService {
 			period,
 			dueDate: formatDate(dueDate),
 			amount,
+			bankAccountInfo: invoice.contract.room.property.bankAccountInfo,
 			documentUrl,
 		});
 	}

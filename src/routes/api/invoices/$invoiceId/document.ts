@@ -37,6 +37,8 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 
 				const isPaid = invoice.status === "PAID";
 				const propertyName = invoice.contract.room.property.name;
+				const bankAccountInfo =
+					invoice.contract.room.property.bankAccountInfo?.trim();
 				const tenantName = invoice.contract.tenant.name;
 				const roomNumber = invoice.contract.room.roomNumber;
 				const tenantPhone =
@@ -368,9 +370,18 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
     <div class="bank-box">
       <div class="bank-title">💳 Petunjuk Pembayaran Transfer:</div>
       <div class="bank-card">
+        ${
+					bankAccountInfo
+						? `
+        <div style="font-size: 14px; font-weight: 800; color: #252925; line-height: 1.4;">${bankAccountInfo}</div>
+        <div style="font-size: 11px; color: #737873; margin-top: 4px;">Rekening Resmi Pembayaran Kos</div>
+        `
+						: `
         <div style="font-size: 11px; color: #737873;">Bank Central Asia (BCA)</div>
         <div style="font-size: 16px; font-weight: 800; letter-spacing: 1px; margin: 4px 0; color: #252925;">8735081290</div>
         <div style="font-size: 11px; color: #737873;">Atas Nama: <b>Bude Frisda / Pengelola Kos</b></div>
+        `
+				}
       </div>
     </div>
     `

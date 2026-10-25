@@ -11,6 +11,7 @@ export interface InvoiceTemplateParams {
 	bankName?: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -37,6 +38,7 @@ export interface MonthlyFirstReminderTemplateParams {
 	bankName?: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -67,6 +69,7 @@ export interface InstallmentReminderTemplateParams {
 	endOfMonthDate: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -81,6 +84,7 @@ export interface DueReminderTemplateParams {
 	amount: number;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -105,6 +109,13 @@ export const whatsappTemplates = {
 			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
 			: "";
 
+		const bankSection = p.bankAccountInfo?.trim()
+			? `💳 *Metode Pembayaran:*\n🏦 *${p.bankAccountInfo.trim()}*`
+			: `💳 *Metode Pembayaran:*
+- Bank: *${p.bankName || "BCA"}*
+- No. Rekening: *${p.bankAccount || "8735081290"}*
+- Atas Nama: *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `Halo Kak *${p.tenantName}*! 👋
 
 Berikut rincian tagihan sewa kos untuk periode *${p.period}*:
@@ -115,10 +126,7 @@ Berikut rincian tagihan sewa kos untuk periode *${p.period}*:
 📅 *Jatuh Tempo:* ${p.dueDate}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
 
-💳 *Metode Pembayaran:*
-- Bank: *${p.bankName || "BCA"}*
-- No. Rekening: *${p.bankAccount || "8735081290"}*
-- Atas Nama: *${p.accountHolder || "Bude Frisda"}*
+${bankSection}
 ${docSection}
 Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini ya Kak.
 
@@ -146,6 +154,10 @@ _— Admin Kos ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice:* ${p.documentUrl}\n`
 			: "";
 
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `Halo Kak *${p.tenantName}*! 👋
 
 ${statusHeadline}
@@ -157,7 +169,7 @@ ${statusHeadline}
 ${statusNote}
 ${docSection}
 Pembayaran dapat ditransfer ke rekening:
-🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
 _— Admin Kos ${p.propertyName}_`;
@@ -171,6 +183,10 @@ _— Admin Kos ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
 			: "";
 
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `Halo Kak *${p.tenantName}*! 👋
 
 Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
@@ -179,7 +195,7 @@ Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNu
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
 
 💳 *Pembayaran dapat ditransfer ke rekening:*
-🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 ${docSection}
 Masa pembayaran sewa adalah tanggal 1 s.d. 5 ya Kak. Pembayaran setelah tanggal 5 akan dikenakan denda keterlambatan sesuai ketentuan kost.
 
@@ -195,6 +211,10 @@ _— Admin Kos ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
 			: "";
 
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `Halo Kak *${p.tenantName}*! 👋
 
 ⚠️ *PENGINGAT BATAS AKHIR PEMBAYARAN HARI INI*
@@ -205,7 +225,7 @@ Mengingatkan kembali bahwa hari ini (Tanggal 5) adalah batas akhir pembayaran se
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
 
 💳 *Pembayaran dapat ditransfer ke rekening:*
-🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 ${docSection}
 Mohon melakukan pelunasan hari ini agar terhindar dari denda keterlambatan ya Kak. Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini.
 
@@ -286,6 +306,10 @@ _— Admin Kos ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice Digital:* ${p.documentUrl}\n`
 			: "";
 
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `🔔 *PENGINGAT SISA CICILAN SEWA*
 
 Halo Kak *${p.tenantName}*! 👋
@@ -298,7 +322,7 @@ Mengingatkan kembali perihal sisa tagihan sewa kos di *${p.propertyName}* (Kamar
 📅 *Batas Waktu Pelunasan:* Sebelum akhir bulan (${p.endOfMonthDate})
 ${docSection}
 Pembayaran dapat ditransfer ke rekening:
-🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 
 Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
 _— Admin Kos ${p.propertyName}_`;

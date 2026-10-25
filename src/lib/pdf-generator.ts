@@ -17,6 +17,7 @@ export interface InvoicePdfData {
 	bankName?: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 }
 
 /**
@@ -371,30 +372,48 @@ export async function generateInvoicePdf(
 			font: fontBold,
 			color: charcoal,
 		});
-		page.drawText(`Bank: ${data.bankName || "BCA (Bank Central Asia)"}`, {
-			x: margin + 12,
-			y: currentY - 28,
-			size: 9,
-			font: fontRegular,
-			color: mutedGray,
-		});
-		page.drawText(`No. Rekening: ${data.bankAccount || "8735081290"}`, {
-			x: margin + 12,
-			y: currentY - 42,
-			size: 11,
-			font: fontBold,
-			color: charcoal,
-		});
-		page.drawText(
-			`Atas Nama: ${data.accountHolder || "Bude Frisda / Pengelola Kos"}`,
-			{
-				x: width / 2 + 10,
-				y: currentY - 42,
-				size: 9,
+
+		if (data.bankAccountInfo?.trim()) {
+			page.drawText(data.bankAccountInfo.trim(), {
+				x: margin + 12,
+				y: currentY - 30,
+				size: 11,
 				font: fontBold,
+				color: charcoal,
+			});
+			page.drawText("Transfer sesuai rekening resmi properti di atas", {
+				x: margin + 12,
+				y: currentY - 44,
+				size: 8.5,
+				font: fontRegular,
 				color: mutedGray,
-			},
-		);
+			});
+		} else {
+			page.drawText(`Bank: ${data.bankName || "BCA (Bank Central Asia)"}`, {
+				x: margin + 12,
+				y: currentY - 28,
+				size: 9,
+				font: fontRegular,
+				color: mutedGray,
+			});
+			page.drawText(`No. Rekening: ${data.bankAccount || "8735081290"}`, {
+				x: margin + 12,
+				y: currentY - 42,
+				size: 11,
+				font: fontBold,
+				color: charcoal,
+			});
+			page.drawText(
+				`Atas Nama: ${data.accountHolder || "Bude Frisda / Pengelola Kos"}`,
+				{
+					x: width / 2 + 10,
+					y: currentY - 42,
+					size: 9,
+					font: fontBold,
+					color: mutedGray,
+				},
+			);
+		}
 		currentY -= bankBoxHeight;
 	} else {
 		currentY -= totalBannerHeight;

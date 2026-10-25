@@ -256,5 +256,84 @@ describe("WhatsApp Notification Message Templates", () => {
 			expect(msg).toContain("/dashboard/reports");
 		});
 	});
+
+	describe("Dynamic Property Bank Account Info (bankAccountInfo)", () => {
+		it("harus menyertakan bankAccountInfo khusus cabang pada template newInvoice", () => {
+			const msg = whatsappTemplates.newInvoice({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				dueDate: "05 November 2026",
+				amount: 1200000,
+				bankAccountInfo: "Mandiri 1370019283721 a.n. Pak Hendra",
+			});
+
+			expect(msg).toContain("Mandiri 1370019283721 a.n. Pak Hendra");
+			expect(msg).not.toContain("8735081290");
+		});
+
+		it("harus menyertakan bankAccountInfo khusus cabang pada monthlyFirstReminder", () => {
+			const msg = (whatsappTemplates as any).monthlyFirstReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				amount: 1200000,
+				bankAccountInfo: "BSI 7123984719 a.n. Ibu Siti",
+			});
+
+			expect(msg).toContain("BSI 7123984719 a.n. Ibu Siti");
+			expect(msg).not.toContain("8735081290");
+		});
+
+		it("harus menyertakan bankAccountInfo khusus cabang pada monthlyFifthReminder", () => {
+			const msg = (whatsappTemplates as any).monthlyFifthReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				amount: 1200000,
+				bankAccountInfo: "BSI 7123984719 a.n. Ibu Siti",
+			});
+
+			expect(msg).toContain("BSI 7123984719 a.n. Ibu Siti");
+			expect(msg).not.toContain("8735081290");
+		});
+
+		it("harus menyertakan bankAccountInfo khusus cabang pada dueReminder & installmentReminder", () => {
+			const dueMsg = whatsappTemplates.dueReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				dueDate: "05 November 2026",
+				daysRemaining: 1,
+				amount: 1200000,
+				bankAccountInfo: "BNI 0987654321 a.n. Kost Sakura Official",
+			});
+
+			expect(dueMsg).toContain("BNI 0987654321 a.n. Kost Sakura Official");
+
+			const instMsg = (whatsappTemplates as any).installmentReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				totalAmount: 1200000,
+				totalPaid: 600000,
+				remainingAmount: 600000,
+				endOfMonthDate: "30 November 2026",
+				bankAccountInfo: "BNI 0987654321 a.n. Kost Sakura Official",
+			});
+
+			expect(instMsg).toContain("BNI 0987654321 a.n. Kost Sakura Official");
+		});
+	});
 });
 
