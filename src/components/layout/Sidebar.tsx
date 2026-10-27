@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import {
-	Activity,
 	BarChart3,
 	BedDouble,
 	Building2,
@@ -104,12 +103,6 @@ export function Sidebar({ isOpen, onClose, dashboardContext }: SidebarProps) {
 			to: "/dashboard/users",
 			label: "User Management",
 			icon: <UserCog className="w-[17px] h-[17px]" />,
-			superAdminOnly: true,
-		},
-		{
-			to: "/status",
-			label: "Status Server",
-			icon: <Activity className="w-[17px] h-[17px]" />,
 			superAdminOnly: true,
 		},
 	];
