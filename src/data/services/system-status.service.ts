@@ -57,8 +57,30 @@ function formatDuration(totalSeconds: number): string {
 
 export class SystemStatusService {
 	private getMemoryInfo(): SystemMemoryInfo {
-		const totalBytes = os.totalmem();
-		const freeBytes = os.freemem();
+		let totalBytes = os.totalmem();
+		let freeBytes = os.freemem();
+
+		// Di Linux (VPS maupun container), os.freemem() hanya membaca MemFree murni
+		// sehingga mengabaikan Buffers & Cached yang sebenarnya memori bebas yang siap pakai.
+		// Membaca /proc/meminfo memberikan MemAvailable yang 100% akurat sesuai perintah htop / free -m.
+		if (process.platform === "linux") {
+			try {
+				if (fs.existsSync("/proc/meminfo")) {
+					const meminfo = fs.readFileSync("/proc/meminfo", "utf8");
+					const availMatch = meminfo.match(/MemAvailable:\s+(\d+)\s+kB/i);
+					const totalMatch = meminfo.match(/MemTotal:\s+(\d+)\s+kB/i);
+					if (availMatch && availMatch[1]) {
+						freeBytes = parseInt(availMatch[1], 10) * 1024;
+					}
+					if (totalMatch && totalMatch[1]) {
+						totalBytes = parseInt(totalMatch[1], 10) * 1024;
+					}
+				}
+			} catch {
+				// Fallback ke os.freemem() & os.totalmem()
+			}
+		}
+
 		const usedBytes = Math.max(0, totalBytes - freeBytes);
 		const usedPercent = Math.min(
 			100,
@@ -68,9 +90,9 @@ export class SystemStatusService {
 		let statusLevel: HealthLevel = "normal";
 		let statusLabel = "Kondisi Normal";
 
-		if (usedPercent >= 85) {
+		if (usedPercent >= 90) {
 			statusLevel = "critical";
-			statusLabel = "Mendekati Batas Maksimal";
+			statusLabel = "Kritis / Mendekati Batas";
 		} else if (usedPercent >= 75) {
 			statusLevel = "warning";
 			statusLabel = "Perlu Dipantau";
@@ -89,10 +111,13 @@ export class SystemStatusService {
 		};
 	}
 
-	private getStorageInfo(): SystemStorageInfo | null {
+	private getStorageInfo(isVercel = false): SystemStorageInfo | null {
 		try {
 			if (typeof fs.statfsSync === "function") {
-				const stat = fs.statfsSync("/");
+				// Di Vercel Serverless (AWS Lambda), root / adalah squashfs read-only image yang 100% terisi.
+				// Satu-satunya writable disk di Vercel adalah /tmp (berukuran 512MB-1GB).
+				const targetPath = isVercel && fs.existsSync("/tmp") ? "/tmp" : "/";
+				const stat = fs.statfsSync(targetPath);
 				const totalBytes = Number(stat.blocks) * Number(stat.bsize);
 				const freeBytes = Number(stat.bavail) * Number(stat.bsize);
 				const usedBytes = Math.max(0, totalBytes - freeBytes);
@@ -104,11 +129,14 @@ export class SystemStatusService {
 				let statusLevel: HealthLevel = "normal";
 				let statusLabel = "Sangat Lega";
 
-				if (usedPercent >= 90) {
+				if (usedPercent >= 95) {
 					statusLevel = "critical";
-					statusLabel = "Hampir Penuh";
-				} else if (usedPercent >= 75) {
+					statusLabel = "Penuh / Kritis";
+				} else if (usedPercent >= 85) {
 					statusLevel = "warning";
+					statusLabel = "Hampir Penuh";
+				} else if (usedPercent >= 70) {
+					statusLevel = "normal";
 					statusLabel = "Cukup";
 				}
 
@@ -152,7 +180,30 @@ export class SystemStatusService {
 		};
 	}
 
-	private getAppInfo(serverTotalMem: number): SystemAppInfo {
+	private getAppInfo(serverTotalMem: number, isVercel = false): SystemAppInfo {
+		if (isVercel) {
+			const memoryUsedBytes = process.memoryUsage().rss;
+			const percentOfServer =
+				serverTotalMem > 0
+					? Math.round((memoryUsedBytes / serverTotalMem) * 1000) / 10
+					: 0;
+			const uptimeSeconds = Math.floor(process.uptime());
+
+			return {
+				isContainer: false,
+				name: "Layanan Aplikasi Web",
+				memoryUsedBytes,
+				memoryUsedFormatted: formatBytes(memoryUsedBytes),
+				memoryPercentOfServer: percentOfServer,
+				uptimeSeconds,
+				uptimeFormatted: formatDuration(uptimeSeconds),
+				statusLevel: "normal",
+				statusLabel: "Aktif Serverless",
+				description:
+					"Aplikasi berjalan aktif pada cloud serverless Vercel (Auto-scaled).",
+			};
+		}
+
 		let isContainer = false;
 		let memoryUsedBytes = 0;
 
@@ -279,7 +330,53 @@ export class SystemStatusService {
 		app: SystemAppInfo,
 		db: SystemDatabaseInfo,
 		serverMemory: SystemMemoryInfo,
+		isVercel = false,
 	): SystemContainerBreakdown {
+		if (isVercel) {
+			const appLimitBytes = 1024 * 1024 * 1024; // 1024 MB standar alokasi fungsi Vercel
+			const appPercent = Math.min(
+				100,
+				Math.max(0, Math.round((app.memoryUsedBytes / appLimitBytes) * 100)),
+			);
+
+			const items: ContainerServiceItem[] = [
+				{
+					id: "homeekost_app",
+					name: "Layanan Aplikasi Web",
+					role: "app",
+					memoryUsedFormatted: app.memoryUsedFormatted,
+					memoryLimitFormatted: "1024 MB (Serverless)",
+					memoryPercentOfLimit: appPercent,
+					statusLevel: appPercent > 85 ? "warning" : "normal",
+					statusLabel: "Aktif Serverless",
+					description:
+						"Menjalankan antarmuka dashboard kos, API sistem, dan automasi notifikasi pada cloud serverless Vercel.",
+				},
+				{
+					id: "homeekost_db",
+					name: "Layanan Basis Data",
+					role: "database",
+					memoryUsedFormatted:
+						db.status === "connected" ? db.sharedBuffersFormatted : "0 MB",
+					memoryLimitFormatted: "Dikelola Cloud",
+					memoryPercentOfLimit: 0,
+					statusLevel: db.status === "connected" ? "normal" : "critical",
+					statusLabel:
+						db.status === "connected" ? "Terhubung Cloud" : "Terkendala",
+					description:
+						db.status === "connected"
+							? `Menyimpan data kamar, penyewa, & transaksi pada database cloud (Ukuran data fisik: ${db.sizeFormatted}, ${db.activeConnections} koneksi aktif).`
+							: "Layanan basis data cloud tidak dapat dijangkau oleh aplikasi.",
+				},
+			];
+
+			return {
+				detected: false,
+				summary: "Arsitektur Cloud Serverless (Vercel) — Mode Non-Docker",
+				items,
+			};
+		}
+
 		// Batas memori sesuai alokasi di docker-compose.yml (app: 512m, db: 256m)
 		const appLimitBytes = 512 * 1024 * 1024;
 		const dbLimitBytes = 256 * 1024 * 1024;
@@ -341,6 +438,7 @@ export class SystemStatusService {
 		memory: SystemMemoryInfo,
 		storage: SystemStorageInfo | null,
 		database: SystemDatabaseInfo,
+		isVercel = false,
 	): SystemRecommendation {
 		if (database.status === "disconnected") {
 			return {
@@ -352,23 +450,36 @@ export class SystemStatusService {
 			};
 		}
 
-		if (memory.usedPercent >= 85) {
+		if (storage && storage.usedPercent >= 95) {
 			return {
 				level: "critical",
-				headline: "Kapasitas Memori Server Mendekati Batas Maksimal",
-				description:
-					"Penggunaan memori server saat ini berada di atas 85%. Disarankan untuk mempertimbangkan peningkatan spesifikasi server ke paket berikutnya agar performa aplikasi tetap lancar dan tidak terjadi gangguan mendadak.",
+				headline: isVercel
+					? "Penyimpanan Sementara Vercel Hampir Habis"
+					: "Ruang Penyimpanan Server Penuh (Kritis)",
+				description: isVercel
+					? "Penyimpanan sementara (/tmp) pada runtime Vercel telah mencapai 95%. Bersihkan berkas sementara aplikasi jika diperlukan."
+					: "Kapasitas penyimpanan server telah melebihi 95%. Sangat disarankan untuk segera membersihkan cache Docker ('docker system prune -a') atau menambah kapasitas disk VPS.",
 				actionRequired: true,
 			};
 		}
 
-		if (storage && storage.usedPercent >= 90) {
+		if (memory.usedPercent >= 90) {
 			return {
 				level: "critical",
-				headline: "Ruang Penyimpanan Server Hampir Penuh",
+				headline: "Kapasitas Memori Server Mendekati Batas Maksimal",
 				description:
-					"Kapasitas penyimpanan server telah melebihi 90%. Disarankan untuk membersihkan berkas cadangan lama atau menambah ruang penyimpanan.",
+					"Penggunaan memori server saat ini berada di atas 90%. Disarankan untuk mempertimbangkan peningkatan spesifikasi server ke paket berikutnya agar performa aplikasi tetap lancar dan tidak terjadi gangguan mendadak.",
 				actionRequired: true,
+			};
+		}
+
+		if (storage && storage.usedPercent >= 85) {
+			return {
+				level: "warning",
+				headline: "Ruang Penyimpanan Server Mendekati Penuh",
+				description:
+					"Kapasitas penyimpanan server telah melebihi 85%. Disarankan untuk memantau sisa ruang disk dan membersihkan berkas log lama.",
+				actionRequired: false,
 			};
 		}
 
@@ -384,9 +495,12 @@ export class SystemStatusService {
 
 		return {
 			level: "normal",
-			headline: "Kapasitas Server Berjalan Sangat Sehat",
-			description:
-				"Seluruh komponen server beroperasi dengan optimal. Penggunaan memori dan penyimpanan masih dalam batas aman, belum diperlukan peningkatan spesifikasi server saat ini.",
+			headline: isVercel
+				? "Layanan Serverless Vercel Berjalan Prima"
+				: "Kapasitas Server Berjalan Sangat Sehat",
+			description: isVercel
+				? "Seluruh layanan aplikasi cloud Vercel dan basis data terhubung dengan optimal."
+				: "Seluruh komponen server beroperasi dengan optimal. Penggunaan memori dan penyimpanan masih dalam batas aman, belum diperlukan peningkatan spesifikasi server saat ini.",
 			actionRequired: false,
 		};
 	}
@@ -396,16 +510,28 @@ export class SystemStatusService {
 	 * dengan format yang mudah dibaca oleh pengguna non-teknis.
 	 */
 	async getSystemStatus(): Promise<SystemStatusData> {
+		const isVercel = Boolean(
+			process.env.VERCEL ||
+				process.env.VERCEL_ENV ||
+				process.env.AWS_LAMBDA_FUNCTION_NAME,
+		);
+
 		const memory = this.getMemoryInfo();
-		const storage = this.getStorageInfo();
+		const storage = this.getStorageInfo(isVercel);
 		const cpu = this.getCpuInfo();
-		const app = this.getAppInfo(memory.totalBytes);
+		const app = this.getAppInfo(memory.totalBytes, isVercel);
 		const database = await this.getDatabaseInfo();
-		const containers = this.getContainerBreakdown(app, database, memory);
+		const containers = this.getContainerBreakdown(
+			app,
+			database,
+			memory,
+			isVercel,
+		);
 		const recommendation = this.generateRecommendation(
 			memory,
 			storage,
 			database,
+			isVercel,
 		);
 
 		let overallStatus: HealthLevel = "normal";
@@ -419,6 +545,10 @@ export class SystemStatusService {
 			overallStatusLabel = "Perlu Dipantau";
 		}
 
+		const platform = isVercel
+			? `Vercel Serverless (${process.env.VERCEL_REGION || "Cloud"})`
+			: `${os.type()} ${os.arch()}`;
+
 		return {
 			timestamp: new Date().toISOString(),
 			overallStatus,
@@ -429,7 +559,7 @@ export class SystemStatusService {
 				cpu,
 				uptimeSeconds: Math.floor(os.uptime()),
 				uptimeFormatted: formatDuration(os.uptime()),
-				platform: `${os.type()} ${os.arch()}`,
+				platform,
 			},
 			app,
 			database,
