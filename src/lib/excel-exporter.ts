@@ -1026,8 +1026,8 @@ export async function createMonthlyFinancialExcelWorkbook(
 			r.height = 20;
 
 			const isIncome =
-				tx.typeKey === "INCOME" ||
-				tx.type === "INCOME" ||
+				tx.typeKey?.toUpperCase() === "INCOME" ||
+				tx.type?.toUpperCase() === "INCOME" ||
 				tx.type === "Pemasukan";
 
 			const cellA = r.getCell(1); // No

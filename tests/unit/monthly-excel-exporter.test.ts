@@ -105,6 +105,47 @@ describe("Monthly Financial Excel Exporter", () => {
 		expect(wsTx?.getCell("A8").value).toBe("Belum ada mutasi transaksi pada periode ini.");
 	});
 
+	it("harus menangani transaksi dari cashflowService dengan type 'Income'/'Expense' secara akurat", async () => {
+		const serviceData: MonthlyFinancialExcelData = {
+			...sampleData,
+			transactions: [
+				{
+					id: "cmvtozotv0003ukk8h53szwn4",
+					date: "29 Oktober 2026",
+					rawDate: "2026-10-29",
+					category: "Sewa Kamar",
+					categoryKey: "RENT",
+					description: "Pembayaran Sewa Kamar 13 (10/2026) - Mira Setiawan",
+					type: "Income",
+					typeKey: "INCOME",
+					amount: 8400000,
+				},
+				{
+					id: "cmvtozotv0003ukk8h53szwn5",
+					date: "30 Oktober 2026",
+					rawDate: "2026-10-30",
+					category: "Listrik",
+					categoryKey: "UTILITIES",
+					description: "Beli Token Listrik Utama",
+					type: "Expense",
+					typeKey: "EXPENSE",
+					amount: 250000,
+				},
+			],
+		};
+
+		const workbook = await createMonthlyFinancialExcelWorkbook(serviceData);
+		const wsTx = workbook.getWorksheet("Buku Kas Oktober");
+
+		expect(wsTx?.getCell("C8").value).toBe("Pemasukan");
+		expect(wsTx?.getCell("F8").value).toBe(8400000);
+		expect(wsTx?.getCell("G8").value).toBe(0);
+
+		expect(wsTx?.getCell("C9").value).toBe("Pengeluaran");
+		expect(wsTx?.getCell("F9").value).toBe(0);
+		expect(wsTx?.getCell("G9").value).toBe(250000);
+	});
+
 	it("harus menghasilkan Uint8Array buffer (.xlsx) valid berukuran lebih dari 0 byte", async () => {
 		const buffer = await generateMonthlyFinancialExcelBuffer(sampleData);
 		expect(buffer).toBeInstanceOf(Uint8Array);

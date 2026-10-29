@@ -339,7 +339,7 @@ function FinancePage() {
 					profitMarginPercentage: financialSummary?.profitMarginPercentage,
 				},
 				profitLossRows: profitLossData || [],
-				transactions: res?.items || [],
+				transactions: res?.data || (res as any)?.items || [],
 			});
 
 			showToast(
