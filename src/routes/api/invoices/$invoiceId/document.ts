@@ -36,6 +36,19 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 				}
 
 				const isPaid = invoice.status === "PAID";
+				const isOverdue =
+					invoice.status === "OVERDUE" ||
+					(!isPaid && new Date(invoice.dueDate) < new Date());
+				const statusLabel = isPaid
+					? "LUNAS"
+					: isOverdue
+						? "TERLAMBAT"
+						: "BELUM LUNAS";
+				const statusColor = isPaid
+					? "#568062"
+					: isOverdue
+						? "#b8382e"
+						: "#b18a4b";
 				const propertyName = invoice.contract.room.property.name;
 				const bankAccountInfo =
 					invoice.contract.room.property.bankAccountInfo?.trim();
@@ -329,8 +342,8 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
       </div>
       <div style="text-align: right;">
         <div class="meta-label">Status Pembayaran:</div>
-        <div class="meta-value" style="color: ${isPaid ? "#568062" : "#b18a4b"};">
-          ${isPaid ? "SUDAH LUNAS" : "MENUNGGU PEMBAYARAN"}
+        <div class="meta-value" style="color: ${statusColor}; font-weight: 800;">
+          ${statusLabel}
         </div>
         <div class="meta-desc">${isPaid ? `Lunas pada: ${paidDate}` : `Jatuh Tempo: ${dueDate}`}</div>
       </div>

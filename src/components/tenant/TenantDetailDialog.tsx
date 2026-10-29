@@ -31,7 +31,8 @@ export function TenantDetailDialog({
 }: TenantDetailDialogProps) {
 	if (!tenant) return null;
 
-	const isLancar = tenant.paymentStatus === "Lancar";
+	const isLunas = tenant.paymentStatus === "Lunas";
+	const isTerlambat = tenant.paymentStatus === "Terlambat";
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,9 +62,11 @@ export function TenantDetailDialog({
 							</span>
 							<span
 								className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-[11px] font-bold ${
-									isLancar
+									isLunas
 										? "bg-[#e8f2ea] text-[#568062]"
-										: "bg-[#f7e9e8] text-[#a65f5b]"
+										: isTerlambat
+											? "bg-[#f7e9e8] text-[#a65f5b]"
+											: "bg-[#fbf4ea] text-[#99773d]"
 								}`}
 							>
 								{tenant.paymentStatus}

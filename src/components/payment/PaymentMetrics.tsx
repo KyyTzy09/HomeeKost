@@ -83,12 +83,12 @@ export function PaymentMetrics({
 				</div>
 			</Card>
 
-			{/* Jatuh Tempo / Overdue */}
+			{/* Terlambat (Overdue) */}
 			<Card className="p-4 bg-white border-[#e4e9e4] shadow-[0_2px_12px_rgba(48,65,53,0.055)] relative overflow-hidden">
 				<div className="flex items-start justify-between">
 					<div>
 						<span className="text-[11px] text-[#737873] font-medium block">
-							Jatuh Tempo / Terlambat
+							Terlambat
 						</span>
 						<h3 className="text-lg sm:text-xl font-bold text-[#a65f5b] mt-1">
 							{isLoading ? "..." : `${stats?.overdueCount || 0} Kamar`}

@@ -359,15 +359,32 @@ export class TenantService {
 		const activeContract = t.rentalContracts?.[0] || null;
 		const room = activeContract?.room || null;
 
-		let paymentStatus: TenantPaymentStatus = "Lancar";
-		if (activeContract?.invoices) {
-			const hasOverdue = activeContract.invoices.some(
-				(inv) =>
-					inv.status === "OVERDUE" ||
-					(inv.status === "PENDING" && new Date(inv.dueDate) < new Date()),
-			);
+		// Determine payment status (Standardized to 3 statuses: Lunas, Belum Lunas, Terlambat)
+		let paymentStatus: TenantPaymentStatus = "Belum Lunas";
+		const invoices = activeContract?.invoices || [];
+
+		if (invoices.length > 0) {
+			const todayWib = getWibStartOfDay();
+			const hasOverdue = invoices.some((inv) => {
+				if (inv.status === "PAID" || inv.status === "CANCELLED") return false;
+				const dueWib = getWibStartOfDay(inv.dueDate);
+				return (
+					inv.status === "OVERDUE" || dueWib.getTime() < todayWib.getTime()
+				);
+			});
+
 			if (hasOverdue) {
 				paymentStatus = "Terlambat";
+			} else {
+				const allSettled = invoices.every((inv) => {
+					if (inv.status === "PAID" || inv.status === "CANCELLED") return true;
+					const txTotal = (
+						(inv as { transactions?: Array<{ amount: unknown }> })
+							.transactions || []
+					).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+					return txTotal >= Number(inv.amount);
+				});
+				paymentStatus = allSettled ? "Lunas" : "Belum Lunas";
 			}
 		}
 
@@ -757,7 +774,7 @@ export class TenantService {
 			registrationDate: tenant.createdAt.toISOString().slice(0, 10),
 			notes: input.notes || null,
 			ktpUrl: tenant.ktpUrl || null,
-			paymentStatus: "Lancar",
+			paymentStatus: hadPaidInvoice ? "Lunas" : "Belum Lunas",
 			contractId: contract.id,
 			roomId: room.id,
 		};
@@ -868,7 +885,7 @@ export class TenantService {
 			emergencyPhone: input.emergencyPhone || null,
 			registrationDate: new Date().toISOString().slice(0, 10),
 			notes: input.notes || null,
-			paymentStatus: "Lancar",
+			paymentStatus: "Belum Lunas",
 		};
 	}
 
