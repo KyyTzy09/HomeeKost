@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import type { AnnualFinancialMatrixResult } from "../data/repositories/report.repository.ts";
+import { formatDate } from "./date-utils.ts";
 
 const MONTH_NAMES = [
 	"Januari",
@@ -549,6 +550,695 @@ export async function downloadAnnualFinancialExcel(
 
 	const targetFilename =
 		filename || `Laporan-Keuangan-Tahunan-${cleanPropName}-${matrix.year}.xlsx`;
+
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement("a");
+	anchor.href = url;
+	anchor.download = targetFilename;
+	document.body.appendChild(anchor);
+	anchor.click();
+	document.body.removeChild(anchor);
+	URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────
+// EKSPOR LAPORAN KEUANGAN BULANAN (2 SHEET: LABA RUGI & BUKU KAS)
+// ─────────────────────────────────────────────────────────────
+
+export interface MonthlyFinancialExcelData {
+	propertyName: string;
+	month: number;
+	year: number;
+	monthName: string;
+	summary: {
+		totalIncome: number;
+		totalExpense: number;
+		operationalExpense: number;
+		investmentExpense: number;
+		netProfit: number;
+		profitMarginPercentage?: number;
+	};
+	profitLossRows: Array<{
+		account: string;
+		period?: string;
+		amount: number;
+		isTotal?: boolean;
+		isProfit?: boolean;
+		isSubItem?: boolean;
+	}>;
+	transactions: Array<{
+		id: string;
+		date?: string;
+		rawDate?: string;
+		type?: string;
+		typeKey?: "INCOME" | "EXPENSE" | string;
+		category: string;
+		description?: string;
+		amount: number;
+		method?: string;
+		propertyName?: string;
+	}>;
+}
+
+/**
+ * Buat instance ExcelJS Workbook untuk Laporan Keuangan Bulanan
+ * Sheet 1: Laba Rugi & Indikator Finansial
+ * Sheet 2: Buku Kas & Rincian Seluruh Transaksi 1 Bulan Penuh
+ */
+export async function createMonthlyFinancialExcelWorkbook(
+	data: MonthlyFinancialExcelData,
+): Promise<ExcelJS.Workbook> {
+	const workbook = new ExcelJS.Workbook();
+	workbook.creator = "HomeeKost Management";
+	workbook.created = new Date();
+	workbook.properties.date1904 = false;
+
+	const downloadDateStr = new Date().toLocaleDateString("id-ID", {
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+
+	// ─────────────────────────────────────────────────────────────
+	// SHEET 1: LAPORAN LABA RUGI BULANAN
+	// ─────────────────────────────────────────────────────────────
+	const wsPL = workbook.addWorksheet(`Laba Rugi ${data.monthName}`, {
+		views: [{ showGridLines: true }],
+		pageSetup: {
+			orientation: "portrait",
+			paperSize: 9, // A4
+			fitToPage: true,
+			fitToWidth: 1,
+			fitToHeight: 0,
+		},
+	});
+
+	wsPL.columns = [
+		{ key: "account", width: 34 },
+		{ key: "period", width: 22 },
+		{ key: "amount", width: 24 },
+		{ key: "percentage", width: 20 },
+	];
+
+	// Header metadata
+	const titlePL = wsPL.getCell("A2");
+	titlePL.value = "HOMEEKOST — LAPORAN LABA RUGI BULANAN";
+	titlePL.font = {
+		name: "Arial",
+		size: 14,
+		bold: true,
+		color: { argb: `FF${PALETTE.sageDark}` },
+	};
+	wsPL.mergeCells("A2:D2");
+	wsPL.getRow(2).height = 26;
+
+	const propPL = wsPL.getCell("A3");
+	propPL.value = `Properti / Cabang: ${data.propertyName}`;
+	propPL.font = {
+		name: "Arial",
+		size: 11,
+		bold: true,
+		color: { argb: `FF${PALETTE.textDark}` },
+	};
+	wsPL.mergeCells("A3:D3");
+
+	const periodPL = wsPL.getCell("A4");
+	periodPL.value = `Periode Pembukuan: ${data.monthName} ${data.year}`;
+	periodPL.font = {
+		name: "Arial",
+		size: 10.5,
+		color: { argb: `FF${PALETTE.textDark}` },
+	};
+	wsPL.mergeCells("A4:D4");
+
+	const datePL = wsPL.getCell("A5");
+	datePL.value = `Tanggal Unduh: ${downloadDateStr}`;
+	datePL.font = {
+		name: "Arial",
+		size: 9.5,
+		italic: true,
+		color: { argb: `FF${PALETTE.textMuted}` },
+	};
+	wsPL.mergeCells("A5:D5");
+
+	wsPL.getRow(6).height = 10;
+
+	// KPI Cards (Row 7-8)
+	const kpiHeaders = [
+		"Total Pemasukan",
+		"Beban Operasional",
+		"Beban Investasi",
+		"Laba Bersih",
+	];
+	const kpiHeaderRow = wsPL.getRow(7);
+	kpiHeaderRow.height = 20;
+	kpiHeaders.forEach((kpi, idx) => {
+		const cell = kpiHeaderRow.getCell(idx + 1);
+		cell.value = kpi;
+		cell.font = {
+			name: "Arial",
+			size: 9.5,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		cell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			fgColor: { argb: `FF${PALETTE.sageLight}` },
+		};
+		cell.alignment = { vertical: "middle", horizontal: "center" };
+		cell.border = {
+			top: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			bottom: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+		};
+	});
+
+	const kpiValues = [
+		data.summary.totalIncome,
+		data.summary.operationalExpense,
+		data.summary.investmentExpense,
+		data.summary.netProfit,
+	];
+	const kpiValueRow = wsPL.getRow(8);
+	kpiValueRow.height = 24;
+	kpiValues.forEach((val, idx) => {
+		const cell = kpiValueRow.getCell(idx + 1);
+		cell.value = val;
+		cell.numFmt = IDR_FORMAT;
+		cell.font = {
+			name: "Arial",
+			size: 11,
+			bold: true,
+			color: {
+				argb:
+					idx === 3 && val < 0
+						? `FF${PALETTE.redMuted}`
+						: `FF${PALETTE.textDark}`,
+			},
+		};
+		cell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			fgColor: { argb: `FF${PALETTE.sagePale}` },
+		};
+		cell.alignment = { vertical: "middle", horizontal: "center" };
+		cell.border = {
+			top: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			bottom: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
+			right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+		};
+	});
+
+	wsPL.getRow(9).height = 12;
+
+	// Table Header (Row 10)
+	const plHeaderRow = wsPL.getRow(10);
+	plHeaderRow.height = 24;
+	const plHeaders = [
+		"Akun Pembukuan",
+		"Periode",
+		"Nominal (Rp)",
+		"Rasio Terhadap Pemasukan",
+	];
+	plHeaders.forEach((h, idx) => {
+		const cell = plHeaderRow.getCell(idx + 1);
+		cell.value = h;
+		cell.font = {
+			name: "Arial",
+			size: 10,
+			bold: true,
+			color: { argb: `FF${PALETTE.white}` },
+		};
+		cell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			fgColor: { argb: `FF${PALETTE.sageDark}` },
+		};
+		cell.alignment = {
+			vertical: "middle",
+			horizontal: idx === 0 ? "left" : idx === 2 ? "right" : "center",
+			indent: idx === 0 ? 1 : 0,
+		};
+		cell.border = {
+			top: { style: "thin", color: { argb: `FF${PALETTE.sageDark}` } },
+			left: { style: "thin", color: { argb: `FF${PALETTE.sageDark}` } },
+			bottom: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
+			right: { style: "thin", color: { argb: `FF${PALETTE.sageDark}` } },
+		};
+	});
+
+	// Table Data Rows (Row 11+)
+	const totalIncome = data.summary.totalIncome || 1;
+	data.profitLossRows.forEach((row, i) => {
+		const rowIdx = 11 + i;
+		const r = wsPL.getRow(rowIdx);
+		r.height = row.isTotal ? 22 : 19;
+
+		const cellA = r.getCell(1);
+		cellA.value = row.account;
+		cellA.font = {
+			name: "Arial",
+			size: row.isTotal ? 10.5 : row.isSubItem ? 9.5 : 10,
+			bold: Boolean(row.isTotal || row.isProfit),
+			color: {
+				argb: row.isProfit
+					? `FF${PALETTE.sageDark}`
+					: `FF${PALETTE.textDark}`,
+			},
+		};
+		cellA.alignment = {
+			vertical: "middle",
+			horizontal: "left",
+			indent: row.isSubItem ? 2 : row.isTotal ? 1 : 1,
+		};
+
+		const cellB = r.getCell(2);
+		cellB.value = row.period || `${data.monthName} ${data.year}`;
+		cellB.font = {
+			name: "Arial",
+			size: 9.5,
+			color: { argb: `FF${PALETTE.textMuted}` },
+		};
+		cellB.alignment = { vertical: "middle", horizontal: "center" };
+
+		const cellC = r.getCell(3);
+		cellC.value = row.amount;
+		cellC.numFmt = IDR_FORMAT;
+		cellC.font = {
+			name: "Arial",
+			size: row.isTotal ? 10.5 : 10,
+			bold: Boolean(row.isTotal || row.isProfit),
+			color: {
+				argb:
+					row.amount < 0
+						? `FF${PALETTE.redMuted}`
+						: `FF${PALETTE.textDark}`,
+			},
+		};
+		cellC.alignment = { vertical: "middle", horizontal: "right" };
+
+		const cellD = r.getCell(4);
+		const ratio = Math.abs(row.amount) / totalIncome;
+		cellD.value = ratio;
+		cellD.numFmt = PERCENT_FORMAT;
+		cellD.font = {
+			name: "Arial",
+			size: 9.5,
+			color: { argb: `FF${PALETTE.textMuted}` },
+		};
+		cellD.alignment = { vertical: "middle", horizontal: "center" };
+
+		const bg = row.isProfit
+			? PALETTE.sageLight
+			: row.isTotal
+				? PALETTE.sagePale
+				: i % 2 === 1
+					? PALETTE.sagePale
+					: PALETTE.white;
+
+		[cellA, cellB, cellC, cellD].forEach((cell) => {
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: `FF${bg}` },
+			};
+			cell.border = {
+				top: {
+					style: row.isTotal ? "thin" : "hair",
+					color: { argb: `FF${PALETTE.borderLight}` },
+				},
+				left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				bottom: {
+					style: row.isProfit ? "double" : row.isTotal ? "medium" : "hair",
+					color: {
+						argb: row.isProfit
+							? `FF${PALETTE.sageDark}`
+							: `FF${PALETTE.borderLight}`,
+					},
+				},
+				right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			};
+		});
+	});
+
+	// ─────────────────────────────────────────────────────────────
+	// SHEET 2: BUKU KAS & MUTASI TRANSAKSI
+	// ─────────────────────────────────────────────────────────────
+	const wsTx = workbook.addWorksheet(`Buku Kas ${data.monthName}`, {
+		views: [{ showGridLines: true }],
+		pageSetup: {
+			orientation: "landscape",
+			paperSize: 9, // A4
+			fitToPage: true,
+			fitToWidth: 1,
+			fitToHeight: 0,
+		},
+	});
+
+	wsTx.columns = [
+		{ key: "no", width: 7 },
+		{ key: "date", width: 18 },
+		{ key: "type", width: 16 },
+		{ key: "category", width: 22 },
+		{ key: "description", width: 36 },
+		{ key: "income", width: 24 },
+		{ key: "expense", width: 24 },
+	];
+
+	// Header metadata
+	const titleTx = wsTx.getCell("A2");
+	titleTx.value = "HOMEEKOST — BUKU KAS & DAFTAR TRANSAKSI";
+	titleTx.font = {
+		name: "Arial",
+		size: 14,
+		bold: true,
+		color: { argb: `FF${PALETTE.sageDark}` },
+	};
+	wsTx.mergeCells("A2:G2");
+	wsTx.getRow(2).height = 26;
+
+	const propTx = wsTx.getCell("A3");
+	propTx.value = `Properti / Cabang: ${data.propertyName}`;
+	propTx.font = {
+		name: "Arial",
+		size: 11,
+		bold: true,
+		color: { argb: `FF${PALETTE.textDark}` },
+	};
+	wsTx.mergeCells("A3:G3");
+
+	const periodTx = wsTx.getCell("A4");
+	periodTx.value = `Periode Pembukuan: ${data.monthName} ${data.year} (${data.transactions.length} Transaksi Tercatat)`;
+	periodTx.font = {
+		name: "Arial",
+		size: 10.5,
+		color: { argb: `FF${PALETTE.textDark}` },
+	};
+	wsTx.mergeCells("A4:G4");
+
+	const dateTx = wsTx.getCell("A5");
+	dateTx.value = `Tanggal Unduh: ${downloadDateStr}`;
+	dateTx.font = {
+		name: "Arial",
+		size: 9.5,
+		italic: true,
+		color: { argb: `FF${PALETTE.textMuted}` },
+	};
+	wsTx.mergeCells("A5:G5");
+
+	wsTx.getRow(6).height = 10;
+
+	// Table Header (Row 7)
+	const txHeaderRow = wsTx.getRow(7);
+	txHeaderRow.height = 24;
+	const txHeaders = [
+		"No",
+		"Tanggal Transaksi",
+		"Jenis",
+		"Kategori",
+		"Keterangan / Catatan",
+		"Pemasukan (Rp)",
+		"Pengeluaran (Rp)",
+	];
+
+	txHeaders.forEach((h, idx) => {
+		const cell = txHeaderRow.getCell(idx + 1);
+		cell.value = h;
+		cell.font = {
+			name: "Arial",
+			size: 10,
+			bold: true,
+			color: { argb: `FF${PALETTE.white}` },
+		};
+		cell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			fgColor: { argb: `FF${PALETTE.sageDark}` },
+		};
+		cell.alignment = {
+			vertical: "middle",
+			horizontal: idx >= 5 ? "right" : idx === 4 ? "left" : "center",
+			indent: idx === 4 ? 1 : 0,
+		};
+		cell.border = {
+			top: { style: "thin", color: { argb: `FF${PALETTE.sageDark}` } },
+			left: { style: "thin", color: { argb: `FF${PALETTE.sageDark}` } },
+			bottom: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
+			right: { style: "thin", color: { argb: `FF${PALETTE.sageDark}` } },
+		};
+	});
+
+	// Transactions Data Rows (Row 8+)
+	const sortedTx = [...data.transactions].sort((a, b) => {
+		const dateA = new Date(a.rawDate || a.date || 0).getTime();
+		const dateB = new Date(b.rawDate || b.date || 0).getTime();
+		return dateA - dateB;
+	});
+
+	const txStartRow = 8;
+	if (sortedTx.length === 0) {
+		const emptyRow = wsTx.getRow(txStartRow);
+		emptyRow.height = 26;
+		const cell = emptyRow.getCell(1);
+		cell.value = "Belum ada mutasi transaksi pada periode ini.";
+		cell.font = {
+			name: "Arial",
+			size: 10,
+			italic: true,
+			color: { argb: `FF${PALETTE.textMuted}` },
+		};
+		cell.alignment = { vertical: "middle", horizontal: "center" };
+		wsTx.mergeCells(`A${txStartRow}:G${txStartRow}`);
+
+		for (let col = 1; col <= 7; col++) {
+			emptyRow.getCell(col).border = {
+				top: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				bottom: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			};
+		}
+	} else {
+		sortedTx.forEach((tx, idx) => {
+			const rowIdx = txStartRow + idx;
+			const r = wsTx.getRow(rowIdx);
+			r.height = 20;
+
+			const isIncome =
+				tx.typeKey === "INCOME" ||
+				tx.type === "INCOME" ||
+				tx.type === "Pemasukan";
+
+			const cellA = r.getCell(1); // No
+			cellA.value = idx + 1;
+			cellA.alignment = { vertical: "middle", horizontal: "center" };
+
+			const cellB = r.getCell(2); // Tanggal
+			cellB.value = tx.date || formatDate(tx.rawDate);
+			cellB.alignment = { vertical: "middle", horizontal: "center" };
+
+			const cellC = r.getCell(3); // Jenis
+			cellC.value = isIncome ? "Pemasukan" : "Pengeluaran";
+			cellC.alignment = { vertical: "middle", horizontal: "center" };
+			cellC.font = {
+				name: "Arial",
+				size: 9.5,
+				bold: true,
+				color: {
+					argb: isIncome
+						? `FF${PALETTE.greenMuted}`
+						: `FF${PALETTE.redMuted}`,
+				},
+			};
+
+			const cellD = r.getCell(4); // Kategori
+			cellD.value = tx.category || "-";
+			cellD.alignment = { vertical: "middle", horizontal: "center" };
+
+			const cellE = r.getCell(5); // Deskripsi
+			cellE.value = tx.description || "-";
+			cellE.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+
+			const cellF = r.getCell(6); // Pemasukan
+			cellF.value = isIncome ? tx.amount : 0;
+			cellF.numFmt = IDR_FORMAT;
+			cellF.alignment = { vertical: "middle", horizontal: "right" };
+
+			const cellG = r.getCell(7); // Pengeluaran
+			cellG.value = isIncome ? 0 : tx.amount;
+			cellG.numFmt = IDR_FORMAT;
+			cellG.alignment = { vertical: "middle", horizontal: "right" };
+
+			const bg = idx % 2 === 1 ? PALETTE.sagePale : PALETTE.white;
+			[cellA, cellB, cellC, cellD, cellE, cellF, cellG].forEach((cell) => {
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: `FF${bg}` },
+				};
+				if (cell !== cellC) {
+					cell.font = {
+						name: "Arial",
+						size: 9.5,
+						color: { argb: `FF${PALETTE.textDark}` },
+					};
+				}
+				cell.border = {
+					top: { style: "hair", color: { argb: `FF${PALETTE.borderLight}` } },
+					left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+					bottom: {
+						style: "hair",
+						color: { argb: `FF${PALETTE.borderLight}` },
+					},
+					right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				};
+			});
+		});
+
+		// Summary Total Row (lastRow + 1)
+		const txEndRow = txStartRow + sortedTx.length - 1;
+		const totalRowIdx = txEndRow + 1;
+		const totalRow = wsTx.getRow(totalRowIdx);
+		totalRow.height = 24;
+
+		const totalLabelCell = totalRow.getCell(1);
+		totalLabelCell.value = "TOTAL MUTASI KAS BULAN INI:";
+		totalLabelCell.font = {
+			name: "Arial",
+			size: 10,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		totalLabelCell.alignment = {
+			vertical: "middle",
+			horizontal: "right",
+			indent: 1,
+		};
+		wsTx.mergeCells(`A${totalRowIdx}:E${totalRowIdx}`);
+
+		const totalIncomeCell = totalRow.getCell(6);
+		totalIncomeCell.value = { formula: `=SUM(F${txStartRow}:F${txEndRow})` };
+		totalIncomeCell.numFmt = IDR_FORMAT;
+		totalIncomeCell.font = {
+			name: "Arial",
+			size: 10.5,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		totalIncomeCell.alignment = { vertical: "middle", horizontal: "right" };
+
+		const totalExpenseCell = totalRow.getCell(7);
+		totalExpenseCell.value = { formula: `=SUM(G${txStartRow}:G${txEndRow})` };
+		totalExpenseCell.numFmt = IDR_FORMAT;
+		totalExpenseCell.font = {
+			name: "Arial",
+			size: 10.5,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		totalExpenseCell.alignment = { vertical: "middle", horizontal: "right" };
+
+		for (let col = 1; col <= 7; col++) {
+			const cell = totalRow.getCell(col);
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: `FF${PALETTE.sageLight}` },
+			};
+			cell.border = {
+				top: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
+				left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				bottom: { style: "double", color: { argb: `FF${PALETTE.sageDark}` } },
+				right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			};
+		}
+
+		// Net Cash Balance Row (lastRow + 2)
+		const netRowIdx = totalRowIdx + 1;
+		const netRow = wsTx.getRow(netRowIdx);
+		netRow.height = 24;
+
+		const netLabelCell = netRow.getCell(1);
+		netLabelCell.value =
+			"SURPLUS / LABA BERSIH KAS (Pemasukan - Pengeluaran):";
+		netLabelCell.font = {
+			name: "Arial",
+			size: 10,
+			bold: true,
+			color: { argb: `FF${PALETTE.textDark}` },
+		};
+		netLabelCell.alignment = {
+			vertical: "middle",
+			horizontal: "right",
+			indent: 1,
+		};
+		wsTx.mergeCells(`A${netRowIdx}:E${netRowIdx}`);
+
+		const netValueCell = netRow.getCell(6);
+		netValueCell.value = { formula: `=F${totalRowIdx}-G${totalRowIdx}` };
+		netValueCell.numFmt = IDR_FORMAT;
+		netValueCell.font = {
+			name: "Arial",
+			size: 11,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		netValueCell.alignment = { vertical: "middle", horizontal: "center" };
+		wsTx.mergeCells(`F${netRowIdx}:G${netRowIdx}`);
+
+		for (let col = 1; col <= 7; col++) {
+			const cell = netRow.getCell(col);
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: `FF${PALETTE.sagePale}` },
+			};
+			cell.border = {
+				top: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				bottom: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
+				right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			};
+		}
+	}
+
+	return workbook;
+}
+
+/**
+ * Generate binary buffer (.xlsx) untuk Laporan Keuangan Bulanan
+ */
+export async function generateMonthlyFinancialExcelBuffer(
+	data: MonthlyFinancialExcelData,
+): Promise<Uint8Array> {
+	const workbook = await createMonthlyFinancialExcelWorkbook(data);
+	const buffer = await workbook.xlsx.writeBuffer();
+	return new Uint8Array(buffer);
+}
+
+/**
+ * Helper untuk men-trigger download langsung file Excel Laporan Keuangan Bulanan (.xlsx) di browser client
+ */
+export async function downloadMonthlyFinancialExcel(
+	data: MonthlyFinancialExcelData,
+	filename?: string,
+): Promise<void> {
+	const buffer = await generateMonthlyFinancialExcelBuffer(data);
+	const blob = new Blob([buffer as BlobPart], {
+		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	});
+
+	const cleanPropName = data.propertyName
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-|-$/g, "");
+
+	const cleanMonthName = data.monthName.toLowerCase();
+	const targetFilename =
+		filename ||
+		`Laporan-Keuangan-Bulanan-${cleanPropName}-${cleanMonthName}-${data.year}.xlsx`;
 
 	const url = URL.createObjectURL(blob);
 	const anchor = document.createElement("a");

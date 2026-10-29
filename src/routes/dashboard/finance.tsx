@@ -10,8 +10,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { MONTH_NAMES_ID } from "#/common/constants/months.const.ts";
 import FinanceDeleteDialog from "#/components/finance/FinanceDeleteDialog.tsx";
-import { useAnnualReportMatrix } from "#/hooks/use-reports.ts";
-import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
+import { getTransactionsServerFn } from "../../data/servers/transaction.fn.ts";
+import { downloadMonthlyFinancialExcel } from "../../lib/excel-exporter.ts";
 import {
 	useCostComposition,
 	useCreateTransaction,
@@ -294,25 +294,60 @@ function FinancePage() {
 
 	// Export Excel
 	const [isExportingExcel, setIsExportingExcel] = useState(false);
-	const { data: annualMatrix } = useAnnualReportMatrix(
-		selectedYear.value,
-		effectivePropertyId,
-	);
 
 	const handleExportExcel = async () => {
-		if (!annualMatrix) {
-			showToast("Data matriks keuangan tahunan belum tersedia.");
-			return;
-		}
 		try {
 			setIsExportingExcel(true);
-			await downloadAnnualFinancialExcel(annualMatrix);
+			const padMonth = String(selectedMonth.value).padStart(2, "0");
+			const lastDay = new Date(
+				selectedYear.value,
+				selectedMonth.value,
+				0,
+			).getDate();
+			const startDate = `${selectedYear.value}-${padMonth}-01`;
+			const endDate = `${selectedYear.value}-${padMonth}-${String(lastDay).padStart(2, "0")}`;
+
+			// Ambil seluruh mutasi transaksi 1 bulan penuh (tanpa batasan paginasi 10 baris)
+			const res = await getTransactionsServerFn({
+				data: {
+					propertyId: effectivePropertyId,
+					startDate,
+					endDate,
+					type: "ALL",
+					limit: 5000,
+					page: 1,
+				},
+			});
+
+			const propertyLabel = isSuperAdmin
+				? selectedProperty.label
+				: dashboardContext.activeProperty?.name ||
+					properties.find((p) => p.id === effectivePropertyId)?.name ||
+					"HomeeKost";
+
+			await downloadMonthlyFinancialExcel({
+				propertyName: propertyLabel,
+				month: selectedMonth.value,
+				year: selectedYear.value,
+				monthName: selectedMonth.label,
+				summary: {
+					totalIncome: financialSummary?.totalIncome || 0,
+					totalExpense: financialSummary?.totalExpense || 0,
+					operationalExpense: financialSummary?.operationalExpense || 0,
+					investmentExpense: financialSummary?.investmentExpense || 0,
+					netProfit: financialSummary?.netProfit || 0,
+					profitMarginPercentage: financialSummary?.profitMarginPercentage,
+				},
+				profitLossRows: profitLossData || [],
+				transactions: res?.items || [],
+			});
+
 			showToast(
-				`File Excel Laporan-Keuangan-Tahunan-${annualMatrix.year}.xlsx berhasil diunduh.`,
+				`File Excel Laporan Keuangan Bulanan (${selectedMonth.label} ${selectedYear.value}) berhasil diunduh.`,
 			);
 		} catch (err: unknown) {
 			const error = err as Error;
-			showToast(error.message || "Gagal mengekspor laporan Excel.");
+			showToast(error.message || "Gagal mengekspor laporan keuangan bulanan.");
 		} finally {
 			setIsExportingExcel(false);
 		}
