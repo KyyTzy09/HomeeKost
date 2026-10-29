@@ -1,5 +1,5 @@
-import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertTriangle, ChevronsRight, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Dialog,
@@ -9,7 +9,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
-import { Input } from "../../common/shadcn/input.tsx";
 import { Label } from "../../common/shadcn/label.tsx";
 
 interface ResetDataDialogProps {
@@ -25,20 +24,81 @@ export function ResetDataDialog({
 	onConfirm,
 	isSubmitting,
 }: ResetDataDialogProps) {
-	const [confirmationText, setConfirmationText] = useState("");
-	const isConfirmed = confirmationText.trim().toUpperCase() === "RESET";
+	const [sliderPos, setSliderPos] = useState(0);
+	const [isDragging, setIsDragging] = useState(false);
+	const [hasConfirmed, setHasConfirmed] = useState(false);
+	const trackRef = useRef<HTMLDivElement>(null);
+	const dragStartXRef = useRef(0);
+	const currentPosRef = useRef(0);
 
 	useEffect(() => {
 		if (open) {
-			setConfirmationText("");
+			setSliderPos(0);
+			setIsDragging(false);
+			setHasConfirmed(false);
+			currentPosRef.current = 0;
 		}
 	}, [open]);
 
-	const handleConfirm = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!isConfirmed || isSubmitting) return;
+	const triggerReset = async () => {
+		setHasConfirmed(true);
 		await onConfirm();
 	};
+
+	const startDrag = (clientX: number) => {
+		if (isSubmitting || hasConfirmed) return;
+		setIsDragging(true);
+		dragStartXRef.current = clientX - currentPosRef.current;
+	};
+
+	const onDrag = (clientX: number) => {
+		if (!isDragging || !trackRef.current || isSubmitting || hasConfirmed) return;
+		const trackWidth = trackRef.current.clientWidth;
+		const handleWidth = 42;
+		const maxDrag = Math.max(0, trackWidth - handleWidth - 8);
+		const newPos = Math.min(maxDrag, Math.max(0, clientX - dragStartXRef.current));
+		currentPosRef.current = newPos;
+		setSliderPos(newPos);
+	};
+
+	const stopDrag = () => {
+		if (!isDragging || !trackRef.current) return;
+		setIsDragging(false);
+		const trackWidth = trackRef.current.clientWidth;
+		const handleWidth = 42;
+		const maxDrag = Math.max(0, trackWidth - handleWidth - 8);
+
+		if (currentPosRef.current >= maxDrag * 0.85) {
+			setSliderPos(maxDrag);
+			currentPosRef.current = maxDrag;
+			triggerReset();
+		} else {
+			setSliderPos(0);
+			currentPosRef.current = 0;
+		}
+	};
+
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => onDrag(e.clientX);
+		const handleMouseUp = () => stopDrag();
+		const handleTouchMove = (e: TouchEvent) => {
+			if (e.touches[0]) onDrag(e.touches[0].clientX);
+		};
+		const handleTouchEnd = () => stopDrag();
+
+		if (isDragging) {
+			window.addEventListener("mousemove", handleMouseMove);
+			window.addEventListener("mouseup", handleMouseUp);
+			window.addEventListener("touchmove", handleTouchMove);
+			window.addEventListener("touchend", handleTouchEnd);
+		}
+		return () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			window.removeEventListener("mouseup", handleMouseUp);
+			window.removeEventListener("touchmove", handleTouchMove);
+			window.removeEventListener("touchend", handleTouchEnd);
+		};
+	}, [isDragging]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -56,7 +116,7 @@ export function ResetDataDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				<form onSubmit={handleConfirm} className="space-y-4 my-2">
+				<div className="space-y-4 my-2">
 					<div className="bg-[#fff7f6] border border-[#f5cfcc] rounded-[12px] p-3 text-[11.5px] text-[#a45149] space-y-1.5 leading-relaxed">
 						<p className="font-semibold flex items-center gap-1.5">
 							<span>⚠️</span> Perhatian Tindakan Permanen:
@@ -74,56 +134,68 @@ export function ResetDataDialog({
 						</ul>
 					</div>
 
-					<div className="space-y-1.5 pt-1">
-						<Label
-							htmlFor="resetConfirmInput"
-							className="text-[11.5px] font-bold text-[#506257]"
-						>
-							Ketik kata <span className="text-[#b66b68] font-mono">RESET</span>{" "}
-							untuk konfirmasi:
+					{/* Slide to Confirm Interactive Slider */}
+					<div className="space-y-2 pt-2">
+						<Label className="text-[11.5px] font-bold text-[#506257]">
+							Konfirmasi Geser (Slide to Confirm):
 						</Label>
-						<Input
-							id="resetConfirmInput"
-							value={confirmationText}
-							onChange={(e) =>
-								setConfirmationText(e.target.value.toUpperCase())
-							}
-							placeholder="RESET"
-							autoComplete="off"
-							disabled={isSubmitting}
-							className="h-[42px] border-[#e4e9e4] rounded-[10px] text-xs font-mono font-bold tracking-wider uppercase focus-visible:border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-						/>
+						<div
+							ref={trackRef}
+							className="relative w-full h-[48px] bg-[#fdf3f2] border border-[#f5cfcc] rounded-[13px] flex items-center p-1 select-none overflow-hidden shadow-inner"
+						>
+							{/* Track Text */}
+							<div className="absolute inset-0 flex items-center justify-center pointer-events-none text-xs font-bold text-[#b66b68] tracking-wide">
+								{isSubmitting || hasConfirmed ? (
+									<span className="flex items-center gap-2">
+										<Loader2 className="w-4 h-4 animate-spin" />
+										Mereset Data...
+									</span>
+								) : (
+									<span className="flex items-center gap-1.5 opacity-80 pl-8">
+										Geser ke kanan untuk konfirmasi ➔
+									</span>
+								)}
+							</div>
+
+							{/* Draggable Slider Thumb */}
+							<div
+								style={{
+									transform: `translateX(${sliderPos}px)`,
+									transition: isDragging
+										? "none"
+										: "transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1)",
+								}}
+								onMouseDown={(e) => startDrag(e.clientX)}
+								onTouchStart={(e) => {
+									if (e.touches[0]) startDrag(e.touches[0].clientX);
+								}}
+								className={`w-[40px] h-[40px] rounded-[10px] bg-[#b66b68] text-white flex items-center justify-center shadow-md cursor-grab active:cursor-grabbing transition-colors ${
+									isSubmitting || hasConfirmed
+										? "pointer-events-none opacity-80"
+										: "hover:bg-[#a25956]"
+								}`}
+							>
+								{isSubmitting || hasConfirmed ? (
+									<Loader2 className="w-4 h-4 animate-spin text-white" />
+								) : (
+									<ChevronsRight className="w-5 h-5 text-white" />
+								)}
+							</div>
+						</div>
 					</div>
 
-					<DialogFooter className="pt-3 gap-2 sm:gap-2">
+					<DialogFooter className="pt-3 flex justify-end">
 						<Button
 							type="button"
 							variant="outline"
 							onClick={() => onOpenChange(false)}
-							disabled={isSubmitting}
-							className="h-[38px] px-4 rounded-[9px] border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3] text-xs font-semibold"
+							disabled={isSubmitting || hasConfirmed}
+							className="h-[38px] px-5 rounded-[9px] border-[#e4e9e4] text-[#737873] hover:bg-[#f3f7f3] text-xs font-semibold cursor-pointer"
 						>
 							Batal
 						</Button>
-						<Button
-							type="submit"
-							disabled={!isConfirmed || isSubmitting}
-							className="h-[38px] px-5 rounded-[9px] bg-[#b66b68] hover:bg-[#a25956] text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-						>
-							{isSubmitting ? (
-								<>
-									<Loader2 className="w-3.5 h-3.5 animate-spin" />
-									<span>Mereset Data...</span>
-								</>
-							) : (
-								<>
-									<Trash2 className="w-3.5 h-3.5" />
-									<span>Reset Data</span>
-								</>
-							)}
-						</Button>
 					</DialogFooter>
-				</form>
+				</div>
 			</DialogContent>
 		</Dialog>
 	);

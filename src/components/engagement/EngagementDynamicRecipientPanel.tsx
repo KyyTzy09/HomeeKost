@@ -274,7 +274,9 @@ export function EngagementDynamicRecipientPanel({
 						className="bg-[#4f6958] hover:bg-[#3d5244] disabled:opacity-50 text-white text-xs font-semibold px-3 h-8 shadow-xs rounded-lg transition-colors flex items-center gap-1.5"
 					>
 						<Send className="w-3.5 h-3.5" />
-						Broadcast ke ({selectedCount}) Terpilih
+						{category === "Pembayaran"
+							? `Kirim Apresiasi ke (${selectedCount}) Terpilih`
+							: `Broadcast ke (${selectedCount}) Terpilih`}
 					</Button>
 				</div>
 
@@ -358,7 +360,7 @@ export function EngagementDynamicRecipientPanel({
 												disabled={isSending}
 											>
 												<Send className="w-3 h-3 mr-1" />
-												Kirim
+												{category === "Pembayaran" ? "Kirim Apresiasi" : "Kirim"}
 											</Button>
 										</div>
 									</div>

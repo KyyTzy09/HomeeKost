@@ -221,7 +221,17 @@ export function DashboardHomePage() {
 
 				<Card
 					className="stat clickable p-[18px_19px] ring-0 border-[#e4e9e4] rounded-[10px]"
-					onClick={() => navigate({ to: "/dashboard/invoices" })}
+					onClick={() => {
+						const hasOverdue = upcomingPayments.some(
+							(p) => p.badgeClass === "red",
+						);
+						navigate({
+							to: "/dashboard/payments",
+							search: {
+								status: hasOverdue ? "OVERDUE" : "PENDING",
+							},
+						});
+					}}
 				>
 					<div className="stat-top">
 						<span>Jatuh Tempo Bulan Ini</span>
@@ -487,7 +497,7 @@ export function DashboardHomePage() {
 						</div>
 						<span
 							className="mini-link cursor-pointer"
-							onClick={() => navigate({ to: "/dashboard/invoices" })}
+							onClick={() => navigate({ to: "/dashboard/payments" })}
 						>
 							Lihat semua
 						</span>

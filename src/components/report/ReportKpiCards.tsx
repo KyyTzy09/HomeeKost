@@ -11,6 +11,8 @@ interface ReportKpiCardsProps {
 	occupiedRooms: number;
 	totalRooms: number;
 	periodLabel: string;
+	incomeGrowthPercent?: number;
+	expenseGrowthPercent?: number;
 }
 
 export function ReportKpiCards({
@@ -22,6 +24,8 @@ export function ReportKpiCards({
 	occupiedRooms,
 	totalRooms,
 	periodLabel,
+	incomeGrowthPercent,
+	expenseGrowthPercent,
 }: ReportKpiCardsProps) {
 	return (
 		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -38,7 +42,21 @@ export function ReportKpiCards({
 				<div className="text-lg font-bold text-[#252925] mt-1.5 tabular-nums">
 					{formatRupiah(totalIncome)}
 				</div>
-				<div className="text-[10px] text-[#737873] mt-0.5">{periodLabel}</div>
+				{typeof incomeGrowthPercent === "number" ? (
+					<div className="mt-1 flex items-center gap-1.5 text-[10px]">
+						<span
+							className={`font-semibold ${
+								incomeGrowthPercent >= 0 ? "text-[#568062]" : "text-[#a65f5b]"
+							}`}
+						>
+							{incomeGrowthPercent >= 0 ? "+" : ""}
+							{incomeGrowthPercent}%
+						</span>
+						<span className="text-[#737873]">vs bulan lalu</span>
+					</div>
+				) : (
+					<div className="text-[10px] text-[#737873] mt-0.5">{periodLabel}</div>
+				)}
 			</Card>
 
 			{/* KPI 2: Total Pengeluaran */}
@@ -54,7 +72,21 @@ export function ReportKpiCards({
 				<div className="text-lg font-bold text-[#252925] mt-1.5 tabular-nums">
 					{formatRupiah(totalExpense)}
 				</div>
-				<div className="text-[10px] text-[#737873] mt-0.5">{periodLabel}</div>
+				{typeof expenseGrowthPercent === "number" ? (
+					<div className="mt-1 flex items-center gap-1.5 text-[10px]">
+						<span
+							className={`font-semibold ${
+								expenseGrowthPercent <= 0 ? "text-[#568062]" : "text-[#a65f5b]"
+							}`}
+						>
+							{expenseGrowthPercent > 0 ? "+" : ""}
+							{expenseGrowthPercent}%
+						</span>
+						<span className="text-[#737873]">vs bulan lalu</span>
+					</div>
+				) : (
+					<div className="text-[10px] text-[#737873] mt-0.5">{periodLabel}</div>
+				)}
 			</Card>
 
 			{/* KPI 3: Laba Bersih */}

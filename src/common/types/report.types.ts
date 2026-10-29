@@ -39,7 +39,18 @@ export interface AiMonthlyReportData {
 	netProfit: number;
 	profitMarginPercentage: number;
 	roomStatus: PropertyRoomStatusSummary;
-	financialHealthGrade?: "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS";
+	financialHealthGrade?:
+		| "PRIMA"
+		| "NORMAL"
+		| "WASPADA"
+		| "BAHAYA"
+		| "SEHAT"
+		| "KRITIS";
+	momGrowth?: {
+		incomeGrowthPercent: number;
+		expenseGrowthPercent: number;
+		profitGrowthPercent: number;
+	};
 	narrativeSummary: string;
 	keyHighlights?: string[];
 	trendAnalysis?: {

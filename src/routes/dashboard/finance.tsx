@@ -10,11 +10,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { MONTH_NAMES_ID } from "#/common/constants/months.const.ts";
 import FinanceDeleteDialog from "#/components/finance/FinanceDeleteDialog.tsx";
+import { getTransactionsServerFn } from "../../data/servers/transaction.fn.ts";
+import { downloadMonthlyFinancialExcel } from "../../lib/excel-exporter.ts";
 import {
 	useCostComposition,
 	useCreateTransaction,
 	useDeleteTransaction,
-	useExportAnnualCsv,
 	useFinancialSummary,
 	useProfitLossStatement,
 	useRecentMonthlyTrends,
@@ -103,10 +104,8 @@ function FinancePage() {
 		label: string;
 		value: string;
 	}>({
-		label: isSuperAdmin
-			? "Semua Cabang Kos (Konsolidasi)"
-			: dashboardContext.activeProperty?.name || "Cabang Ditugaskan",
-		value: isSuperAdmin ? "ALL" : activePropertyId || "",
+		label: dashboardContext.activeProperty?.name || "Semua Cabang Kos",
+		value: dashboardContext.activeProperty?.id || "ALL",
 	});
 
 	// Effective Property ID based on RBAC:
@@ -250,7 +249,6 @@ function FinancePage() {
 	const createTxMutation = useCreateTransaction();
 	const updateTxMutation = useUpdateTransaction();
 	const deleteTxMutation = useDeleteTransaction();
-	const exportCsvMutation = useExportAnnualCsv();
 
 	// Handlers
 	const handleSortToggle = (newSortBy: "transactionDate" | "amount") => {
@@ -294,29 +292,64 @@ function FinancePage() {
 		}
 	};
 
-	const handleExportCsv = async () => {
+	// Export Excel
+	const [isExportingExcel, setIsExportingExcel] = useState(false);
+
+	const handleExportExcel = async () => {
 		try {
-			const result = await exportCsvMutation.mutateAsync({
-				propertyId: effectivePropertyId,
+			setIsExportingExcel(true);
+			const padMonth = String(selectedMonth.value).padStart(2, "0");
+			const lastDay = new Date(
+				selectedYear.value,
+				selectedMonth.value,
+				0,
+			).getDate();
+			const startDate = `${selectedYear.value}-${padMonth}-01`;
+			const endDate = `${selectedYear.value}-${padMonth}-${String(lastDay).padStart(2, "0")}`;
+
+			// Ambil seluruh mutasi transaksi 1 bulan penuh (tanpa batasan paginasi 10 baris)
+			const res = await getTransactionsServerFn({
+				data: {
+					propertyId: effectivePropertyId,
+					startDate,
+					endDate,
+					type: "ALL",
+					limit: 5000,
+					page: 1,
+				},
+			});
+
+			const propertyLabel = isSuperAdmin
+				? selectedProperty.label
+				: dashboardContext.activeProperty?.name ||
+					properties.find((p) => p.id === effectivePropertyId)?.name ||
+					"HomeeKost";
+
+			await downloadMonthlyFinancialExcel({
+				propertyName: propertyLabel,
+				month: selectedMonth.value,
 				year: selectedYear.value,
+				monthName: selectedMonth.label,
+				summary: {
+					totalIncome: financialSummary?.totalIncome || 0,
+					totalExpense: financialSummary?.totalExpense || 0,
+					operationalExpense: financialSummary?.operationalExpense || 0,
+					investmentExpense: financialSummary?.investmentExpense || 0,
+					netProfit: financialSummary?.netProfit || 0,
+					profitMarginPercentage: financialSummary?.profitMarginPercentage,
+				},
+				profitLossRows: profitLossData || [],
+				transactions: res?.data || (res as any)?.items || [],
 			});
 
-			const blob = new Blob([result.csvContent], {
-				type: "text/csv;charset=utf-8;",
-			});
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement("a");
-			link.setAttribute("href", url);
-			link.setAttribute("download", result.filename);
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-			URL.revokeObjectURL(url);
-
-			showToast(`File ${result.filename} berhasil diunduh.`);
+			showToast(
+				`File Excel Laporan Keuangan Bulanan (${selectedMonth.label} ${selectedYear.value}) berhasil diunduh.`,
+			);
 		} catch (err: unknown) {
 			const error = err as Error;
-			showToast(error.message || "Gagal mengekspor laporan tahunan.");
+			showToast(error.message || "Gagal mengekspor laporan keuangan bulanan.");
+		} finally {
+			setIsExportingExcel(false);
 		}
 	};
 
@@ -376,7 +409,7 @@ function FinancePage() {
 										setCurrentPage(1);
 										if (val === "ALL") {
 											setSelectedProperty({
-												label: "Semua Cabang Kos (Konsolidasi)",
+												label: "Semua Cabang Kos",
 												value: "ALL",
 											});
 										} else {
@@ -398,7 +431,7 @@ function FinancePage() {
 									</SelectTrigger>
 									<SelectContent className="bg-white border-[#e4e9e4]">
 										<SelectItem value="ALL" className="text-xs font-semibold">
-											Semua Cabang Kos (Konsolidasi)
+											Semua Cabang Kos
 										</SelectItem>
 										{properties.map((p) => (
 											<SelectItem key={p.id} value={p.id} className="text-xs">
@@ -478,10 +511,19 @@ function FinancePage() {
 							</div>
 						</div>
 						<div className="mt-3 flex items-center gap-1.5 text-[11px]">
-							<span className="text-[#737873]">
-								Operasional:{" "}
-								<b>{formatRupiah(financialSummary?.operationalExpense || 0)}</b>
+							<span
+								className={`font-semibold ${
+									(financialSummary?.momGrowth.expenseGrowthPercent || 0) <= 0
+										? "text-[#568062]"
+										: "text-[#a65f5b]"
+								}`}
+							>
+								{(financialSummary?.momGrowth.expenseGrowthPercent || 0) > 0
+									? "+"
+									: ""}
+								{financialSummary?.momGrowth.expenseGrowthPercent || 0}%
 							</span>
+							<span className="text-[#737873]">vs bulan lalu</span>
 						</div>
 					</Card>
 
@@ -542,9 +584,17 @@ function FinancePage() {
 								<Coins className="w-4 h-4" />
 							</div>
 						</div>
-						<div className="mt-3 flex items-center gap-1.5 text-[11px] text-[#737873]">
-							<span>
-								Periode: <b>{financialSummary?.periodLabel || "Bulan Ini"}</b>
+						<div className="mt-3 flex items-center gap-1.5 text-[11px]">
+							<span
+								className={`font-semibold ${
+									(financialSummary?.expenseRatio || 0) <= 40
+										? "text-[#568062]"
+										: "text-[#b18a4b]"
+								}`}
+							>
+								{(financialSummary?.expenseRatio || 0) <= 40
+									? "Beban Ideal (< 40%)"
+									: "Perlu Dipantau (> 40%)"}
 							</span>
 						</div>
 					</Card>
@@ -582,11 +632,11 @@ function FinancePage() {
 					}}
 					data={profitLossData}
 					isLoading={isLoadingProfitLoss}
-					onExportCsv={handleExportCsv}
-					isExporting={exportCsvMutation.isPending}
+					onExportExcel={handleExportExcel}
+					isExportingExcel={isExportingExcel}
 					propertyName={
 						isSuperAdmin && selectedProperty.value === "ALL"
-							? "Semua Cabang Kos (Konsolidasi)"
+							? "Semua Cabang Kos"
 							: selectedProperty.label
 					}
 				/>

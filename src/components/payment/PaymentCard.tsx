@@ -10,8 +10,8 @@ export interface PaymentItem {
 }
 
 export const STATUS_LABEL: Record<PaymentItem["status"], string> = {
-	PAID: "Sudah bayar",
-	PENDING: "Jatuh tempo",
+	PAID: "Lunas",
+	PENDING: "Belum Lunas",
 	OVERDUE: "Terlambat",
 };
 

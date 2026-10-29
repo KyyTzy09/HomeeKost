@@ -14,6 +14,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardEngagementRouteImport } from './routes/dashboard/engagement'
 import { Route as DashboardFinanceRouteImport } from './routes/dashboard/finance'
@@ -54,6 +55,11 @@ const LoginRoute = LoginRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status': typeof StatusRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status': typeof StatusRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/status': typeof StatusRoute
   '/dashboard/engagement': typeof DashboardEngagementRoute
   '/dashboard/finance': typeof DashboardFinanceRoute
   '/dashboard/invoices': typeof DashboardInvoicesRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/status'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/status'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/status'
     | '/dashboard/engagement'
     | '/dashboard/finance'
     | '/dashboard/invoices'
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  StatusRoute: typeof StatusRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCronDailyTasksRoute: typeof ApiCronDailyTasksRoute
   ApiCronMonthlyReportsRoute: typeof ApiCronMonthlyReportsRoute
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/': {
@@ -483,6 +503,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  StatusRoute: StatusRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCronDailyTasksRoute: ApiCronDailyTasksRoute,
   ApiCronMonthlyReportsRoute: ApiCronMonthlyReportsRoute,

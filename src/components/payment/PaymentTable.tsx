@@ -52,9 +52,10 @@ export interface PeriodFilterOption {
 
 export const PAYMENT_STATUS_OPTIONS: PaymentFilterOption[] = [
 	{ label: "Semua Status", value: "ALL" },
-	{ label: "Menunggu Bayar", value: "PENDING" },
-	{ label: "Sudah Bayar (Lunas)", value: "PAID" },
-	{ label: "Jatuh Tempo / Terlambat", value: "OVERDUE" },
+	{ label: "Lunas", value: "PAID" },
+	{ label: "Belum Lunas", value: "PENDING" },
+	{ label: "Cicilan", value: "PARTIAL" },
+	{ label: "Terlambat", value: "OVERDUE" },
 ];
 
 interface PaymentTableProps {
@@ -301,8 +302,8 @@ export function PaymentTable({
 					};
 					const statusLabels: Record<PaymentStatus, string> = {
 						PAID: "Lunas",
-						PARTIAL: "Dicicil",
-						PENDING: "Menunggu",
+						PARTIAL: "Cicilan",
+						PENDING: "Belum Lunas",
 						OVERDUE: "Terlambat",
 						CANCELLED: "Dibatalkan",
 					};

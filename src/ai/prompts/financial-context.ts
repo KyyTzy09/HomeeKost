@@ -17,10 +17,10 @@ export function buildFinancialFeaturePrompt(
 		: `STATUS PERIODE: SEDANG BERJALAN (Data Dinamis / Belum Tutup Buku).
 ATURAN KERAS UNTUK BULAN SEDANG BERJALAN:
 - Data belum lengkap karena bulan masih aktif berjalan.
-- DILARANG KERAS menyimpulkan kondisi keuangan "KRITIS" hanya karena bulan baru berjalan sebagian hari (misal pengeluaran operasional dicatat di awal bulan sementara pembayaran sewa penghuni belum seluruhnya jatuh tempo).
+- DILARANG KERAS menyimpulkan kondisi keuangan "BAHAYA" hanya karena bulan baru berjalan sebagian hari (misal pengeluaran operasional dicatat di awal bulan sementara pembayaran sewa penghuni belum seluruhnya jatuh tempo).
 - Evaluasi penagihan dan okupansi harus dipandang proporsional terhadap hari yang telah berjalan.
 - Gaya narasi harus bersifat "Observasi Progresif", menyebutkan tanggal berjalan dan menegaskan bahwa angka masih berkembang hingga penutupan buku akhir bulan.
-- Untuk nilai "financialHealthGrade": Jangan tetapkan "KRITIS" hanya karena ketidaksinkronan waktu pencatatan di awal/tengah bulan.`;
+- Untuk nilai "financialHealthGrade": Jangan tetapkan "BAHAYA" hanya karena ketidaksinkronan waktu pencatatan di awal/tengah bulan.`;
 
 	return `Anda adalah Analis Finansial Eksekutif AI HomeeKost.
 
@@ -31,21 +31,18 @@ ${timeContext}
 ${statusRule}
 
 # RUBRIK PENILAIAN FINANCIAL HEALTH GRADE (MANDATORY)
-Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria berikut:
+Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan Rasio Beban Kas (Total Pengeluaran / Total Pendapatan):
 1. "PRIMA":
-   - Margin Laba Bersih >= 60% DAN
-   - Okupansi Kamar >= 85% DAN
-   - Collection Rate (Ketepatan Bayar) >= 90%
-2. "SEHAT":
-   - Margin Laba Bersih 40% - 59.9% DAN
-   - Okupansi Kamar >= 70%
-3. "WASPADA":
-   - Margin Laba Bersih 15% - 39.9% ATAU
+   - Rasio Beban Kas < 25% (Margin Laba Bersih > 75%) DAN
+   - Okupansi Kamar >= 80% DAN
+   - Collection Rate (Ketepatan Bayar) >= 85%
+2. "WASPADA" (Kategori Tengah / Perhatian Operasional):
+   - Rasio Beban Kas 25% - 50% (Margin Laba Bersih 50% - 75%) ATAU
    - Okupansi Kamar < 70% ATAU
    - Biaya perbaikan/komplain menyerap > 20% dari total pengeluaran
-4. "KRITIS" (Hanya berlaku jika SUDAH TUTUP BUKU atau performa okupansi riil sangat hancur):
-   - Periode telah TUTUP BUKU DAN (Margin Laba Bersih < 15% ATAU Collection Rate < 50%)
-   - Pengecualian pada bulan berjalan: Hanya boleh "KRITIS" jika okupansi kamar < 25% dan tidak ada penerimaan sama sekali.
+3. "BAHAYA" (Hanya berlaku jika SUDAH TUTUP BUKU):
+   - Periode telah TUTUP BUKU DAN (Rasio Beban Kas > 50% / Margin Laba Bersih < 50% ATAU Collection Rate < 50%)
+   - Pengecualian pada bulan berjalan: DILARANG menetapkan "BAHAYA" karena pencatatan sewa masih berproses. Batasi maksimal ke "WASPADA".
 
 # ATURAN PENULISAN ELEMEN OUTPUT:
 1. "executiveSummary":
@@ -71,7 +68,7 @@ Tentukan nilai "financialHealthGrade" secara deterministik berdasarkan kriteria 
 # FORMAT OUTPUT JSON WAJIB (STRICT JSON ONLY)
 {
   "executiveSummary": "string (2-3 kalimat)",
-  "financialHealthGrade": "PRIMA" | "SEHAT" | "WASPADA" | "KRITIS",
+  "financialHealthGrade": "PRIMA" | "WASPADA" | "BAHAYA",
   "keyHighlights": [
     "string poin 1 fakta beban terbesar",
     "string poin 2 fakta okupansi kamar",

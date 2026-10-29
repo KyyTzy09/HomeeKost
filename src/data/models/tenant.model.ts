@@ -13,7 +13,7 @@ export type TenantPrismaStatus = TenantStatus;
 export type BillingCycleEnum = BillingCycle;
 
 export type TenantStatusEnum = "Aktif" | "Akan Berakhir" | "Nonaktif";
-export type PaymentStatusEnum = "Lunas" | "Pending" | "Menunggak";
+export type PaymentStatusEnum = "Lunas" | "Belum Lunas" | "Terlambat";
 
 export interface TenantDomainModel {
 	id: string;

@@ -11,6 +11,7 @@ export interface InvoiceTemplateParams {
 	bankName?: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -37,6 +38,7 @@ export interface MonthlyFirstReminderTemplateParams {
 	bankName?: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -67,6 +69,7 @@ export interface InstallmentReminderTemplateParams {
 	endOfMonthDate: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -81,6 +84,7 @@ export interface DueReminderTemplateParams {
 	amount: number;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 	documentUrl?: string;
 }
 
@@ -105,23 +109,29 @@ export const whatsappTemplates = {
 			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
 			: "";
 
+		const bankSection = p.bankAccountInfo?.trim()
+			? `💳 *Metode Pembayaran:*\n🏦 *${p.bankAccountInfo.trim()}*`
+			: `💳 *Metode Pembayaran:*
+- Bank: *${p.bankName || "BCA"}*
+- No. Rekening: *${p.bankAccount || "8735081290"}*
+- Atas Nama: *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `Halo Kak *${p.tenantName}*! 👋
 
 Berikut rincian tagihan sewa kos untuk periode *${p.period}*:
 
-🏠 *Properti:* ${p.propertyName}
+🏠 *${p.propertyName}*
 🚪 *Kamar:* ${p.roomNumber}
 📄 *No. Invoice:* ${p.invoiceNumber}
 📅 *Jatuh Tempo:* ${p.dueDate}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
 
-💳 *Metode Pembayaran:*
-- Bank: *${p.bankName || "BCA"}*
-- No. Rekening: *${p.bankAccount || "8735081290"}*
-- Atas Nama: *${p.accountHolder || "Bude Frisda"}*
+${bankSection}
 ${docSection}
-Mohon lakukan pembayaran sebelum tanggal jatuh tempo dan kirimkan bukti transfer ke nomor ini. Terima kasih! 🙏✨
-_— Pengelola ${p.propertyName}_`;
+Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini ya Kak.
+
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -144,20 +154,25 @@ _— Pengelola ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice:* ${p.documentUrl}\n`
 			: "";
 
-		return `Halo Kak *${p.tenantName}*,
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
+		return `Halo Kak *${p.tenantName}*! 👋
 
 ${statusHeadline}
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Nominal:* *${formatRupiah(p.amount)}*
 
 ${statusNote}
 ${docSection}
 Pembayaran dapat ditransfer ke rekening:
-🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 
-Jika sudah melakukan transfer, abaikan pesan ini atau kirimkan bukti pembayaran kepada kami. Terima kasih! 🙏`;
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -168,22 +183,54 @@ Jika sudah melakukan transfer, abaikan pesan ini atau kirimkan bukti pembayaran 
 			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
 			: "";
 
-		return `Halo *${p.tenantName}*,
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
 
-Hari ini sudah tanggal 1 ${p.period}. Jangan lupa untuk melakukan pembayaran tagihan sewa kos Anda:
+		return `Halo Kak *${p.tenantName}*! 👋
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
+
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
 
-📅 *Masa Pembayaran:* Tanggal 1 s/d 5 ${p.period}
-⚠️ *Penting:* Batas waktu pembayaran adalah tanggal 5. Pembayaran yang melewati tanggal 5 akan dikenakan denda keterlambatan sesuai kebijakan kos.
+💳 *Pembayaran dapat ditransfer ke rekening:*
+${bankLine}
+${docSection}
+Masa pembayaran sewa adalah tanggal 1 s.d. 5 ya Kak. Pembayaran setelah tanggal 5 akan dikenakan denda keterlambatan sesuai ketentuan kost.
+
+Terima kasih banyak bagi yang sudah melakukan pembayaran tepat waktu, have a nice day Kak! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
+	},
+
+	/**
+	 * Template Pengingat Jatuh Tempo Tanggal 5 (Batas Akhir Bayar & Peringatan Denda)
+	 */
+	monthlyFifthReminder(p: MonthlyFirstReminderTemplateParams): string {
+		const docSection = p.documentUrl
+			? `\n📄 *Tautan Invoice Digital Resmi:*\n${p.documentUrl}\n`
+			: "";
+
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
+		return `Halo Kak *${p.tenantName}*! 👋
+
+⚠️ *PENGINGAT BATAS AKHIR PEMBAYARAN HARI INI*
+
+Mengingatkan kembali bahwa hari ini (Tanggal 5) adalah batas akhir pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
+
+📄 *No. Invoice:* ${p.invoiceNumber}
+💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
 
 💳 *Pembayaran dapat ditransfer ke rekening:*
-🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 ${docSection}
-Jika Anda sudah melakukan transfer, silakan kirimkan bukti pembayaran ke nomor ini. Terima kasih! 🙏✨
-— Pengelola ${p.propertyName}`;
+Mohon melakukan pelunasan hari ini agar terhindar dari denda keterlambatan ya Kak. Jika sudah melakukan transfer, silakan kirimkan bukti pembayarannya ke sini.
+
+Terima kasih banyak atas perhatian dan kerja samanya Kak! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -196,26 +243,29 @@ Jika Anda sudah melakukan transfer, silakan kirimkan bukti pembayaran ke nomor i
 
 		const appreciationText =
 			p.isOnTime === true
-				? `Terima kasih banyak! Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi tepat waktu. Kami sangat mengapresiasi kedisiplinan dan kerja sama Anda! 🙏✨`
-				: `Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima dan diverifikasi.`;
+				? `Terima kasih banyak! Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima dan diverifikasi lunas. 🙏✨`
+				: `Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima dan diverifikasi lunas. 🙏✨`;
 
 		const closingText =
 			p.isOnTime === true
-				? `Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Semoga nyaman tinggal di *${p.propertyName}*! 🌿🏡`
-				: `Bukti pembayaran resmi ini tersimpan secara digital di sistem pengelola kos. Terima kasih atas kerja samanya. 🙏`;
+				? `Bukti pembayaran resmi ini tersimpan secara digital di sistem kami. Semoga selalu betah dan nyaman tinggal di *${p.propertyName}*! 🌿🏡`
+				: `Bukti pembayaran resmi ini tersimpan secara digital di sistem kami. Terima kasih atas kerja samanya. 🙏`;
 
 		return `🎉 *PEMBAYARAN DITERIMA & LUNAS* 🎉
 
-Halo *${p.tenantName}*,
+Halo Kak *${p.tenantName}*! 👋
 ${appreciationText}
 
 📄 *No. Kwitansi:* ${p.invoiceNumber}
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
 💳 *Metode Bayar:* ${p.paymentMethod}
 🗓️ *Tanggal Bayar:* ${p.paidDate}
 💵 *Jumlah Diterima:* *${formatRupiah(p.amount)}* (LUNAS)
 ${docSection}
-${closingText}`;
+${closingText}
+
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -228,10 +278,10 @@ ${closingText}`;
 
 		return `🧾 *BUKTI PENERIMAAN CICILAN SEWA*
 
-Halo Kak *${p.tenantName}*,
-Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima:
+Halo Kak *${p.tenantName}*! 👋
+Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima:
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💳 *Metode Bayar:* ${p.paymentMethod}
 🗓️ *Tanggal Bayar:* ${p.paidDate}
@@ -242,8 +292,10 @@ Pembayaran sewa kos Anda untuk periode *${p.period}* telah kami terima:
 - Total Terbayar: ${formatRupiah(p.totalPaid)}
 - ⚠️ *Sisa Tagihan:* *${formatRupiah(p.remainingAmount)}*
 ${docSection}
-Bukti pembayaran resmi ini tersimpan digital di sistem pengelola kos. Terima kasih! 🙏✨
-_— Pengelola ${p.propertyName}_`;
+Bukti pembayaran resmi ini tersimpan secara digital di sistem kami.
+
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -254,12 +306,15 @@ _— Pengelola ${p.propertyName}_`;
 			? `\n📄 *Tautan Invoice Digital:* ${p.documentUrl}\n`
 			: "";
 
+		const bankLine = p.bankAccountInfo?.trim()
+			? `🏦 *${p.bankAccountInfo.trim()}*`
+			: `🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+
 		return `🔔 *PENGINGAT SISA CICILAN SEWA*
 
-Halo Kak *${p.tenantName}*,
-Mengingatkan kembali perihal sisa tagihan sewa kos untuk periode *${p.period}*:
+Halo Kak *${p.tenantName}*! 👋
+Mengingatkan kembali perihal sisa tagihan sewa kos di *${p.propertyName}* (Kamar ${p.roomNumber}) untuk periode *${p.period}*:
 
-🏠 *Properti:* ${p.propertyName} (Kamar ${p.roomNumber})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💵 *Total Tagihan:* ${formatRupiah(p.totalAmount)}
 ✅ *Sudah Dibayar:* ${formatRupiah(p.totalPaid)}
@@ -267,10 +322,10 @@ Mengingatkan kembali perihal sisa tagihan sewa kos untuk periode *${p.period}*:
 📅 *Batas Waktu Pelunasan:* Sebelum akhir bulan (${p.endOfMonthDate})
 ${docSection}
 Pembayaran dapat ditransfer ke rekening:
-🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*
+${bankLine}
 
-Mohon lakukan pelunasan sisa tagihan sebelum tanggal tersebut. Terima kasih banyak atas kerjasamanya! 🙏✨
-_— Pengelola ${p.propertyName}_`;
+Terima kasih banyak atas perhatian dan kerja sama baiknya Kak, have a nice day! 😊🙏
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -284,7 +339,7 @@ Keluarga besar *${p.propertyName}* mengucapkan selamat bertambah usia! 🎈✨
 Semoga di usia yang baru ini senantiasa diberikan kesehatan, kebahagiaan, kemudahan dalam setiap urusan/pekerjaan, serta tercapai segala cita-cita yang diimpikan.
 
 Terima kasih telah menjadi bagian berharga dari keluarga hunian kami. Semoga betah dan selalu nyaman tinggal di *${p.propertyName}*! 🌿🏡
-_— Manajemen & Pengelola ${p.propertyName}_`;
+_— Admin Kos ${p.propertyName}_`;
 	},
 
 	/**
@@ -302,6 +357,9 @@ _— Manajemen & Pengelola ${p.propertyName}_`;
 		const propertyBadge = p.propertyName
 			? `\n🏠 *Lokasi:* ${p.propertyName}`
 			: "";
+		const sender = p.propertyName
+			? `_— Admin Kos ${p.propertyName}_`
+			: "_— Admin Kos_";
 
 		return `*${categoryBadge}*
 ━━━━━━━━━━━━━━━━━━━━━
@@ -311,7 +369,7 @@ ${p.message}
 
 ━━━━━━━━━━━━━━━━━━━━━
 _Mohon diperhatikan oleh seluruh penghuni demi kenyamanan bersama. Terima kasih!_ 🙏
-_— Manajemen Pengelola Kos_`;
+${sender}`;
 	},
 
 	/**
@@ -348,5 +406,83 @@ Silakan buka Web Dashboard untuk melihat rincian laporan dan wawasan bisnis leng
 🔗 ${reportUrl}
 ━━━━━━━━━━━━━━━━━━━━━
 _Pesan otomatis dari Sistem Manajemen Kost_`;
+	},
+
+	/**
+	 * Template Peringatan Penggunaan Kapasitas Server (Mendekati Kritis / Kritis)
+	 */
+	serverStatusAlert(p: {
+		statusLabel: "Mendekati Kritis" | "Kritis";
+		headline: string;
+		description: string;
+		ramUsedFormatted: string;
+		ramTotalFormatted: string;
+		ramPercent: number;
+		storageUsedFormatted?: string;
+		storageTotalFormatted?: string;
+		storagePercent?: number;
+		cpuLoadStatus: string;
+		databaseStatus: string;
+		actionAdvice: string;
+		statusUrl?: string;
+	}): string {
+		const appUrl = process.env.APP_URL || "http://localhost:3000";
+		const url = p.statusUrl || `${appUrl}/status`;
+		const icon = p.statusLabel === "Kritis" ? "🚨" : "⚠️";
+		const title =
+			p.statusLabel === "Kritis"
+				? "PERINGATAN KRITIS SERVER"
+				: "PERINGATAN KAPASITAS SERVER";
+
+		const storageLine = p.storageTotalFormatted
+			? `• Penyimpanan: *${p.storagePercent}%* (${p.storageUsedFormatted} / ${p.storageTotalFormatted})`
+			: "• Penyimpanan: Dikelola Cloud";
+
+		return `${icon} *${title}* ${icon}
+━━━━━━━━━━━━━━━━━━━━━
+Halo Bapak/Ibu Pengelola,
+Sistem mendeteksi kondisi server kos yang memerlukan perhatian:
+
+• Status: *${p.statusLabel.toUpperCase()}*
+• Penggunaan RAM: *${p.ramPercent}%* (${p.ramUsedFormatted} / ${p.ramTotalFormatted})
+${storageLine}
+• Beban CPU: *${p.cpuLoadStatus}*
+• Basis Data: *${p.databaseStatus}*
+
+📌 *Kondisi:*
+${p.headline}
+${p.description}
+
+🛠️ *Tindakan yang Disarankan:*
+${p.actionAdvice}
+
+Pantau kapasitas dan panduan lengkap di:
+🔗 ${url}
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan otomatis dari Sistem Manajemen Kos_`;
+	},
+
+	/**
+	 * Template Uji Coba Pengiriman Pesan WhatsApp Server
+	 */
+	serverTestAlert(p: {
+		recipientPhone: string;
+		statusUrl?: string;
+	}): string {
+		const appUrl = process.env.APP_URL || "http://localhost:3000";
+		const url = p.statusUrl || `${appUrl}/status`;
+
+		return `🔔 *UJI COBA NOTIFIKASI WHATSAPP SERVER* 🔔
+━━━━━━━━━━━━━━━━━━━━━
+Halo Bapak/Ibu Pengelola,
+Ini adalah pesan uji coba dari sistem *HomeeKost Management*.
+
+✅ Nomor WhatsApp *${p.recipientPhone}* berhasil terhubung ke sistem peringatan server kos.
+Anda akan menerima notifikasi otomatis jika kapasitas server mendekati kritis atau memerlukan perhatian.
+
+Pantau status server secara berkala di:
+🔗 ${url}
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan pengujian berhasil dikirim._`;
 	},
 };

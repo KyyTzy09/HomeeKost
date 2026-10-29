@@ -195,6 +195,7 @@ model Property {
   name                  String
   address               String
   description           String?
+  bankAccountInfo       String?              @db.Text
   imageUrl              String?              @db.Text
   
   rooms                 Room[]

@@ -561,6 +561,7 @@ export class EngagementRepository {
 								property: {
 									select: {
 										name: true,
+										bankAccountInfo: true,
 									},
 								},
 							},
@@ -723,6 +724,7 @@ export class EngagementRepository {
 								property: {
 									select: {
 										name: true,
+										bankAccountInfo: true,
 									},
 								},
 							},

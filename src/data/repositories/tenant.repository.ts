@@ -1,3 +1,4 @@
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 import { prisma } from "../../db.ts";
 import type {
 	BillingCycle,
@@ -84,6 +85,7 @@ export class TenantRepository {
 					include: {
 						room: true,
 						invoices: {
+							include: { transactions: true },
 							orderBy: { dueDate: "asc" },
 							take: 12,
 						},
@@ -108,6 +110,7 @@ export class TenantRepository {
 							},
 						},
 						invoices: {
+							include: { transactions: true },
 							orderBy: { dueDate: "asc" },
 							take: 12,
 						},
@@ -306,6 +309,7 @@ export class TenantRepository {
 			updatePendingInvoiceAmount?: boolean;
 			createDifferenceInvoice?: boolean;
 			newRentAmount?: number;
+			contractUpdateScope?: "ALL_HISTORY" | "CURRENT_ONLY" | null;
 		},
 	) {
 		return this.db.$transaction(
@@ -433,6 +437,155 @@ export class TenantRepository {
 				});
 
 				if (activeContract) {
+					if (data.contractUpdateScope === "ALL_HISTORY") {
+						const allContracts = await tx.rentalContract.findMany({
+							where: { tenantId },
+							include: {
+								invoices: {
+									include: { transactions: true },
+								},
+								room: true,
+							},
+							orderBy: { startDate: "asc" },
+						});
+
+						const firstContract = allContracts[0];
+						const effectiveStartDate =
+							data.startDate || firstContract?.startDate || activeContract.startDate || new Date();
+						const effectiveRoomId =
+							data.roomId || activeContract.roomId || firstContract?.roomId;
+						const effectiveRoom = effectiveRoomId
+							? await tx.room.findUnique({ where: { id: effectiveRoomId } })
+							: activeContract.room;
+
+						if (!effectiveRoom) {
+							throw new Error("Kamar untuk kontrak tidak ditemukan.");
+						}
+
+						const hadPaidInvoice = allContracts.some((c) =>
+							c.invoices.some(
+								(inv) =>
+									inv.status === "PAID" ||
+									(inv.transactions && inv.transactions.length > 0),
+							),
+						);
+
+						const effectiveBillingCycle =
+							data.billingCycle ||
+							activeContract.billingCycle ||
+							firstContract?.billingCycle ||
+							"MONTHLY";
+
+						let cycleMonths = 1;
+						if (effectiveBillingCycle === "QUARTERLY") cycleMonths = 3;
+						else if (effectiveBillingCycle === "SEMI_ANNUAL") cycleMonths = 6;
+						else if (effectiveBillingCycle === "ANNUALLY") cycleMonths = 12;
+
+						const effectivePrice =
+							data.newRentAmount && data.newRentAmount > 0
+								? data.newRentAmount
+								: Number(effectiveRoom.price) * cycleMonths;
+
+						const effectiveEndDate = new Date(
+							effectiveStartDate.getFullYear(),
+							effectiveStartDate.getMonth() + cycleMonths,
+							effectiveStartDate.getDate(),
+						);
+
+						const allInvoiceIds = allContracts.flatMap((c) =>
+							c.invoices.map((i) => i.id),
+						);
+						if (allInvoiceIds.length > 0) {
+							await tx.transaction.deleteMany({
+								where: { invoiceId: { in: allInvoiceIds } },
+							});
+							await tx.invoice.deleteMany({
+								where: { id: { in: allInvoiceIds } },
+							});
+						}
+
+						await tx.transaction.deleteMany({
+							where: {
+								propertyId: effectiveRoom.propertyId,
+								type: "INCOME",
+								category: "RENT",
+								description: {
+									contains: updatedTenant.name,
+									mode: "insensitive",
+								},
+							},
+						});
+
+						await tx.rentalContract.deleteMany({
+							where: { tenantId },
+						});
+
+						if (activeContract.roomId && activeContract.roomId !== effectiveRoom.id) {
+							await tx.room.update({
+								where: { id: activeContract.roomId },
+								data: { status: "VACANT" },
+							});
+						}
+						await tx.room.update({
+							where: { id: effectiveRoom.id },
+							data: { status: "OCCUPIED" },
+						});
+
+						const newContract = await tx.rentalContract.create({
+							data: {
+								roomId: effectiveRoom.id,
+								tenantId,
+								billingCycle: effectiveBillingCycle,
+								startDate: effectiveStartDate,
+								endDate: effectiveEndDate,
+								dueDateDay: effectiveStartDate.getDate() || 10,
+								status: "ACTIVE",
+							},
+						});
+
+						const pMonth = effectiveStartDate.getMonth() + 1;
+						const pYear = effectiveStartDate.getFullYear();
+						const invNum = formatDeterministicInvoiceNumber({
+							date: effectiveStartDate,
+							roomNumber: effectiveRoom.roomNumber,
+							property: effectiveRoom.property,
+						});
+
+						const newInvoice = await tx.invoice.create({
+							data: {
+								contractId: newContract.id,
+								invoiceNumber: invNum,
+								periodMonth: pMonth,
+								periodYear: pYear,
+								amount: effectivePrice,
+								dueDate: effectiveStartDate,
+								paidAt: hadPaidInvoice ? effectiveStartDate : null,
+								status: hadPaidInvoice ? "PAID" : "PENDING",
+							},
+						});
+
+						if (hadPaidInvoice) {
+							const adminUser = await tx.user.findFirst({ select: { id: true } });
+							const desc = `Pembayaran Sewa Kamar ${effectiveRoom.roomNumber} - ${updatedTenant.name}`;
+							await tx.transaction.create({
+								data: {
+									propertyId: effectiveRoom.propertyId,
+									createdBy: adminUser?.id || "system",
+									invoiceId: newInvoice.id,
+									type: "INCOME",
+									category: "RENT",
+									classification: "OPERATIONAL",
+									paymentMethod: "TRANSFER",
+									amount: effectivePrice,
+									description: desc,
+									transactionDate: effectiveStartDate,
+								},
+							});
+						}
+
+						return updatedTenant;
+					}
+
 					const isRoomChanged = Boolean(
 						data.roomId && data.roomId !== activeContract.roomId,
 					);
@@ -560,7 +713,12 @@ export class TenantRepository {
 
 							// Jika harga naik dan flag createDifferenceInvoice !== false, terbitkan invoice selisih bulan ini
 							if (priceDiff > 0 && data.createDifferenceInvoice !== false) {
-								const invNumber = `INV-DIFF-${currentYear}${currentMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
+								const invNumber = formatDeterministicInvoiceNumber({
+									date: now,
+									roomNumber: effectiveRoom.roomNumber,
+									property: effectiveRoom.property,
+									sequence: 2,
+								});
 
 								await tx.invoice.create({
 									data: {
@@ -589,10 +747,28 @@ export class TenantRepository {
 							});
 						}
 					} else if (data.billingCycle || data.startDate || data.dueDateDay) {
+						let newEndDate = activeContract.endDate;
+						if (data.billingCycle) {
+							let cycleMonths = 1;
+							if (data.billingCycle === "QUARTERLY") cycleMonths = 3;
+							else if (data.billingCycle === "SEMI_ANNUAL") cycleMonths = 6;
+							else if (data.billingCycle === "ANNUALLY") cycleMonths = 12;
+
+							const baseStart = data.startDate || activeContract.startDate;
+							newEndDate = new Date(
+								baseStart.getFullYear(),
+								baseStart.getMonth() + cycleMonths,
+								baseStart.getDate(),
+							);
+						}
+
 						await tx.rentalContract.update({
 							where: { id: activeContract.id },
 							data: {
-								...(data.billingCycle && { billingCycle: data.billingCycle }),
+								...(data.billingCycle && {
+									billingCycle: data.billingCycle,
+									endDate: newEndDate,
+								}),
 								...(data.startDate && { startDate: data.startDate }),
 								...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
 							},
@@ -656,14 +832,14 @@ export class TenantRepository {
 							}
 
 							if (currentInvoice) {
-								// Update nominal invoice
-								await tx.invoice.update({
-									where: { id: currentInvoice.id },
-									data: { amount: effectiveRentAmount },
-								});
-
-								// Jika invoice ini sudah PAID, sinkronkan juga catatan kas masuk (Transaction)
-								if (currentInvoice.status === "PAID") {
+								if (currentInvoice.status !== "PAID") {
+									// Update nominal invoice jika belum lunas
+									await tx.invoice.update({
+										where: { id: currentInvoice.id },
+										data: { amount: effectiveRentAmount },
+									});
+								} else if (isRoomChanged) {
+									// Jika sudah lunas dan hanya kamar yang berubah, perbarui deskripsi kamar tanpa mengubah nominal kas
 									if (
 										currentInvoice.transactions &&
 										currentInvoice.transactions.length > 0
@@ -674,49 +850,20 @@ export class TenantRepository {
 												oldRoomNumber,
 												targetRoomNumber,
 											);
-											await tx.transaction.update({
-												where: { id: trans.id },
-												data: {
-													amount: effectiveRentAmount,
-													propertyId: targetPropertyId,
-													...(updatedDesc !== trans.description && {
-														description: updatedDesc,
-													}),
-												},
-											});
-										}
-									} else {
-										// Cari transaksi kas pemasukan sewa pendaftaran untuk tenant & properti ini
-										const relatedTx = await tx.transaction.findFirst({
-											where: {
-												propertyId: activeContract.room.propertyId,
-												type: "INCOME",
-												category: "RENT",
-												description: {
-													contains: activeContract.tenant.name,
-													mode: "insensitive",
-												},
-											},
-											orderBy: { createdAt: "desc" },
-										});
-
-										if (relatedTx) {
-											const updatedDesc =
-												updateDescriptionRoom(
-													relatedTx.description,
-													oldRoomNumber,
-													targetRoomNumber,
-												) ||
-												`Pembayaran Sewa Kamar ${targetRoomNumber} - ${data.name || activeContract.tenant.name}`;
-											await tx.transaction.update({
-												where: { id: relatedTx.id },
-												data: {
-													amount: effectiveRentAmount,
-													invoiceId: currentInvoice.id,
-													propertyId: targetPropertyId,
-													description: updatedDesc,
-												},
-											});
+											if (
+												updatedDesc !== trans.description ||
+												targetPropertyId !== trans.propertyId
+											) {
+												await tx.transaction.update({
+													where: { id: trans.id },
+													data: {
+														propertyId: targetPropertyId,
+														...(updatedDesc !== trans.description && {
+															description: updatedDesc,
+														}),
+													},
+												});
+											}
 										}
 									}
 								}
@@ -737,22 +884,31 @@ export class TenantRepository {
 	async deleteTenant(id: string) {
 		return this.db.$transaction(
 			async (tx) => {
-				// Find active contracts
-				const activeContracts = await tx.rentalContract.findMany({
-					where: {
-						tenantId: id,
-						status: "ACTIVE",
-					},
+				// 1. Ambil seluruh kontrak dari tenant ini (aktif maupun non-aktif)
+				const tenantContracts = await tx.rentalContract.findMany({
+					where: { tenantId: id },
+					select: { id: true, roomId: true, status: true },
 				});
+				const contractIds = tenantContracts.map((c) => c.id);
 
-				// Release all rooms
+				// 2. Hapus tagihan/invoice sewa agar tidak menggantung di halaman Pembayaran & Invoice
+				// Seluruh catatan riwayat transaksi kas di tabel Transaction TETAP AMAN & ABADI (onDelete: SetNull pada invoiceId)
+				if (contractIds.length > 0) {
+					await tx.invoice.deleteMany({
+						where: {
+							contractId: { in: contractIds },
+						},
+					});
+				}
+
+				// 3. Lepaskan status kamar kembali ke Kosong (VACANT) & TERMINATED-kan kontrak aktif
+				const activeContracts = tenantContracts.filter((c) => c.status === "ACTIVE");
 				for (const contract of activeContracts) {
 					await tx.room.update({
 						where: { id: contract.roomId },
 						data: { status: "VACANT" },
 					});
 
-					// Pastikan seluruh kontrak aktif pada kamar ini benar-benar TERMINATED agar kamar kembali kosong
 					await tx.rentalContract.updateMany({
 						where: {
 							roomId: contract.roomId,
@@ -762,7 +918,7 @@ export class TenantRepository {
 					});
 				}
 
-				// Mark tenant as INACTIVE
+				// 4. Mark tenant as INACTIVE
 				return tx.tenant.update({
 					where: { id },
 					data: { status: "INACTIVE" },

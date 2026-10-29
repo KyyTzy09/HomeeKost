@@ -17,6 +17,7 @@ interface InvoiceDocPreviewProps {
 	propertyName?: string;
 	propertyImageUrl?: string | null;
 	propertyAddress?: string | null;
+	bankAccountInfo?: string | null;
 	onDownloadPdf?: (invoice: InvoiceItem) => void;
 }
 
@@ -25,6 +26,7 @@ export function InvoiceDocPreview({
 	propertyName = "HomeeKost",
 	propertyImageUrl,
 	propertyAddress,
+	bankAccountInfo,
 	onDownloadPdf,
 }: InvoiceDocPreviewProps) {
 	if (!invoice) {
@@ -43,6 +45,8 @@ export function InvoiceDocPreview({
 	}
 
 	const isPaid = invoice.status === "PAID";
+	const isOverdue = invoice.status === "OVERDUE";
+	const isPartial = invoice.status === "PARTIAL";
 
 	const handlePrint = () => {
 		if (onDownloadPdf) {
@@ -61,7 +65,11 @@ export function InvoiceDocPreview({
 						className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${
 							isPaid
 								? "bg-[#e8f2ea] text-[#568062]"
-								: "bg-[#fbf4e6] text-[#b18a4b]"
+								: isOverdue
+									? "bg-[#f7e9e8] text-[#a65f5b]"
+									: isPartial
+										? "bg-[#fef3c7] text-[#92400e]"
+										: "bg-[#fbf4e6] text-[#b18a4b]"
 						}`}
 					>
 						{isPaid ? (
@@ -69,7 +77,13 @@ export function InvoiceDocPreview({
 						) : (
 							<Clock className="w-3.5 h-3.5" />
 						)}
-						{isPaid ? "Status: LUNAS" : "Status: MENUNGGU PEMBAYARAN"}
+						{isPaid
+							? "Status: LUNAS"
+							: isOverdue
+								? "Status: TERLAMBAT"
+								: isPartial
+									? "Status: CICILAN"
+									: "Status: BELUM LUNAS"}
 					</span>
 				</div>
 
@@ -253,17 +267,31 @@ export function InvoiceDocPreview({
 							Petunjuk Pembayaran Resmi:
 						</h4>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-							<div className="bg-white p-3 rounded-lg border border-[#e4e9e4]">
-								<span className="text-[10px] text-[#737873] block">
-									Transfer Bank BCA:
-								</span>
-								<b className="text-sm tabular-nums font-bold text-[#252925] tracking-wider block mt-0.5">
-									8735081290
-								</b>
-								<span className="text-[11px] text-[#737873] block mt-0.5">
-									a.n. <b>Bude Frisda / Pengelola Kos</b>
-								</span>
-							</div>
+							{bankAccountInfo?.trim() ? (
+								<div className="bg-white p-3 rounded-lg border border-[#e4e9e4]">
+									<span className="text-[10px] text-[#737873] block">
+										Rekening Pembayaran Resmi:
+									</span>
+									<b className="text-sm font-bold text-[#252925] block mt-0.5">
+										{bankAccountInfo.trim()}
+									</b>
+									<span className="text-[11px] text-[#737873] block mt-0.5">
+										Transfer sesuai rekening properti di atas
+									</span>
+								</div>
+							) : (
+								<div className="bg-white p-3 rounded-lg border border-[#e4e9e4]">
+									<span className="text-[10px] text-[#737873] block">
+										Transfer Bank BCA:
+									</span>
+									<b className="text-sm tabular-nums font-bold text-[#252925] tracking-wider block mt-0.5">
+										8735081290
+									</b>
+									<span className="text-[11px] text-[#737873] block mt-0.5">
+										a.n. <b>Bude Frisda / Pengelola Kos</b>
+									</span>
+								</div>
+							)}
 
 							<div className="bg-white p-3 rounded-lg border border-[#e4e9e4] flex items-center justify-between">
 								<div>

@@ -1,3 +1,4 @@
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 import { prisma } from "../../db.ts";
 import type {
 	InvoiceStatus,
@@ -5,10 +6,12 @@ import type {
 	Prisma,
 	PrismaClient,
 } from "../../generated/prisma/client.js";
+import { getWibStartOfDay } from "../../lib/payment-utils.ts";
 
 export interface InvoiceFindManyParams {
 	propertyIds?: string[];
 	status?: InvoiceStatus;
+	statusFilter?: "ALL" | "PAID" | "UNPAID" | "OVERDUE" | "PARTIAL" | InvoiceStatus;
 	month?: number;
 	year?: number;
 	search?: string;
@@ -24,66 +27,104 @@ export class InvoiceRepository {
 	private buildWhereClause(
 		params: InvoiceFindManyParams,
 	): Prisma.InvoiceWhereInput {
-		const where: Prisma.InvoiceWhereInput = {};
+		const conditions: Prisma.InvoiceWhereInput[] = [];
 
 		if (params.propertyIds && params.propertyIds.length > 0) {
-			where.contract = {
-				room: {
-					propertyId: { in: params.propertyIds },
+			conditions.push({
+				contract: {
+					room: {
+						propertyId: { in: params.propertyIds },
+					},
 				},
-			};
+			});
 		}
 
-		if (params.status) {
-			where.status = params.status;
+		const todayWibStart = getWibStartOfDay();
+
+		if (params.statusFilter && params.statusFilter !== "ALL") {
+			if (params.statusFilter === "PAID") {
+				conditions.push({ status: "PAID" });
+			} else if (
+				params.statusFilter === "UNPAID" ||
+				params.statusFilter === "PENDING"
+			) {
+				// Belum Lunas: Belum lunas penuh dan tanggal jatuh tempo belum terlewat (hari ini atau masa depan)
+				conditions.push({
+					status: { notIn: ["PAID", "CANCELLED"] },
+					dueDate: { gte: todayWibStart },
+				});
+			} else if (params.statusFilter === "OVERDUE") {
+				// Terlambat: Belum lunas dan sudah melewati tanggal jatuh tempo
+				conditions.push({
+					status: { notIn: ["PAID", "CANCELLED"] },
+					OR: [
+						{ status: "OVERDUE" },
+						{ dueDate: { lt: todayWibStart } },
+					],
+				});
+			} else if (params.statusFilter === "PARTIAL") {
+				// Cicilan: Belum lunas dan memiliki transaksi cicilan
+				conditions.push({
+					status: { notIn: ["PAID", "CANCELLED"] },
+					transactions: { some: {} },
+				});
+			} else if (params.statusFilter === "CANCELLED") {
+				conditions.push({ status: "CANCELLED" });
+			}
+		} else if (params.status) {
+			conditions.push({ status: params.status });
 		}
 
 		if (params.month) {
-			where.periodMonth = params.month;
+			conditions.push({ periodMonth: params.month });
 		}
 
 		if (params.year) {
-			where.periodYear = params.year;
+			conditions.push({ periodYear: params.year });
 		}
 
 		if (params.search?.trim()) {
 			const search = params.search.trim();
-			where.OR = [
-				{ invoiceNumber: { contains: search, mode: "insensitive" } },
-				{
-					contract: {
-						tenant: {
-							name: { contains: search, mode: "insensitive" },
-						},
-					},
-				},
-				{
-					contract: {
-						tenant: {
-							phoneNumber: { contains: search, mode: "insensitive" },
-						},
-					},
-				},
-				{
-					contract: {
-						room: {
-							roomNumber: { contains: search, mode: "insensitive" },
-						},
-					},
-				},
-				{
-					contract: {
-						room: {
-							property: {
+			conditions.push({
+				OR: [
+					{ invoiceNumber: { contains: search, mode: "insensitive" } },
+					{
+						contract: {
+							tenant: {
 								name: { contains: search, mode: "insensitive" },
 							},
 						},
 					},
-				},
-			];
+					{
+						contract: {
+							tenant: {
+								phoneNumber: { contains: search, mode: "insensitive" },
+							},
+						},
+					},
+					{
+						contract: {
+							room: {
+								roomNumber: { contains: search, mode: "insensitive" },
+							},
+						},
+					},
+					{
+						contract: {
+							room: {
+								property: {
+									name: { contains: search, mode: "insensitive" },
+								},
+							},
+						},
+					},
+				],
+			});
 		}
 
-		return where;
+		if (conditions.length === 0) return {};
+		if (conditions.length === 1) return conditions[0];
+		return { AND: conditions };
 	}
 
 	async findMany(params: InvoiceFindManyParams) {
@@ -155,6 +196,8 @@ export class InvoiceRepository {
 		if (month) baseWhere.periodMonth = month;
 		if (year) baseWhere.periodYear = year;
 
+		const todayWibStart = getWibStartOfDay();
+
 		const [
 			totalInvoices,
 			paidInvoices,
@@ -167,10 +210,21 @@ export class InvoiceRepository {
 				where: { ...baseWhere, status: "PAID" },
 			}),
 			this.db.invoice.count({
-				where: { ...baseWhere, status: "PENDING" },
+				where: {
+					...baseWhere,
+					status: { notIn: ["PAID", "CANCELLED"] },
+					dueDate: { gte: todayWibStart },
+				},
 			}),
 			this.db.invoice.count({
-				where: { ...baseWhere, status: "OVERDUE" },
+				where: {
+					...baseWhere,
+					status: { notIn: ["PAID", "CANCELLED"] },
+					OR: [
+						{ status: "OVERDUE" },
+						{ dueDate: { lt: todayWibStart } },
+					],
+				},
 			}),
 			this.db.invoice.findMany({
 				where: baseWhere,
@@ -507,9 +561,19 @@ export class InvoiceRepository {
 			select: {
 				id: true,
 				tenantId: true,
+				billingCycle: true,
+				startDate: true,
+				endDate: true,
 				room: {
 					select: {
 						price: true,
+						roomNumber: true,
+						property: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
 					},
 				},
 				invoices: {
@@ -551,6 +615,16 @@ export class InvoiceRepository {
 
 		for (let i = 0; i < contracts.length; i++) {
 			const contract = contracts[i];
+			// Lewati jika kontrak multi-bulan (Triwulan, Semesteran, Tahunan) masih aktif mencakup periode ini
+			const targetPeriodStart = new Date(periodYear, periodMonth - 1, 1);
+			if (
+				contract.billingCycle !== "MONTHLY" &&
+				contract.endDate &&
+				targetPeriodStart < contract.endDate
+			) {
+				continue;
+			}
+
 			// Lewati jika sudah ada invoice untuk periode ini (di kontrak ini maupun kontrak sebelumnya)
 			if (
 				contract.invoices.length > 0 ||
@@ -559,9 +633,12 @@ export class InvoiceRepository {
 				continue;
 			}
 
-			const monthPadded = String(periodMonth).padStart(2, "0");
-			const invoiceNumber = `INV-${periodYear}${monthPadded}-${timestamp}${String(i + 1).padStart(3, "0")}`;
 			const dueDate = new Date(periodYear, periodMonth - 1, dueDateDay);
+			const invoiceNumber = formatDeterministicInvoiceNumber({
+				date: dueDate,
+				roomNumber: contract.room.roomNumber,
+				property: contract.room.property,
+			});
 			const amount = Number(contract.room.price);
 
 			toCreate.push({

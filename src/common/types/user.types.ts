@@ -1,4 +1,5 @@
 export type AppUserRole = "SUPER_ADMIN" | "ADMIN";
+export type AuditActorRole = AppUserRole | "SYSTEM";
 export type AppUserStatus = "ACTIVE" | "INACTIVE";
 
 export interface UserItem {
@@ -15,8 +16,9 @@ export interface UserItem {
 export interface AuditLogItem {
 	id: string | number;
 	time: string;
+	rawDate?: string;
 	userName: string;
-	userRole: AppUserRole;
+	userRole: AuditActorRole;
 	activity: string;
 	detail: string;
 }
@@ -33,7 +35,6 @@ export interface UserProfileDetail {
 		id: string;
 		name: string;
 		address: string;
-		totalRooms: number;
 	}>;
 	createdAt?: string;
 }

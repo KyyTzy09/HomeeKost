@@ -11,12 +11,13 @@ export interface InvoicePdfData {
 	createdDate: string;
 	dueDate: string;
 	amount: number;
-	status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
+	status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED" | "PARTIAL";
 	paidDate?: string | null;
 	description?: string;
 	bankName?: string;
 	bankAccount?: string;
 	accountHolder?: string;
+	bankAccountInfo?: string | null;
 }
 
 /**
@@ -43,8 +44,34 @@ export async function generateInvoicePdf(
 	const borderGray = rgb(0.89, 0.91, 0.89); // #e4e9e4
 	const greenSuccess = rgb(0.34, 0.5, 0.38); // #568062
 	const amberWarning = rgb(0.69, 0.54, 0.29); // #b18a4b
+	const redDanger = rgb(0.65, 0.37, 0.36); // #a65f5b
 
 	const isPaid = data.status === "PAID";
+	const isOverdue = data.status === "OVERDUE";
+	const isPartial = data.status === "PARTIAL";
+
+	const statusColor = isPaid
+		? greenSuccess
+		: isOverdue
+			? redDanger
+			: amberWarning;
+
+	const stampText = isPaid
+		? "LUNAS"
+		: isOverdue
+			? "TERLAMBAT"
+			: isPartial
+				? "CICILAN"
+				: "BELUM LUNAS";
+
+	const statusDescription = isPaid
+		? "SUDAH DIVERIFIKASI LUNAS"
+		: isOverdue
+			? "TAGIHAN TERLAMBAT"
+			: isPartial
+				? "PEMBAYARAN CICILAN"
+				: "BELUM LUNAS";
+
 	const margin = 40;
 	let currentY = height - margin;
 
@@ -134,13 +161,12 @@ export async function generateInvoicePdf(
 
 	// ─── 2. Status Stamp ───────────────────────────────────────────────
 	currentY -= 15;
-	const stampText = isPaid ? "LUNAS" : "MENUNGGU";
 	page.drawRectangle({
 		x: width - margin - 120,
 		y: currentY - 28,
 		width: 120,
 		height: 28,
-		borderColor: isPaid ? greenSuccess : amberWarning,
+		borderColor: statusColor,
 		borderWidth: 1.5,
 	});
 	page.drawText(stampText, {
@@ -148,7 +174,7 @@ export async function generateInvoicePdf(
 		y: currentY - 18,
 		size: 13,
 		font: fontBold,
-		color: isPaid ? greenSuccess : amberWarning,
+		color: statusColor,
 	});
 
 	// ─── 3. Tenant & Rental Meta Box ──────────────────────────────────
@@ -205,12 +231,12 @@ export async function generateInvoicePdf(
 		font: fontBold,
 		color: mutedGray,
 	});
-	page.drawText(isPaid ? "SUDAH DIVERIFIKASI LUNAS" : "MENUNGGU PEMBAYARAN", {
+	page.drawText(statusDescription, {
 		x: width / 2 + 30,
 		y: currentY - 34,
 		size: 11,
 		font: fontBold,
-		color: isPaid ? greenSuccess : amberWarning,
+		color: statusColor,
 	});
 	page.drawText(
 		isPaid
@@ -346,30 +372,48 @@ export async function generateInvoicePdf(
 			font: fontBold,
 			color: charcoal,
 		});
-		page.drawText(`Bank: ${data.bankName || "BCA (Bank Central Asia)"}`, {
-			x: margin + 12,
-			y: currentY - 28,
-			size: 9,
-			font: fontRegular,
-			color: mutedGray,
-		});
-		page.drawText(`No. Rekening: ${data.bankAccount || "8735081290"}`, {
-			x: margin + 12,
-			y: currentY - 42,
-			size: 11,
-			font: fontBold,
-			color: charcoal,
-		});
-		page.drawText(
-			`Atas Nama: ${data.accountHolder || "Bude Frisda / Pengelola Kos"}`,
-			{
-				x: width / 2 + 10,
-				y: currentY - 42,
-				size: 9,
+
+		if (data.bankAccountInfo?.trim()) {
+			page.drawText(data.bankAccountInfo.trim(), {
+				x: margin + 12,
+				y: currentY - 30,
+				size: 11,
 				font: fontBold,
+				color: charcoal,
+			});
+			page.drawText("Transfer sesuai rekening resmi properti di atas", {
+				x: margin + 12,
+				y: currentY - 44,
+				size: 8.5,
+				font: fontRegular,
 				color: mutedGray,
-			},
-		);
+			});
+		} else {
+			page.drawText(`Bank: ${data.bankName || "BCA (Bank Central Asia)"}`, {
+				x: margin + 12,
+				y: currentY - 28,
+				size: 9,
+				font: fontRegular,
+				color: mutedGray,
+			});
+			page.drawText(`No. Rekening: ${data.bankAccount || "8735081290"}`, {
+				x: margin + 12,
+				y: currentY - 42,
+				size: 11,
+				font: fontBold,
+				color: charcoal,
+			});
+			page.drawText(
+				`Atas Nama: ${data.accountHolder || "Bude Frisda / Pengelola Kos"}`,
+				{
+					x: width / 2 + 10,
+					y: currentY - 42,
+					size: 9,
+					font: fontBold,
+					color: mutedGray,
+				},
+			);
+		}
 		currentY -= bankBoxHeight;
 	} else {
 		currentY -= totalBannerHeight;

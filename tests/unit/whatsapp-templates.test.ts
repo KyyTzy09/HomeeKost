@@ -139,7 +139,7 @@ describe("WhatsApp Notification Message Templates", () => {
 	});
 
 	describe("monthlyFirstReminder Template", () => {
-		it("harus menyusun pengingat tagihan tanggal 1 tanpa kata 'Kak', menyebut masa bayar tanggal 1 s/d 5, dan klausul denda", () => {
+		it("harus menyusun pengingat tagihan tanggal 1 dengan sapaan Kak dan pengirim Admin Kos", () => {
 			const msg = (whatsappTemplates as any).monthlyFirstReminder({
 				tenantName: "Ahmad Priyadi",
 				propertyName: "Kost Harmoni",
@@ -152,19 +152,45 @@ describe("WhatsApp Notification Message Templates", () => {
 				documentUrl: "http://localhost:3000/api/invoices/123/document",
 			});
 
-			expect(msg).toContain("Halo *Ahmad Priyadi*");
-			expect(msg).not.toContain("Halo Kak");
-			expect(msg).toContain("Hari ini sudah tanggal 1 November 2026");
-			expect(msg).toContain("Tanggal 1 s/d 5 November 2026");
-			expect(msg).toContain("dikenakan denda keterlambatan");
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).toContain("Kost Harmoni");
+			expect(msg).toContain("A-01");
+			expect(msg).toContain("INV-202611-001");
 			expect(msg).toContain("Rp1.500.000");
 			expect(msg).toContain("8735081290");
 			expect(msg).toContain("Bude Frisda");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
+		});
+	});
+
+	describe("monthlyFifthReminder Template", () => {
+		it("harus menyusun pengingat jatuh tempo tanggal 5 dengan sapaan Kak, batas akhir bayar, dan pengirim Admin Kos", () => {
+			const msg = (whatsappTemplates as any).monthlyFifthReminder({
+				tenantName: "Ahmad Priyadi",
+				propertyName: "Kost Harmoni",
+				roomNumber: "A-01",
+				invoiceNumber: "INV-202611-001",
+				period: "November 2026",
+				amount: 1500000,
+				bankAccount: "8735081290",
+				accountHolder: "Bude Frisda",
+				documentUrl: "http://localhost:3000/api/invoices/123/document",
+			});
+
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).toContain("PENGINGAT BATAS AKHIR PEMBAYARAN HARI INI");
+			expect(msg).toContain("Kost Harmoni");
+			expect(msg).toContain("A-01");
+			expect(msg).toContain("INV-202611-001");
+			expect(msg).toContain("Rp1.500.000");
+			expect(msg).toContain("8735081290");
+			expect(msg).toContain("Bude Frisda");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
 		});
 	});
 
 	describe("paymentReceipt Template on-time variation", () => {
-		it("harus menyertakan apresiasi kedisiplinan dan tanpa kata 'Kak' jika pembayaran tepat waktu", () => {
+		it("harus menyertakan doa kenyamanan hunian dan pengirim Admin Kos jika tepat waktu", () => {
 			const msg = whatsappTemplates.paymentReceipt({
 				tenantName: "Ahmad Priyadi",
 				propertyName: "Kost Harmoni",
@@ -177,13 +203,13 @@ describe("WhatsApp Notification Message Templates", () => {
 				isOnTime: true,
 			});
 
-			expect(msg).toContain("Halo *Ahmad Priyadi*");
-			expect(msg).not.toContain("Halo Kak");
-			expect(msg).toContain("tepat waktu");
-			expect(msg).toContain("mengapresiasi kedisiplinan");
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).toContain("telah kami terima dan diverifikasi lunas");
+			expect(msg).toContain("Semoga selalu betah dan nyaman tinggal");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
 		});
 
-		it("harus menggunakan konfirmasi formal standar jika pembayaran terlambat", () => {
+		it("harus menggunakan konfirmasi standar dan pengirim Admin Kos jika pembayaran terlambat", () => {
 			const msg = whatsappTemplates.paymentReceipt({
 				tenantName: "Ahmad Priyadi",
 				propertyName: "Kost Harmoni",
@@ -196,10 +222,10 @@ describe("WhatsApp Notification Message Templates", () => {
 				isOnTime: false,
 			});
 
-			expect(msg).toContain("Halo *Ahmad Priyadi*");
-			expect(msg).not.toContain("Halo Kak");
-			expect(msg).not.toContain("tepat waktu");
-			expect(msg).toContain("telah kami terima dan diverifikasi");
+			expect(msg).toContain("Halo Kak *Ahmad Priyadi*! 👋");
+			expect(msg).not.toContain("Semoga selalu betah dan nyaman tinggal");
+			expect(msg).toContain("Terima kasih atas kerja samanya");
+			expect(msg).toContain("Admin Kos Kost Harmoni");
 		});
 	});
 
@@ -228,6 +254,85 @@ describe("WhatsApp Notification Message Templates", () => {
 			expect(msg).toContain("PRIMA 🌟");
 			expect(msg).toContain("90%");
 			expect(msg).toContain("/dashboard/reports");
+		});
+	});
+
+	describe("Dynamic Property Bank Account Info (bankAccountInfo)", () => {
+		it("harus menyertakan bankAccountInfo khusus cabang pada template newInvoice", () => {
+			const msg = whatsappTemplates.newInvoice({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				dueDate: "05 November 2026",
+				amount: 1200000,
+				bankAccountInfo: "Mandiri 1370019283721 a.n. Pak Hendra",
+			});
+
+			expect(msg).toContain("Mandiri 1370019283721 a.n. Pak Hendra");
+			expect(msg).not.toContain("8735081290");
+		});
+
+		it("harus menyertakan bankAccountInfo khusus cabang pada monthlyFirstReminder", () => {
+			const msg = (whatsappTemplates as any).monthlyFirstReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				amount: 1200000,
+				bankAccountInfo: "BSI 7123984719 a.n. Ibu Siti",
+			});
+
+			expect(msg).toContain("BSI 7123984719 a.n. Ibu Siti");
+			expect(msg).not.toContain("8735081290");
+		});
+
+		it("harus menyertakan bankAccountInfo khusus cabang pada monthlyFifthReminder", () => {
+			const msg = (whatsappTemplates as any).monthlyFifthReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				amount: 1200000,
+				bankAccountInfo: "BSI 7123984719 a.n. Ibu Siti",
+			});
+
+			expect(msg).toContain("BSI 7123984719 a.n. Ibu Siti");
+			expect(msg).not.toContain("8735081290");
+		});
+
+		it("harus menyertakan bankAccountInfo khusus cabang pada dueReminder & installmentReminder", () => {
+			const dueMsg = whatsappTemplates.dueReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				dueDate: "05 November 2026",
+				daysRemaining: 1,
+				amount: 1200000,
+				bankAccountInfo: "BNI 0987654321 a.n. Kost Sakura Official",
+			});
+
+			expect(dueMsg).toContain("BNI 0987654321 a.n. Kost Sakura Official");
+
+			const instMsg = (whatsappTemplates as any).installmentReminder({
+				tenantName: "Rian Pratama",
+				propertyName: "Kost Sakura",
+				roomNumber: "C-02",
+				invoiceNumber: "INV-202611-009",
+				period: "November 2026",
+				totalAmount: 1200000,
+				totalPaid: 600000,
+				remainingAmount: 600000,
+				endOfMonthDate: "30 November 2026",
+				bankAccountInfo: "BNI 0987654321 a.n. Kost Sakura Official",
+			});
+
+			expect(instMsg).toContain("BNI 0987654321 a.n. Kost Sakura Official");
 		});
 	});
 });

@@ -17,6 +17,7 @@ import {
 	ProfileInfoForm,
 	ProfileManagedPropertiesCard,
 	ProfileOverviewCard,
+	ProfileServerAlertCard,
 	ResetDataDialog,
 	SecuritySettingsDialog,
 } from "../../components/profile/index.ts";
@@ -230,6 +231,13 @@ function ProfilePage() {
 						onSelectProperty={handleSelectProperty}
 						isSwitchingProperty={setActivePropertyMutation.isPending}
 					/>
+
+					{/* Pengaturan Notifikasi WhatsApp Kapasitas Server (Admin & SuperAdmin) */}
+					{(isSuperAdmin ||
+						currentProfile.role === "ADMIN" ||
+						user?.role === "ADMIN") && (
+						<ProfileServerAlertCard onShowToast={showToast} />
+					)}
 
 					{/* Zona Pengaturan Data (Khusus SuperAdmin) */}
 					{isSuperAdmin && (

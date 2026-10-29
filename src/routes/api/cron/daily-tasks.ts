@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { engagementService } from "../../../data/services/engagement.service.ts";
+import { reportService } from "../../../data/services/report.service.ts";
 
 export const Route = createFileRoute("/api/cron/daily-tasks")({
 	server: {
@@ -42,11 +43,28 @@ async function handleCronRequest(request: Request): Promise<Response> {
 	}
 
 	try {
-		const result = await engagementService.runDailyCronTasks();
-		return new Response(JSON.stringify(result), {
-			status: 200,
-			headers: { "Content-Type": "application/json" },
-		});
+		const [engagementResult, reportResult] = await Promise.allSettled([
+			engagementService.runDailyCronTasks(),
+			reportService.runDailyReportUpdateCron(),
+		]);
+
+		return new Response(
+			JSON.stringify({
+				success: true,
+				engagement:
+					engagementResult.status === "fulfilled"
+						? engagementResult.value
+						: { error: String(engagementResult.reason) },
+				reports:
+					reportResult.status === "fulfilled"
+						? reportResult.value
+						: { error: String(reportResult.reason) },
+			}),
+			{
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			},
+		);
 	} catch (error) {
 		console.error("[CronApi] Error executing daily cron tasks:", error);
 		return new Response(

@@ -1,3 +1,4 @@
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 import type {
 	OccupationStatus,
 	RentDuration,
@@ -12,6 +13,7 @@ import type {
 import type { BillingCycle } from "../../generated/prisma/client.js";
 import { formatDate, getMonthName } from "../../lib/date-utils.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
+import { getWibStartOfDay } from "../../lib/payment-utils.ts";
 import { formatDisplayPhone, sanitizePhone } from "../../lib/phone-utils.ts";
 import { roomRepository } from "../repositories/room.repository.ts";
 import { tenantRepository } from "../repositories/tenant.repository.ts";
@@ -247,16 +249,32 @@ export class TenantService {
 			const activeContract = t.rentalContracts?.[0] || null;
 			const room = activeContract?.room || null;
 
-			// Determine payment status
-			let paymentStatus: TenantPaymentStatus = "Lancar";
-			if (activeContract?.invoices) {
-				const hasOverdue = activeContract.invoices.some(
-					(inv) =>
-						inv.status === "OVERDUE" ||
-						(inv.status === "PENDING" && new Date(inv.dueDate) < new Date()),
-				);
+			// Determine payment status (Standardized to 3 statuses: Lunas, Belum Lunas, Terlambat)
+			let paymentStatus: TenantPaymentStatus = "Belum Lunas";
+			const invoices = activeContract?.invoices || [];
+
+			if (invoices.length > 0) {
+				const todayWib = getWibStartOfDay();
+				const hasOverdue = invoices.some((inv) => {
+					if (inv.status === "PAID" || inv.status === "CANCELLED") return false;
+					const dueWib = getWibStartOfDay(inv.dueDate);
+					return (
+						inv.status === "OVERDUE" || dueWib.getTime() < todayWib.getTime()
+					);
+				});
+
 				if (hasOverdue) {
 					paymentStatus = "Terlambat";
+				} else {
+					const allSettled = invoices.every((inv) => {
+						if (inv.status === "PAID" || inv.status === "CANCELLED") return true;
+						const txTotal = (
+							(inv as { transactions?: Array<{ amount: unknown }> })
+								.transactions || []
+						).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+						return txTotal >= Number(inv.amount);
+					});
+					paymentStatus = allSettled ? "Lunas" : "Belum Lunas";
 				}
 			}
 
@@ -341,15 +359,32 @@ export class TenantService {
 		const activeContract = t.rentalContracts?.[0] || null;
 		const room = activeContract?.room || null;
 
-		let paymentStatus: TenantPaymentStatus = "Lancar";
-		if (activeContract?.invoices) {
-			const hasOverdue = activeContract.invoices.some(
-				(inv) =>
-					inv.status === "OVERDUE" ||
-					(inv.status === "PENDING" && new Date(inv.dueDate) < new Date()),
-			);
+		// Determine payment status (Standardized to 3 statuses: Lunas, Belum Lunas, Terlambat)
+		let paymentStatus: TenantPaymentStatus = "Belum Lunas";
+		const invoices = activeContract?.invoices || [];
+
+		if (invoices.length > 0) {
+			const todayWib = getWibStartOfDay();
+			const hasOverdue = invoices.some((inv) => {
+				if (inv.status === "PAID" || inv.status === "CANCELLED") return false;
+				const dueWib = getWibStartOfDay(inv.dueDate);
+				return (
+					inv.status === "OVERDUE" || dueWib.getTime() < todayWib.getTime()
+				);
+			});
+
 			if (hasOverdue) {
 				paymentStatus = "Terlambat";
+			} else {
+				const allSettled = invoices.every((inv) => {
+					if (inv.status === "PAID" || inv.status === "CANCELLED") return true;
+					const txTotal = (
+						(inv as { transactions?: Array<{ amount: unknown }> })
+							.transactions || []
+					).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+					return txTotal >= Number(inv.amount);
+				});
+				paymentStatus = allSettled ? "Lunas" : "Belum Lunas";
 			}
 		}
 
@@ -521,7 +556,7 @@ export class TenantService {
 					: ("PENDING" as const);
 				const pMonth = cycleStart.getMonth() + 1;
 				const pYear = cycleStart.getFullYear();
-				const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-${c + 1}`;
+				const invNum = formatDeterministicInvoiceNumber({ date: cycleStart, roomNumber: room.roomNumber, property: room.property, sequence: c + 1 });
 
 				// 1 Invoice per Siklus Sewa (misal Rp 5.100.000 per Semester)
 				invoicesToCreate.push({
@@ -566,7 +601,11 @@ export class TenantService {
 			);
 			const pMonth = startDate.getMonth() + 1;
 			const pYear = startDate.getFullYear();
-			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+			const invNum = formatDeterministicInvoiceNumber({
+				date: startDate,
+				roomNumber: room.roomNumber,
+				property: room.property,
+			});
 
 			invoicesToCreate.push({
 				invoiceNumber: invNum,
@@ -606,7 +645,11 @@ export class TenantService {
 			);
 			const pMonth = startDate.getMonth() + 1;
 			const pYear = startDate.getFullYear();
-			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+			const invNum = formatDeterministicInvoiceNumber({
+				date: startDate,
+				roomNumber: room.roomNumber,
+				property: room.property,
+			});
 
 			transactionsToCreate.push({
 				propertyId: room.propertyId,
@@ -641,7 +684,11 @@ export class TenantService {
 			);
 			const pMonth = startDate.getMonth() + 1;
 			const pYear = startDate.getFullYear();
-			const invNum = `INV-${pYear}${pMonth.toString().padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}-1`;
+			const invNum = formatDeterministicInvoiceNumber({
+				date: startDate,
+				roomNumber: room.roomNumber,
+				property: room.property,
+			});
 
 			invoicesToCreate.push({
 				invoiceNumber: invNum,
@@ -727,7 +774,7 @@ export class TenantService {
 			registrationDate: tenant.createdAt.toISOString().slice(0, 10),
 			notes: input.notes || null,
 			ktpUrl: tenant.ktpUrl || null,
-			paymentStatus: "Lancar",
+			paymentStatus: hadPaidInvoice ? "Lunas" : "Belum Lunas",
 			contractId: contract.id,
 			roomId: room.id,
 		};
@@ -774,6 +821,10 @@ export class TenantService {
 				? input.createDifferenceInvoice !== false
 				: true;
 		const newRentAmount = input.rent ? parseRupiah(input.rent) : undefined;
+		const contractUpdateScope =
+			"contractUpdateScope" in input && input.contractUpdateScope
+				? input.contractUpdateScope
+				: "CURRENT_ONLY";
 
 		await this.tenantRepo.updateTenantWithContract(id, {
 			name: input.name,
@@ -800,6 +851,7 @@ export class TenantService {
 			updatePendingInvoiceAmount,
 			createDifferenceInvoice,
 			newRentAmount,
+			contractUpdateScope,
 		});
 
 		const fullTenant = await this.getTenantById(id);
@@ -833,7 +885,7 @@ export class TenantService {
 			emergencyPhone: input.emergencyPhone || null,
 			registrationDate: new Date().toISOString().slice(0, 10),
 			notes: input.notes || null,
-			paymentStatus: "Lancar",
+			paymentStatus: "Belum Lunas",
 		};
 	}
 

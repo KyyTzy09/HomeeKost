@@ -79,7 +79,7 @@ export const updateTenantSchema = tenantSchema.extend({
 	roomChangeMode: z.enum(["CORRECTION", "TRANSFER"]).nullable().optional(),
 	updatePendingInvoiceAmount: z.boolean().nullable().optional(),
 	createDifferenceInvoice: z.boolean().nullable().optional(),
+	contractUpdateScope: z.enum(["ALL_HISTORY", "CURRENT_ONLY"]).nullable().optional(),
 });
 
 export type UpdateTenantFormValues = z.infer<typeof updateTenantSchema>;
-

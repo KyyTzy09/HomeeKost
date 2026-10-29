@@ -306,18 +306,22 @@ function RoomsPage() {
 			) : filteredRooms.length === 0 ? (
 				<div className="p-12 bg-white border border-[#e4e9e4] rounded-2xl text-center shadow-[0_2px_12px_rgba(48,65,53,0.055)]">
 					<p className="text-xs text-[#737873]">
-						Tidak ada kamar yang sesuai dengan filter ini.
+						{activeFilter === "all"
+							? "Belum ada kamar yang terdaftar di properti kos ini."
+							: `Tidak ada kamar dengan status "${activeFilter}".`}
 					</p>
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						className="mt-3 text-xs border-[#e4e9e4]"
-						onClick={handleOpenAdd}
-					>
-						<Plus className="w-3 h-3 mr-1" />
-						Tambah Kamar Pertama
-					</Button>
+					{activeFilter === "all" && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="mt-3 text-xs border-[#e4e9e4]"
+							onClick={handleOpenAdd}
+						>
+							<Plus className="w-3 h-3 mr-1" />
+							Tambah Kamar Pertama
+						</Button>
+					)}
 				</div>
 			) : (
 				<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">

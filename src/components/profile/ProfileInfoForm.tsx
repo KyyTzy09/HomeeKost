@@ -29,7 +29,6 @@ export function ProfileInfoForm({
 			name: profile.name || "",
 			email: profile.email || "",
 			phoneNumber: profile.phoneNumber || "",
-			newPassword: "",
 		},
 		validators: {
 			onSubmit: ({ value }) => {
@@ -57,7 +56,6 @@ export function ProfileInfoForm({
 			name: profile.name || "",
 			email: profile.email || "",
 			phoneNumber: profile.phoneNumber || "",
-			newPassword: "",
 		});
 	}, [profile, form.reset]);
 
@@ -142,34 +140,6 @@ export function ProfileInfoForm({
 									field.handleChange(sanitized);
 								}}
 								placeholder="08xxxxxxxxxx"
-								className="h-10 text-xs border-[#dfe7e0] bg-[#fbfcfb] focus:ring-[#8fa594]"
-							/>
-							{field.state.meta.errors.length > 0 && (
-								<p className="text-[11px] text-[#b66b68] mt-1 font-medium">
-									{String(field.state.meta.errors[0])}
-								</p>
-							)}
-						</div>
-					)}
-				</form.Field>
-
-				{/* Password Baru (Opsional) */}
-				<form.Field name="newPassword">
-					{(field) => (
-						<div className="space-y-1.5">
-							<div className="flex items-center justify-between">
-								<Label className="text-xs font-semibold text-[#252925]">
-									Password Baru (Opsional)
-								</Label>
-								<span className="text-[10px] text-[#737873]">
-									Minimal 8 karakter
-								</span>
-							</div>
-							<Input
-								type="password"
-								value={field.state.value}
-								onChange={(e) => field.handleChange(e.target.value)}
-								placeholder="Kosongkan jika tidak ingin mengganti kata sandi"
 								className="h-10 text-xs border-[#dfe7e0] bg-[#fbfcfb] focus:ring-[#8fa594]"
 							/>
 							{field.state.meta.errors.length > 0 && (

@@ -87,6 +87,7 @@ export class PropertyRepository {
 		name: string;
 		address: string;
 		description?: string | null;
+		bankAccountInfo?: string | null;
 		imageUrl?: string | null;
 	}) {
 		return this.db.property.create({
@@ -94,6 +95,7 @@ export class PropertyRepository {
 				name: data.name,
 				address: data.address,
 				description: data.description ?? null,
+				bankAccountInfo: data.bankAccountInfo ?? null,
 				imageUrl: data.imageUrl ?? null,
 			},
 			include: {
@@ -108,6 +110,7 @@ export class PropertyRepository {
 			name?: string;
 			address?: string;
 			description?: string | null;
+			bankAccountInfo?: string | null;
 			imageUrl?: string | null;
 		},
 	) {
@@ -118,6 +121,9 @@ export class PropertyRepository {
 				...(data.address !== undefined && { address: data.address }),
 				...(data.description !== undefined && {
 					description: data.description,
+				}),
+				...(data.bankAccountInfo !== undefined && {
+					bankAccountInfo: data.bankAccountInfo,
 				}),
 				...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
 			},

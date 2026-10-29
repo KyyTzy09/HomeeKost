@@ -266,6 +266,32 @@ export function PropertyFormDialog({
 						)}
 					</form.Field>
 
+					{/* Field: Informasi Rekening Pembayaran */}
+					<form.Field name="bankAccountInfo">
+						{(field) => (
+							<div>
+								<Label
+									htmlFor={field.name}
+									className="block text-[11px] font-bold text-[#506257] mb-[6px]"
+								>
+									Informasi Rekening Pembayaran (Bank / E-Wallet)
+								</Label>
+								<Input
+									id={field.name}
+									name={field.name}
+									value={field.state.value}
+									onBlur={field.handleBlur}
+									onChange={(e) => field.handleChange(e.target.value)}
+									placeholder="Contoh: BCA 8735081290 a.n. Bude Frisda"
+									className="h-[43px] border-[#dfe7e0] rounded-[11px] px-[13px] text-[12px] bg-[#fbfcfb] text-[#252925] focus-visible:border-[#8fa594] focus-visible:ring-[#8fa594]/20"
+								/>
+								<p className="text-[10.5px] text-[#737873] mt-1">
+									Nomor rekening ini akan otomatis tercantum pada pesan WhatsApp tagihan dan invoice digital anak kos di cabang ini.
+								</p>
+							</div>
+						)}
+					</form.Field>
+
 					{/* Field: Logo / Gambar Kos */}
 					<div>
 						<Label className="block text-[11px] font-bold text-[#506257] mb-[6px]">

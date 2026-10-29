@@ -530,11 +530,14 @@ export class EngagementService {
 			);
 		}
 
-		// ─── Task 1 & 2 Query: Query Reminders (Hanya Tgl 1) & Birthdays secara Paralel (<10ms) ─
-		const isFirstDayOfMonth = now.getDate() === 1;
+		// ─── Task 1 & 2 Query: Query Reminders (Tgl 1 & Tgl 5) & Birthdays secara Paralel (<10ms) ─
+		const dayOfMonth = now.getDate();
+		const isFirstDayOfMonth = dayOfMonth === 1;
+		const isFifthDayOfMonth = dayOfMonth === 5;
+		const isReminderDay = isFirstDayOfMonth || isFifthDayOfMonth;
 
 		const [dueReminders, todaysBirthdays] = await Promise.all([
-			isFirstDayOfMonth
+			isReminderDay
 				? this.repo.getFirstOfMonthInvoicesForReminder(curMonth, curYear)
 				: Promise.resolve([]),
 			this.repo.getTodaysBirthdays(),
@@ -552,6 +555,7 @@ export class EngagementService {
 				period: string;
 				amount: number;
 				documentUrl: string;
+				bankAccountInfo?: string | null;
 			}
 		>();
 
@@ -588,13 +592,15 @@ export class EngagementService {
 					period,
 					amount: Number(inv.amount),
 					documentUrl,
+					bankAccountInfo: inv.contract.room.property.bankAccountInfo,
 				});
 			}
 		}
 
-		// Eksekusi pengiriman pesan WhatsApp untuk tagihan tanggal 1 awal bulan
+		// Eksekusi pengiriman pesan WhatsApp untuk tagihan tanggal 1 awal bulan & tanggal 5 jatuh tempo
 		for (const [invId, rem] of reminderQueue.entries()) {
-			const invoiceToken = `TOKEN:REMINDER:${invId}:${todayStr}`;
+			const reminderTypeLabel = isFifthDayOfMonth ? "Tgl 5" : "Tgl 1";
+			const invoiceToken = `TOKEN:REMINDER_${isFifthDayOfMonth ? "DAY5" : "DAY1"}:${invId}:${todayStr}`;
 
 			// Pre-flight Idempotency Check: Lewati jika invoice ini sudah sukses dikirimi reminder hari ini
 			if (sentTokensToday.has(invoiceToken) || sentInvoiceIdsToday.has(invId)) {
@@ -602,19 +608,35 @@ export class EngagementService {
 				continue;
 			}
 
-			const message = whatsappTemplates.monthlyFirstReminder({
-				tenantName: rem.tenantName,
-				propertyName: rem.propertyName,
-				roomNumber: rem.roomNumber,
-				invoiceNumber: rem.invoiceNumber,
-				period: rem.period,
-				amount: rem.amount,
-				bankName: "BCA",
-				bankAccount: "8735081290",
-				accountHolder: "Bude Frisda",
-				documentUrl: rem.documentUrl,
-			});
-			const noteLabel = `[${invoiceToken}] Cron Tagihan Tgl 1 (#${rem.invoiceNumber}) [${invId}]`;
+			const message = isFifthDayOfMonth
+				? whatsappTemplates.monthlyFifthReminder({
+						tenantName: rem.tenantName,
+						propertyName: rem.propertyName,
+						roomNumber: rem.roomNumber,
+						invoiceNumber: rem.invoiceNumber,
+						period: rem.period,
+						amount: rem.amount,
+						bankName: "BCA",
+						bankAccount: "8735081290",
+						accountHolder: "Bude Frisda",
+						bankAccountInfo: rem.bankAccountInfo,
+						documentUrl: rem.documentUrl,
+					})
+				: whatsappTemplates.monthlyFirstReminder({
+						tenantName: rem.tenantName,
+						propertyName: rem.propertyName,
+						roomNumber: rem.roomNumber,
+						invoiceNumber: rem.invoiceNumber,
+						period: rem.period,
+						amount: rem.amount,
+						bankName: "BCA",
+						bankAccount: "8735081290",
+						accountHolder: "Bude Frisda",
+						bankAccountInfo: rem.bankAccountInfo,
+						documentUrl: rem.documentUrl,
+					});
+
+			const noteLabel = `[${invoiceToken}] Cron Tagihan ${reminderTypeLabel} (#${rem.invoiceNumber}) [${invId}]`;
 
 			try {
 				const res = await this.fonnte.sendText({
@@ -644,7 +666,7 @@ export class EngagementService {
 					recipientNumber: rem.phone,
 					messageType: "DUE_DATE_REMINDER",
 					status: "FAILED",
-					notes: `Error Cron Tagihan Tgl 1 (#${rem.invoiceNumber})`,
+					notes: `Error Cron Tagihan ${reminderTypeLabel} (#${rem.invoiceNumber})`,
 				});
 			}
 

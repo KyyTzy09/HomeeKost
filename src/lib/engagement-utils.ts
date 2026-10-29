@@ -84,7 +84,7 @@ export function filterRecipientsByTemplate(
 			});
 	}
 
-	// Any other category (e.g. "Kerja Bakti", "Umum", or undefined/empty):
+	// Any other category (e.g. "Umum", or undefined/empty):
 	// All active tenants sorted by roomNumber asc (natural sort)
 	return [...filtered].sort((a, b) =>
 		compareRoomNumbers(a.roomNumber || "", b.roomNumber || ""),

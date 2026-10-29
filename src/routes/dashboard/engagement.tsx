@@ -3,10 +3,11 @@ import { CheckCircle2, MessageSquare, Plus, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
-import type {
-	AnnouncementItem,
-	EngagementRecipient,
-	EngagementTemplateItem,
+import {
+	type AnnouncementItem,
+	type EngagementRecipient,
+	type EngagementTemplateItem,
+	isCoreEngagementTemplate,
 } from "../../common/types/index.ts";
 import type {
 	BroadcastAnnouncementInput,
@@ -57,33 +58,28 @@ const DEFAULT_TEMPLATES: EngagementTemplateItem[] = [
 		id: "tpl-1",
 		name: "Sambutan Anak Kos Baru",
 		content:
-			"Halo Kak! Selamat datang di HomeeKost. Semoga betah dan nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊🌿",
+			"Halo Kak *{nama}*! 👋\n\nSelamat datang di *{kos}* (Kamar {kamar}). Semoga betah dan nyaman tinggal bersama kami. Jika butuh bantuan fasilitas kamar atau info lainnya, silakan hubungi pengelola ya! 😊🌿\n\n_— Admin Kos {kos}_",
 		category: "Sambutan",
 		icon: "👋",
+		isCore: true,
 	},
 	{
 		id: "tpl-2",
 		name: "Apresiasi Pembayaran Tepat Waktu",
 		content:
-			"Terima kasih banyak sudah melakukan pembayaran sewa kos tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan dan berkah! ✨🙏",
+			"Halo Kak *{nama}*! 👋\n\nTerima kasih banyak sudah melakukan pembayaran sewa kos di *{kos}* tepat waktu. Pembayaran telah kami verifikasi lunas. Semoga harimu menyenangkan dan berkah selalu! ✨🙏\n\n_— Admin Kos {kos}_",
 		category: "Pembayaran",
 		icon: "💳",
+		isCore: true,
 	},
 	{
 		id: "tpl-3",
 		name: "Ucapan Selamat Ulang Tahun",
 		content:
-			"Selamat ulang tahun! 🎉🎂 Semoga senantiasa sehat, bahagia, dan sukses selalu dalam studi maupun pekerjaan. Terima kasih telah menjadi bagian berharga dari keluarga besar kami!",
+			"🎂🎉 *SELAMAT ULANG TAHUN, KAK {nama}!* 🎉🎂\n\nKeluarga besar *{kos}* mengucapkan selamat bertambah usia! 🎈✨\n\nSemoga di usia yang baru senantiasa diberikan kesehatan, kebahagiaan, dan kelancaran dalam segala urusan maupun pekerjaan. Terima kasih telah menjadi bagian berharga dari keluarga hunian kami! 🌿🏡\n\n_— Admin Kos {kos}_",
 		category: "Ulang Tahun",
 		icon: "🎂",
-	},
-	{
-		id: "tpl-4",
-		name: "Pemberitahuan Kerja Bakti",
-		content:
-			"Diberitahukan kepada seluruh penghuni, pada hari Minggu pagi pukul 08.00 WIB akan diadakan kerja bakti & pembersihan area bersama. Mohon partisipasi dan kerja samanya. Terima kasih! 🧹",
-		category: "Kerja Bakti",
-		icon: "🧹",
+		isCore: true,
 	},
 ];
 
@@ -93,7 +89,6 @@ const CATEGORY_ICONS: Record<string, string> = {
 	Sambutan: "👋",
 	Pembayaran: "💳",
 	"Ulang Tahun": "🎂",
-	"Kerja Bakti": "🧹",
 	Umum: "💬",
 };
 
@@ -108,9 +103,43 @@ const loadStoredTemplates = (): EngagementTemplateItem[] => {
 		const stored = localStorage.getItem(TEMPLATE_STORAGE_KEY);
 		if (!stored) return DEFAULT_TEMPLATES;
 		const parsed = JSON.parse(stored);
-		return Array.isArray(parsed) && parsed.length > 0
-			? parsed
-			: DEFAULT_TEMPLATES;
+		if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_TEMPLATES;
+
+		const mapped: EngagementTemplateItem[] = parsed.map((item: any) => {
+			const isCore = isCoreEngagementTemplate(item);
+			// Upgrade template inti jika di localStorage masih versi lama tanpa {nama}
+			if (isCore && String(item.id) === "tpl-2" && !item.content.includes("{nama}")) {
+				return {
+					...item,
+					content: DEFAULT_TEMPLATES[1].content,
+					isCore: true,
+				};
+			}
+			if (isCore && String(item.id) === "tpl-1" && !item.content.includes("{nama}")) {
+				return {
+					...item,
+					content: DEFAULT_TEMPLATES[0].content,
+					isCore: true,
+				};
+			}
+			return {
+				...item,
+				isCore,
+			};
+		});
+
+		for (const def of DEFAULT_TEMPLATES) {
+			const hasTemplate = mapped.some(
+				(t) =>
+					String(t.id) === String(def.id) ||
+					(isCoreEngagementTemplate(t) && t.category === def.category),
+			);
+			if (!hasTemplate) {
+				mapped.unshift(def);
+			}
+		}
+
+		return mapped;
 	} catch {
 		return DEFAULT_TEMPLATES;
 	}
@@ -303,6 +332,13 @@ function EngagementPage() {
 	};
 
 	const handleDeleteTemplate = (tpl: EngagementTemplateItem) => {
+		if (isCoreEngagementTemplate(tpl)) {
+			showToast(
+				"Template utama (Sambutan, Apresiasi, dan Ulang Tahun) tidak dapat dihapus.",
+			);
+			return;
+		}
+
 		const nextTemplates = templates.filter((t) => t.id !== tpl.id);
 		setTemplates(nextTemplates);
 		if (typeof window !== "undefined") {
@@ -441,6 +477,10 @@ function EngagementPage() {
 					onOpenAddTemplate={() => {
 						setEditingTemplate(null);
 						setIsTemplateDialogOpen(true);
+					}}
+					onOpenDetail={(tpl) => {
+						setDetailTemplate(tpl);
+						setIsDetailDialogOpen(true);
 					}}
 				/>
 			</div>

@@ -132,13 +132,21 @@ export class RoomService {
 				const priceNum = Number(r.price) || 0;
 				const formattedPrice = `Rp${priceNum.toLocaleString("id-ID")}`;
 
+				// Sinkronisasi status riil: jika ada kontrak aktif maka Terisi, jika tidak maka Kosong (kecuali Maintenance)
+				const uiStatus: RoomStatusType =
+					r.status === "MAINTENANCE"
+						? "Maintenance"
+						: activeContract
+							? "Terisi"
+							: "Kosong";
+
 				return {
 					id: r.id,
 					propertyId: r.propertyId,
 					roomNo: r.roomNumber,
 					type: (r.type || "Standard") as "Standard" | "Deluxe" | "Suite",
 					price: formattedPrice,
-					status: this.mapStatusToUI(r.status),
+					status: uiStatus,
 					tenantName,
 					dueDate,
 					facilities: r.facilities || "",

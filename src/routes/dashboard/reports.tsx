@@ -18,13 +18,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
-import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import {
-	AutomationSettingsDialog,
 	ExecutiveReportDoc,
 	ReportAiInsightPanel,
 	ReportAnnualMatrixCard,
-	ReportAutomationCard,
 	ReportKpiCards,
 	ReportRoomExpenseBreakdown,
 } from "../../components/report/index.ts";
@@ -32,14 +29,11 @@ import {
 	annualReportMatrixQueryOptions,
 	monthlyReportQueryOptions,
 	propertiesQueryOptions,
-	reportAutomationSettingsQueryOptions,
 	useAnnualReportMatrix,
 	useDashboardContext,
 	useMonthlyReport,
 	useProperties,
 	useRegenerateAiInsight,
-	useReportAutomationSettings,
-	useUpdateReportAutomationSettings,
 } from "../../hooks/index.ts";
 import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
@@ -67,17 +61,6 @@ export const Route = createFileRoute("/dashboard/reports")({
 			),
 			context.queryClient.ensureQueryData(propertiesQueryOptions()),
 		];
-
-		if (
-			context.dashboard?.isSuperAdmin ||
-			context.dashboard?.role === "SUPER_ADMIN"
-		) {
-			prefetchPromises.push(
-				context.queryClient.ensureQueryData(
-					reportAutomationSettingsQueryOptions(),
-				),
-			);
-		}
 
 		await Promise.all(prefetchPromises);
 	},
@@ -115,24 +98,10 @@ const YEARS: SelectOption<number>[] = [
 const DEFAULT_MONTH_OPTION = MONTHS[0];
 const DEFAULT_YEAR_OPTION = YEARS[2];
 
-const DEFAULT_AUTOMATION_SETTINGS: AutomationSettingsFormValues = {
-	scheduleDay: 1,
-	scheduleTime: "08:00",
-	aiModel: "gemini-3.5-flash-lite",
-	autoSendWhatsApp: false,
-	targetPhone: "",
-};
-
 function ReportsPage() {
 	const { user, userRole, isSuperAdmin, activeProperty } =
 		useDashboardContext();
 	const { data: properties } = useProperties();
-	const { data: dbAutomationSettings } = useReportAutomationSettings({
-		enabled: isSuperAdmin,
-	});
-	const updateSettingsMutation = useUpdateReportAutomationSettings();
-
-	const currentSettings = dbAutomationSettings || DEFAULT_AUTOMATION_SETTINGS;
 
 	const now = new Date();
 	const currentMonthNumber = now.getMonth() + 1;
@@ -148,12 +117,9 @@ function ReportsPage() {
 	const [selectedProperty, setSelectedProperty] = useState<
 		SelectOption<string>
 	>({
-		label: "Semua Cabang Kos",
-		value: "ALL",
+		label: activeProperty?.name || "Semua Cabang Kos",
+		value: activeProperty?.id || "ALL",
 	});
-
-	// Automation settings dialog state
-	const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
 	// Toast state
 	const [toastMessage, setToastMessage] = useState<{
@@ -252,25 +218,6 @@ function ReportsPage() {
 
 	const handlePrintPdf = () => {
 		window.print();
-	};
-
-	const handleSaveAutomationSettings = async (
-		values: AutomationSettingsFormValues,
-	) => {
-		try {
-			await updateSettingsMutation.mutateAsync(values);
-			showToast(
-				`Pengaturan automasi laporan bulanan berhasil disimpan (Setiap tanggal ${values.scheduleDay} pukul ${values.scheduleTime || "08:00"} WIB)`,
-				"success",
-			);
-		} catch (err) {
-			showToast(
-				err instanceof Error
-					? err.message
-					: "Gagal menyimpan pengaturan automasi",
-				"error",
-			);
-		}
 	};
 
 	const periodLabel = `${selectedMonth.label} ${selectedYear.label}`;
@@ -495,6 +442,8 @@ function ReportsPage() {
 							occupiedRooms={monthlyReport.roomStatus.occupiedRooms}
 							totalRooms={monthlyReport.roomStatus.totalRooms}
 							periodLabel={periodLabel}
+							incomeGrowthPercent={monthlyReport.momGrowth?.incomeGrowthPercent}
+							expenseGrowthPercent={monthlyReport.momGrowth?.expenseGrowthPercent}
 						/>
 
 						{/* Executive AI Narrative Insight & Strategic Recommendations */}
@@ -525,23 +474,6 @@ function ReportsPage() {
 							onExportExcel={handleExportAnnualExcel}
 							isExportingExcel={isExportingExcel}
 						/>
-
-						{/* Automasi Laporan Bulanan Card & Dialog (SuperAdmin Only) */}
-						{isSuperAdmin && (
-							<>
-								<ReportAutomationCard
-									scheduleDay={currentSettings.scheduleDay}
-									scheduleTime={currentSettings.scheduleTime}
-									onOpenSettings={() => setIsSettingsOpen(true)}
-								/>
-								<AutomationSettingsDialog
-									open={isSettingsOpen}
-									onOpenChange={setIsSettingsOpen}
-									initialValues={currentSettings}
-									onSubmit={handleSaveAutomationSettings}
-								/>
-							</>
-						)}
 					</div>
 				</>
 			)}
