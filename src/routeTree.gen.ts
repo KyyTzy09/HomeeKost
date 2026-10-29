@@ -29,6 +29,7 @@ import { Route as DashboardUsersRouteImport } from './routes/dashboard/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiCronDailyTasksRouteImport } from './routes/api/cron/daily-tasks'
 import { Route as ApiCronMonthlyReportsRouteImport } from './routes/api/cron/monthly-reports'
+import { Route as ApiCronServerAlertRouteImport } from './routes/api/cron/server-alert'
 import { Route as DashboardPropertiesPropertyIdRouteImport } from './routes/dashboard/properties.$propertyId'
 import { Route as ApiInvoicesInvoiceIdDocumentRouteImport } from './routes/api/invoices/$invoiceId/document'
 
@@ -132,6 +133,11 @@ const ApiCronMonthlyReportsRoute = ApiCronMonthlyReportsRouteImport.update({
   path: '/api/cron/monthly-reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronServerAlertRoute = ApiCronServerAlertRouteImport.update({
+  id: '/api/cron/server-alert',
+  path: '/api/cron/server-alert',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardPropertiesPropertyIdRoute =
   DashboardPropertiesPropertyIdRouteImport.update({
     id: '/properties/$propertyId',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/api/cron/monthly-reports': typeof ApiCronMonthlyReportsRoute
+  '/api/cron/server-alert': typeof ApiCronServerAlertRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
   '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/api/cron/monthly-reports': typeof ApiCronMonthlyReportsRoute
+  '/api/cron/server-alert': typeof ApiCronServerAlertRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
   '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/cron/daily-tasks': typeof ApiCronDailyTasksRoute
   '/api/cron/monthly-reports': typeof ApiCronMonthlyReportsRoute
+  '/api/cron/server-alert': typeof ApiCronServerAlertRoute
   '/dashboard/properties/$propertyId': typeof DashboardPropertiesPropertyIdRoute
   '/api/invoices/$invoiceId/document': typeof ApiInvoicesInvoiceIdDocumentRoute
 }
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/cron/daily-tasks'
     | '/api/cron/monthly-reports'
+    | '/api/cron/server-alert'
     | '/dashboard/properties/$propertyId'
     | '/api/invoices/$invoiceId/document'
   fileRoutesByTo: FileRoutesByTo
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/cron/daily-tasks'
     | '/api/cron/monthly-reports'
+    | '/api/cron/server-alert'
     | '/dashboard/properties/$propertyId'
     | '/api/invoices/$invoiceId/document'
   id:
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/cron/daily-tasks'
     | '/api/cron/monthly-reports'
+    | '/api/cron/server-alert'
     | '/dashboard/properties/$propertyId'
     | '/api/invoices/$invoiceId/document'
   fileRoutesById: FileRoutesById
@@ -301,6 +313,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiCronDailyTasksRoute: typeof ApiCronDailyTasksRoute
   ApiCronMonthlyReportsRoute: typeof ApiCronMonthlyReportsRoute
+  ApiCronServerAlertRoute: typeof ApiCronServerAlertRoute
   ApiInvoicesInvoiceIdDocumentRoute: typeof ApiInvoicesInvoiceIdDocumentRoute
 }
 
@@ -446,6 +459,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronMonthlyReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/server-alert': {
+      id: '/api/cron/server-alert'
+      path: '/api/cron/server-alert'
+      fullPath: '/api/cron/server-alert'
+      preLoaderRoute: typeof ApiCronServerAlertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard/properties/$propertyId': {
       id: '/dashboard/properties/$propertyId'
       path: '/properties/$propertyId'
@@ -507,17 +527,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiCronDailyTasksRoute: ApiCronDailyTasksRoute,
   ApiCronMonthlyReportsRoute: ApiCronMonthlyReportsRoute,
+  ApiCronServerAlertRoute: ApiCronServerAlertRoute,
   ApiInvoicesInvoiceIdDocumentRoute: ApiInvoicesInvoiceIdDocumentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
