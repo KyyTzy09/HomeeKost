@@ -126,21 +126,24 @@ export class ServerAlertService {
 		const status =
 			providedStatus || (await this.statusService.getSystemStatus());
 
-		// 1. Evaluasi apakah kondisi kritis
+		// 1. Evaluasi apakah kondisi kritis (membutuhkan tindakan darurat segera)
 		const isCritical =
 			status.database.status === "disconnected" ||
 			(status.server.storage && status.server.storage.usedPercent >= 92) ||
 			(status.server.memory.usedPercent >= 90 &&
-				((status.server.storage && status.server.storage.usedPercent >= 90) ||
+				((status.server.storage && status.server.storage.usedPercent >= 88) ||
 					status.server.cpu.loadStatus === "Tinggi")) ||
 			status.overallStatus === "critical";
 
-		// 2. Evaluasi apakah kondisi mendekati kritis
+		// 2. Evaluasi apakah kondisi mendekati kritis (5-10% sebelum menyentuh batas kritis)
+		// Bukan sekadar status Waspada biasa, melainkan saat kapasitas fisik benar-benar mendekati limit
 		const isNearCritical =
 			!isCritical &&
-			(status.server.memory.usedPercent >= 88 ||
-				(status.server.storage && status.server.storage.usedPercent >= 85) ||
-				status.overallStatus === "warning");
+			((status.server.storage && status.server.storage.usedPercent >= 82) ||
+				(status.server.memory.usedPercent >= 80 &&
+					(status.server.cpu.loadStatus === "Tinggi" ||
+						(status.server.storage && status.server.storage.usedPercent >= 80))) ||
+				status.server.memory.usedPercent >= 88);
 
 		let targetStatusLabel: "Mendekati Kritis" | "Kritis" | null = null;
 
@@ -183,16 +186,16 @@ export class ServerAlertService {
 				"Layanan basis data terputus. Segera hubungi administrator teknis untuk memeriksa koneksi server database.";
 		} else if (
 			status.server.storage &&
-			status.server.storage.usedPercent >= 85
+			status.server.storage.usedPercent >= 82
 		) {
 			actionAdvice =
-				"Penyimpanan harddisk mulai penuh. Cukup bersihkan berkas sampah, bukti transfer lama, atau log server agar kembali lega. Belum perlu upgrade VPS.";
-		} else if (status.server.memory.usedPercent >= 88) {
+				"Penyimpanan mulai menipis (sisa 10-18%). Cukup arsipkan berkas lama atau bukti transfer yang sudah tidak terpakai agar kembali lega.";
+		} else if (status.server.memory.usedPercent >= 85) {
 			actionAdvice =
-				"RAM tinggi karena sistem sedang menyimpan cache data transaksi. Kondisi ini aman dan sistem akan melepaskan memori otomatis. TIDAK PERLU upgrade VPS.";
+				"Penggunaan RAM tinggi karena sistem sedang aktif memproses operasional kos. Kondisi ini wajar dan memori akan berkurang otomatis saat pemrosesan selesai. Tidak perlu buru-buru upgrade server.";
 		} else if (isCritical) {
 			actionAdvice =
-				"Penggunaan sumber daya berada di batas atas karena skala kos yang membesar. Saatnya mempertimbangkan peningkatan paket spesifikasi server VPS.";
+				"Kapasitas server berada di batas darurat. Disarankan memeriksa beban aplikasi atau menjadwalkan peningkatan kapasitas server.";
 		}
 
 		// 5. Susun Pesan WhatsApp

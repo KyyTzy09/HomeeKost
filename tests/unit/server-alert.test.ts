@@ -56,7 +56,7 @@ describe("Server Alert WhatsApp Notifications", () => {
 			const text = whatsappTemplates.serverStatusAlert({
 				statusLabel: "Mendekati Kritis",
 				headline: "RAM mulai mendekati batas normal",
-				description: "Sebagian memori digunakan untuk cache sistem.",
+				description: "Aplikasi sedang aktif memproses data kos.",
 				ramPercent: 88,
 				ramUsedFormatted: "1.76 GB",
 				ramTotalFormatted: "2 GB",
@@ -66,7 +66,7 @@ describe("Server Alert WhatsApp Notifications", () => {
 				cpuLoadStatus: "Normal",
 				databaseStatus: "Terhubung & Siap",
 				actionAdvice:
-					"Server masih berjalan dengan baik, cache RAM akan dibersihkan otomatis saat dibutuhkan.",
+					"Server masih berjalan dengan baik, memori akan berkurang otomatis saat pemrosesan selesai.",
 				statusUrl: "http://localhost:3000/status",
 			});
 

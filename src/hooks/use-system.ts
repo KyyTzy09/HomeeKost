@@ -83,15 +83,17 @@ export function useUpdateServerAlertSettings(): UseMutationResult<
 export function useSendTestServerAlert(): UseMutationResult<
 	{ success: boolean; message: string },
 	Error,
-	{ phone?: string }
+	{ targetPhone?: string; phone?: string } | void
 > {
 	return useMutation<
 		{ success: boolean; message: string },
 		Error,
-		{ phone?: string }
+		{ targetPhone?: string; phone?: string } | void
 	>({
 		mutationFn: async (payload) => {
-			return sendTestServerAlertServerFn({ data: payload });
+			const targetPhone =
+				payload && ("targetPhone" in payload ? payload.targetPhone : payload.phone);
+			return sendTestServerAlertServerFn({ data: { targetPhone } });
 		},
 	});
 }

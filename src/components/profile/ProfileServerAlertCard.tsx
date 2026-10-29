@@ -15,6 +15,13 @@ import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import { Input } from "../../common/shadcn/input.tsx";
 import { Label } from "../../common/shadcn/label.tsx";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../../common/shadcn/select.tsx";
 import { serverAlertSettingsSchema } from "../../common/validations/system-alert.schema.ts";
 import {
 	useSendTestServerAlert,
@@ -40,18 +47,33 @@ export function ProfileServerAlertCard({
 	>("NEAR_CRITICAL_AND_CRITICAL");
 	const [cooldownHours, setCooldownHours] = useState<number>(6);
 	const [validationError, setValidationError] = useState<string | null>(null);
+	const [hasInitialized, setHasInitialized] = useState(false);
 
-	// Sinkronisasi data saat query selesai dimuat
+	// Sinkronisasi data saat pertama kali dimuat dari database
 	useEffect(() => {
-		if (settings) {
+		if (settings && !hasInitialized) {
 			setEnabled(Boolean(settings.enabled));
 			setTargetPhone(settings.targetPhone || "");
 			setTriggerCondition(
 				settings.triggerCondition || "NEAR_CRITICAL_AND_CRITICAL",
 			);
 			setCooldownHours(settings.cooldownHours ? Number(settings.cooldownHours) : 6);
+			setHasInitialized(true);
 		}
-	}, [settings]);
+	}, [settings, hasInitialized]);
+
+	const formatErrorMessage = (err: unknown): string => {
+		if (err instanceof Error) {
+			try {
+				const parsed = JSON.parse(err.message);
+				if (Array.isArray(parsed) && parsed[0]?.message) {
+					return parsed[0].message;
+				}
+			} catch {}
+			return err.message;
+		}
+		return "Terjadi kesalahan.";
+	};
 
 	const handleSave = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -72,21 +94,24 @@ export function ProfileServerAlertCard({
 		}
 
 		try {
-			await updateMutation.mutateAsync(result.data);
+			const saved = await updateMutation.mutateAsync(result.data);
+			setEnabled(Boolean(saved.enabled));
+			setTargetPhone(saved.targetPhone || "");
+			setTriggerCondition(saved.triggerCondition);
+			setCooldownHours(saved.cooldownHours);
 			onShowToast?.(
-				"Pengaturan notifikasi WhatsApp peringatan server berhasil disimpan!",
+				"Pengaturan notifikasi WhatsApp peringatan server berhasil disimpan ke database!",
 				"success",
 			);
 		} catch (err) {
-			const errMsg =
-				err instanceof Error ? err.message : "Gagal menyimpan pengaturan.";
+			const errMsg = formatErrorMessage(err);
 			setValidationError(errMsg);
 			onShowToast?.(errMsg, "error");
 		}
 	};
 
 	const handleSendTest = async () => {
-		const phoneToTest = targetPhone.trim();
+		const phoneToTest = targetPhone.trim() || settings?.targetPhone?.trim() || "";
 		if (!phoneToTest || phoneToTest.length < 8) {
 			const msg =
 				"Masukkan nomor WhatsApp yang valid terlebih dahulu sebelum mengirim tes.";
@@ -97,16 +122,15 @@ export function ProfileServerAlertCard({
 
 		setValidationError(null);
 		try {
-			const res = await testMutation.mutateAsync({ phone: phoneToTest });
+			const res = await testMutation.mutateAsync({
+				targetPhone: phoneToTest,
+			});
 			onShowToast?.(
 				res.message || "Pesan uji coba WhatsApp berhasil dikirim!",
 				"success",
 			);
 		} catch (err) {
-			const errMsg =
-				err instanceof Error
-					? err.message
-					: "Gagal mengirim pesan uji coba WhatsApp.";
+			const errMsg = formatErrorMessage(err);
 			setValidationError(errMsg);
 			onShowToast?.(errMsg, "error");
 		}
@@ -123,7 +147,7 @@ export function ProfileServerAlertCard({
 					<div>
 						<div className="flex items-center gap-2">
 							<h2 className="text-sm font-bold text-[#252925] tracking-tight">
-								Peringatan WhatsApp Server (VPS)
+								Peringatan WhatsApp Server
 							</h2>
 							<span
 								className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
@@ -245,13 +269,10 @@ export function ProfileServerAlertCard({
 								<span className="text-xs font-bold text-[#252925]">
 									Mendekati Kritis & Kritis
 								</span>
-								<span className="text-[10px] font-semibold text-[#3b6647] bg-[#e6f2e8] px-1.5 py-0.5 rounded">
-									Disarankan
-								</span>
 							</div>
 							<p className="text-[11px] text-[#737873] leading-snug">
-								Memberitahu saat sistem mulai Waspada (misal RAM & CPU bersamaan
-								tinggi atau disk menipis) sebelum terjadi gangguan.
+								Memberitahu saat kapasitas server sudah hampir mencapai batas
+								darurat (sekitar 80–85%, 5–10% sebelum kritis).
 							</p>
 						</button>
 
@@ -268,9 +289,6 @@ export function ProfileServerAlertCard({
 								<span className="text-xs font-bold text-[#252925]">
 									Hanya Saat Kritis
 								</span>
-								<span className="text-[10px] font-semibold text-[#80501a] bg-[#fbeedc] px-1.5 py-0.5 rounded">
-									Super Hemat
-								</span>
 							</div>
 							<p className="text-[11px] text-[#737873] leading-snug">
 								Hanya mengirim saat server dalam kondisi bahaya darurat
@@ -280,7 +298,7 @@ export function ProfileServerAlertCard({
 					</div>
 				</div>
 
-				{/* Batas Jeda Waktu Pengiriman (Cooldown) */}
+				{/* Batas Jeda Waktu Pengiriman (Cooldown) - Custom Select */}
 				<div className="space-y-1.5">
 					<Label
 						htmlFor="cooldown-hours-select"
@@ -289,18 +307,31 @@ export function ProfileServerAlertCard({
 						<Clock className="w-3.5 h-3.5 text-[#4f6958]" />
 						Jeda Minimal Antar Pesan (Anti-Spam)
 					</Label>
-					<div className="flex items-center gap-2">
-						<select
-							id="cooldown-hours-select"
-							value={cooldownHours}
-							onChange={(e) => setCooldownHours(Number(e.target.value))}
-							className="h-10 text-xs border border-[#dfe7e0] bg-[#fbfcfb] rounded-lg px-3 focus:outline-none focus:ring-1 focus:ring-[#4f6958] text-[#252925] font-medium"
+					<div className="flex flex-col sm:flex-row sm:items-center gap-2">
+						<Select
+							value={String(cooldownHours)}
+							onValueChange={(val) => {
+								if (val) setCooldownHours(Number(val));
+							}}
 						>
-							<option value={3}>Setiap 3 Jam</option>
-							<option value={6}>Setiap 6 Jam (Standar)</option>
-							<option value={12}>Setiap 12 Jam</option>
-							<option value={24}>Setiap 24 Jam (1 Kali Sehari)</option>
-						</select>
+							<SelectTrigger className="w-full sm:w-[220px] h-10 border-[#dfe7e0] rounded-lg px-3 text-xs bg-[#fbfcfb] text-[#252925] font-medium focus:ring-1 focus:ring-[#4f6958]">
+								<SelectValue placeholder="Pilih Jeda Waktu">
+									{cooldownHours === 3
+										? "Setiap 3 Jam"
+										: cooldownHours === 6
+											? "Setiap 6 Jam (Standar)"
+											: cooldownHours === 12
+												? "Setiap 12 Jam"
+												: "Setiap 24 Jam (1 Kali Sehari)"}
+								</SelectValue>
+							</SelectTrigger>
+							<SelectContent className="bg-white border-[#e4e9e4] shadow-md rounded-lg text-xs">
+								<SelectItem value="3">Setiap 3 Jam</SelectItem>
+								<SelectItem value="6">Setiap 6 Jam (Standar)</SelectItem>
+								<SelectItem value="12">Setiap 12 Jam</SelectItem>
+								<SelectItem value="24">Setiap 24 Jam (1 Kali Sehari)</SelectItem>
+							</SelectContent>
+						</Select>
 						<span className="text-[11px] text-[#737873]">
 							Mencegah kuota terbuang jika server masih dalam kondisi yang sama.
 						</span>
@@ -322,9 +353,10 @@ export function ProfileServerAlertCard({
 						<span>Petunjuk Perhitungan Adil untuk Pemilik Kost</span>
 					</div>
 					<p className="text-[11px] text-[#636863] leading-relaxed">
-						Sistem ini menggunakan kalkulasi multi-indikator adil: RAM terisi untuk
-						cache aplikasi adalah hal yang normal dan tidak memicu pesan darurat.
-						Peringatan hanya dikirim saat ada risiko nyata operasional terganggu.
+						Sistem ini menggunakan perhitungan yang adil: Penggunaan RAM yang
+						bertambah saat aplikasi aktif bekerja adalah hal yang normal dan tidak
+						langsung memicu pesan darurat. Peringatan hanya dikirim jika kapasitas
+						benar-benar hampir habis dan berisiko mengganggu operasional kos.
 					</p>
 					{settings?.lastNotifiedAt && (
 						<div className="pt-1.5 mt-1 border-t border-[#e8e4d8] text-[10px] text-[#7b807a] flex items-center gap-1">

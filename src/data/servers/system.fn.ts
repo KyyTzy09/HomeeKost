@@ -136,12 +136,16 @@ export const updateServerAlertSettingsServerFn = createServerFn({
 export const sendTestServerAlertServerFn = createServerFn({
 	method: "POST",
 })
-	.validator((input: { targetPhone: string }) => {
+	.validator((input?: { targetPhone?: string; phone?: string }) => {
+		const raw = input?.targetPhone || input?.phone;
 		return z
 			.object({
-				targetPhone: z.string().min(8, "Nomor WhatsApp minimal 8 digit"),
+				targetPhone: z
+					.string()
+					.min(8, "Nomor WhatsApp minimal 8 digit")
+					.optional(),
 			})
-			.parse(input);
+			.parse({ targetPhone: raw || undefined });
 	})
 	.handler(
 		async ({ data }): Promise<{ success: boolean; message: string }> => {
@@ -149,7 +153,17 @@ export const sendTestServerAlertServerFn = createServerFn({
 				"sendTestServerAlertServerFn",
 				data,
 				async () => {
-					return serverAlertService.sendTestAlert(data.targetPhone);
+					let phone = data?.targetPhone;
+					if (!phone) {
+						const settings = await serverAlertService.getSettings();
+						phone = settings.targetPhone;
+					}
+					if (!phone || phone.length < 8) {
+						throw new Error(
+							"Nomor WhatsApp tujuan belum diisi (minimal 8 digit).",
+						);
+					}
+					return serverAlertService.sendTestAlert(phone);
 				},
 				{
 					method: "POST",
