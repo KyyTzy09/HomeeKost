@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { updateTenantSchema } from "../../src/common/validations/tenant.schema.ts";
 import { getDurationMonths, calculateDueDate } from "../../src/lib/date-utils.ts";
 
@@ -75,9 +75,8 @@ describe("Tenant Duration Update & Scope Validation", () => {
 
 	it("harus memverifikasi logika skip pada generator tagihan bulanan untuk kontrak multi-bulan aktif", () => {
 		// Mock contract dengan durasi Triwulan dari 1 Oktober 2026 s/d 1 Januari 2027
-		const contractStartDate = new Date(2026, 9, 1); // 1 Okt 2026
 		const contractEndDate = new Date(2027, 0, 1);   // 1 Jan 2027
-		const billingCycle = "QUARTERLY";
+		const billingCycle: string = "QUARTERLY";
 
 		// Uji bulan November 2026 (Bulan ke-2 dari siklus Triwulan)
 		const novPeriodStart = new Date(2026, 10, 1); // 1 Nov 2026

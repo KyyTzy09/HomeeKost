@@ -37,7 +37,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
-import type { AppUserRole, AuditActorRole, AuditLogItem } from "../../common/types/index.ts";
+import type { AuditActorRole, AuditLogItem } from "../../common/types/index.ts";
 
 interface UserAuditLogTableProps {
 	data: AuditLogItem[];

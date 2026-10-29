@@ -7,7 +7,7 @@ interface ManagedPropertyItem {
 	id: string;
 	name: string;
 	address: string;
-	totalRooms: number;
+	totalRooms?: number;
 }
 
 interface ProfileManagedPropertiesCardProps {

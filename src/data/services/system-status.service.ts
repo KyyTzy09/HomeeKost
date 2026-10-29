@@ -357,7 +357,7 @@ export class SystemStatusService {
 	private getContainerBreakdown(
 		app: SystemAppInfo,
 		db: SystemDatabaseInfo,
-		serverMemory: SystemMemoryInfo,
+		_serverMemory: SystemMemoryInfo,
 		isVercel = false,
 	): SystemContainerBreakdown {
 		if (isVercel) {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
 	evaluateRentalPaymentStatus,
-	getWibStartOfDay,
 } from "../../src/lib/payment-utils.ts";
 
 describe("evaluateRentalPaymentStatus", () => {

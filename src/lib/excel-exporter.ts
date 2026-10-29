@@ -593,6 +593,7 @@ export interface MonthlyFinancialExcelData {
 		type?: string;
 		typeKey?: "INCOME" | "EXPENSE" | string;
 		category: string;
+		categoryKey?: string;
 		description?: string;
 		amount: number;
 		method?: string;

@@ -12,7 +12,6 @@ import type {
 	GenerateMonthlyInvoicesInput,
 } from "../../common/validations/index.ts";
 import type {
-	InvoiceStatus,
 	PaymentMethod,
 } from "../../generated/prisma/client.js";
 import { formatDate, formatRentalPeriod } from "../../lib/date-utils.ts";

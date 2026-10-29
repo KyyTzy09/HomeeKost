@@ -1,7 +1,6 @@
 import {
 	AlertCircle,
 	CheckCircle2,
-	Clock,
 	Info,
 	Sparkles,
 	TrendingUp,

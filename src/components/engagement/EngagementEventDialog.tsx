@@ -4,7 +4,6 @@ import {
 	Lock,
 	Megaphone,
 	PartyPopper,
-	Sparkles,
 	Wrench,
 } from "lucide-react";
 import { useEffect } from "react";

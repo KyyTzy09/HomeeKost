@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { systemStatusService } from "../../src/data/services/system-status.service.ts";
 
 describe("SystemStatusService Unit Tests", () => {
