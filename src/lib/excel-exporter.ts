@@ -1102,42 +1102,24 @@ export async function createMonthlyFinancialExcelWorkbook(
 		const totalRow = wsTx.getRow(totalRowIdx);
 		totalRow.height = 24;
 
-		const totalLabelCell = totalRow.getCell(1);
-		totalLabelCell.value = "TOTAL MUTASI KAS BULAN INI:";
-		totalLabelCell.font = {
-			name: "Arial",
-			size: 10,
-			bold: true,
-			color: { argb: `FF${PALETTE.sageDark}` },
-		};
-		totalLabelCell.alignment = {
-			vertical: "middle",
-			horizontal: "right",
-			indent: 1,
-		};
-		wsTx.mergeCells(`A${totalRowIdx}:E${totalRowIdx}`);
+		// Hitung total deterministik agar sel langsung terisi nilai (precomputed result) di semua penampil Excel
+		const calculatedTotalIncome = sortedTx.reduce((sum, tx) => {
+			const isIncome =
+				tx.typeKey?.toUpperCase() === "INCOME" ||
+				tx.type?.toUpperCase() === "INCOME" ||
+				tx.type === "Pemasukan";
+			return sum + (isIncome ? Number(tx.amount || 0) : 0);
+		}, 0);
 
-		const totalIncomeCell = totalRow.getCell(6);
-		totalIncomeCell.value = { formula: `=SUM(F${txStartRow}:F${txEndRow})` };
-		totalIncomeCell.numFmt = IDR_FORMAT;
-		totalIncomeCell.font = {
-			name: "Arial",
-			size: 10.5,
-			bold: true,
-			color: { argb: `FF${PALETTE.sageDark}` },
-		};
-		totalIncomeCell.alignment = { vertical: "middle", horizontal: "right" };
+		const calculatedTotalExpense = sortedTx.reduce((sum, tx) => {
+			const isIncome =
+				tx.typeKey?.toUpperCase() === "INCOME" ||
+				tx.type?.toUpperCase() === "INCOME" ||
+				tx.type === "Pemasukan";
+			return sum + (isIncome ? 0 : Number(tx.amount || 0));
+		}, 0);
 
-		const totalExpenseCell = totalRow.getCell(7);
-		totalExpenseCell.value = { formula: `=SUM(G${txStartRow}:G${txEndRow})` };
-		totalExpenseCell.numFmt = IDR_FORMAT;
-		totalExpenseCell.font = {
-			name: "Arial",
-			size: 10.5,
-			bold: true,
-			color: { argb: `FF${PALETTE.sageDark}` },
-		};
-		totalExpenseCell.alignment = { vertical: "middle", horizontal: "right" };
+		const calculatedNetCash = calculatedTotalIncome - calculatedTotalExpense;
 
 		for (let col = 1; col <= 7; col++) {
 			const cell = totalRow.getCell(col);
@@ -1154,10 +1136,68 @@ export async function createMonthlyFinancialExcelWorkbook(
 			};
 		}
 
+		const totalLabelCell = totalRow.getCell(1);
+		totalLabelCell.value = "TOTAL MUTASI KAS BULAN INI:";
+		totalLabelCell.font = {
+			name: "Arial",
+			size: 10,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		totalLabelCell.alignment = {
+			vertical: "middle",
+			horizontal: "right",
+			indent: 1,
+		};
+		wsTx.mergeCells(`A${totalRowIdx}:E${totalRowIdx}`);
+
+		const totalIncomeCell = totalRow.getCell(6);
+		totalIncomeCell.value = {
+			formula: `SUM(F${txStartRow}:F${txEndRow})`,
+			result: calculatedTotalIncome,
+		};
+		totalIncomeCell.numFmt = IDR_FORMAT;
+		totalIncomeCell.font = {
+			name: "Arial",
+			size: 10.5,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		totalIncomeCell.alignment = { vertical: "middle", horizontal: "right" };
+
+		const totalExpenseCell = totalRow.getCell(7);
+		totalExpenseCell.value = {
+			formula: `SUM(G${txStartRow}:G${txEndRow})`,
+			result: calculatedTotalExpense,
+		};
+		totalExpenseCell.numFmt = IDR_FORMAT;
+		totalExpenseCell.font = {
+			name: "Arial",
+			size: 10.5,
+			bold: true,
+			color: { argb: `FF${PALETTE.sageDark}` },
+		};
+		totalExpenseCell.alignment = { vertical: "middle", horizontal: "right" };
+
 		// Net Cash Balance Row (lastRow + 2)
 		const netRowIdx = totalRowIdx + 1;
 		const netRow = wsTx.getRow(netRowIdx);
 		netRow.height = 24;
+
+		for (let col = 1; col <= 7; col++) {
+			const cell = netRow.getCell(col);
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: `FF${PALETTE.sagePale}` },
+			};
+			cell.border = {
+				top: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+				bottom: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
+				right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
+			};
+		}
 
 		const netLabelCell = netRow.getCell(1);
 		netLabelCell.value =
@@ -1176,31 +1216,24 @@ export async function createMonthlyFinancialExcelWorkbook(
 		wsTx.mergeCells(`A${netRowIdx}:E${netRowIdx}`);
 
 		const netValueCell = netRow.getCell(6);
-		netValueCell.value = { formula: `=F${totalRowIdx}-G${totalRowIdx}` };
+		netValueCell.value = {
+			formula: `F${totalRowIdx}-G${totalRowIdx}`,
+			result: calculatedNetCash,
+		};
 		netValueCell.numFmt = IDR_FORMAT;
 		netValueCell.font = {
 			name: "Arial",
 			size: 11,
 			bold: true,
-			color: { argb: `FF${PALETTE.sageDark}` },
+			color: {
+				argb:
+					calculatedNetCash >= 0
+						? `FF${PALETTE.sageDark}`
+						: `FF${PALETTE.redMuted}`,
+			},
 		};
-		netValueCell.alignment = { vertical: "middle", horizontal: "center" };
+		netValueCell.alignment = { vertical: "middle", horizontal: "right" };
 		wsTx.mergeCells(`F${netRowIdx}:G${netRowIdx}`);
-
-		for (let col = 1; col <= 7; col++) {
-			const cell = netRow.getCell(col);
-			cell.fill = {
-				type: "pattern",
-				pattern: "solid",
-				fgColor: { argb: `FF${PALETTE.sagePale}` },
-			};
-			cell.border = {
-				top: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
-				left: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
-				bottom: { style: "medium", color: { argb: `FF${PALETTE.sageDark}` } },
-				right: { style: "thin", color: { argb: `FF${PALETTE.borderLight}` } },
-			};
-		}
 	}
 
 	return workbook;

@@ -88,8 +88,21 @@ describe("Monthly Financial Excel Exporter", () => {
 
 		// Baris Total (Row 10)
 		expect(wsTx?.getCell("A10").value).toBe("TOTAL MUTASI KAS BULAN INI:");
-		expect(wsTx?.getCell("F10").value).toEqual({ formula: "=SUM(F8:F9)" });
-		expect(wsTx?.getCell("G10").value).toEqual({ formula: "=SUM(G8:G9)" });
+		expect(wsTx?.getCell("F10").value).toEqual({
+			formula: "SUM(F8:F9)",
+			result: 1500000,
+		});
+		expect(wsTx?.getCell("G10").value).toEqual({
+			formula: "SUM(G8:G9)",
+			result: 500000,
+		});
+
+		// Baris Surplus / Laba Bersih Kas (Row 11)
+		expect(wsTx?.getCell("A11").value).toContain("SURPLUS / LABA BERSIH KAS");
+		expect(wsTx?.getCell("F11").value).toEqual({
+			formula: "F10-G10",
+			result: 1000000,
+		});
 	});
 
 	it("harus menangani kondisi tanpa transaksi (0 data) secara aman tanpa crash", async () => {
