@@ -548,7 +548,7 @@ export class TenantRepository {
 						const invNum = formatDeterministicInvoiceNumber({
 							date: effectiveStartDate,
 							roomNumber: effectiveRoom.roomNumber,
-							property: effectiveRoom.property,
+							property: (effectiveRoom as any).property || (effectiveRoom as any).propertyId,
 						});
 
 						const newInvoice = await tx.invoice.create({
@@ -715,8 +715,8 @@ export class TenantRepository {
 							if (priceDiff > 0 && data.createDifferenceInvoice !== false) {
 								const invNumber = formatDeterministicInvoiceNumber({
 									date: now,
-									roomNumber: effectiveRoom.roomNumber,
-									property: effectiveRoom.property,
+									roomNumber: targetRoom.roomNumber,
+									property: (targetRoom as any).property || targetRoom.propertyId,
 									sequence: 2,
 								});
 

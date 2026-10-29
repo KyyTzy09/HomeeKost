@@ -12,14 +12,6 @@ import type {
 import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import { generateAnnualFinancialCsv } from "../../lib/csv-exporter.ts";
 import { getTodayDateString } from "../../lib/date-utils.ts";
-import { type FonnteClient, fonnteClient } from "../../lib/fonnte-client.ts";
-import { sanitizePhoneNumber } from "../../lib/phone-sanitizer.ts";
-import { isReportScheduleDue } from "../../lib/schedule-utils.ts";
-import { whatsappTemplates } from "../../lib/whatsapp-templates.ts";
-import {
-	type EngagementRepository,
-	engagementRepository,
-} from "../repositories/engagement.repository.ts";
 import {
 	type PropertyRepository,
 	propertyRepository,
@@ -54,8 +46,6 @@ export class ReportService {
 	constructor(
 		private readonly reportRepo: ReportRepository = reportRepository,
 		private readonly propertyRepo: PropertyRepository = propertyRepository,
-		private readonly engagementRepo: EngagementRepository = engagementRepository,
-		private readonly fonnte: FonnteClient = fonnteClient,
 		private readonly systemSettingRepo: SystemSettingRepository = systemSettingRepository,
 	) {}
 
@@ -399,6 +389,35 @@ export class ReportService {
 			targetMonth,
 			targetYear,
 		);
+
+		// Hitung Metrik Bulan Lalu untuk Perbandingan Pertumbuhan (MoM)
+		const prevMonth = targetMonth === 1 ? 12 : targetMonth - 1;
+		const prevYear = targetMonth === 1 ? targetYear - 1 : targetYear;
+		const prevSummary = await this.reportRepo.getMonthlyFinancialSummary(
+			propertyIds,
+			prevMonth,
+			prevYear,
+		);
+
+		const calculateGrowth = (curr: number, prev: number) => {
+			if (prev === 0) return curr > 0 ? 100 : 0;
+			return Math.round(((curr - prev) / prev) * 100 * 10) / 10;
+		};
+
+		const momGrowth = {
+			incomeGrowthPercent: calculateGrowth(
+				summary.totalIncome,
+				prevSummary.totalIncome,
+			),
+			expenseGrowthPercent: calculateGrowth(
+				summary.totalExpense,
+				prevSummary.totalExpense,
+			),
+			profitGrowthPercent: calculateGrowth(
+				summary.netProfit,
+				prevSummary.netProfit,
+			),
+		};
 
 		// 4. Susun Payload Context untuk AI LLM dengan Time Context Real-Time
 		const lastDayOfMonth = new Date(targetYear, targetMonth, 0).getDate();

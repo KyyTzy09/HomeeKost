@@ -3,7 +3,6 @@ import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import {
 	type EngagementTemplateItem,
-	isCoreEngagementTemplate,
 } from "../../common/types/index.ts";
 
 interface EngagementTemplatePanelProps {

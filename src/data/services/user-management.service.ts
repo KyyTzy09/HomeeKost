@@ -422,7 +422,7 @@ export class UserManagementService {
 	}
 
 	async getAuditLogs(limit = 100): Promise<AuditLogItem[]> {
-		const logs: Array<AuditLogItem & { rawDate: Date }> = [];
+		const logs: Array<Omit<AuditLogItem, "rawDate"> & { rawDate: Date }> = [];
 
 		try {
 			// 1. Ambil transaksi keuangan riil dari tabel transactions

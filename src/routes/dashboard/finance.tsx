@@ -336,7 +336,13 @@ function FinancePage() {
 					operationalExpense: financialSummary?.operationalExpense || 0,
 					investmentExpense: financialSummary?.investmentExpense || 0,
 					netProfit: financialSummary?.netProfit || 0,
-					profitMarginPercentage: financialSummary?.profitMarginPercentage,
+					profitMarginPercentage:
+						financialSummary?.totalIncome && financialSummary.totalIncome > 0
+							? Math.round(
+									(financialSummary.netProfit / financialSummary.totalIncome) *
+										100,
+								)
+							: undefined,
 				},
 				profitLossRows: profitLossData || [],
 				transactions: res?.data || (res as any)?.items || [],

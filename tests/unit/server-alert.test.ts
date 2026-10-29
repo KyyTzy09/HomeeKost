@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import type { SystemStatusData } from "../../src/common/types/system.types.ts";
 import { serverAlertSettingsSchema } from "../../src/common/validations/system-alert.schema.ts";
 import { ServerAlertService } from "../../src/data/services/server-alert.service.ts";
@@ -96,12 +96,20 @@ describe("Server Alert WhatsApp Notifications", () => {
 	describe("ServerAlertService Logic Gate", () => {
 		const mockStatusNormal: SystemStatusData = {
 			timestamp: new Date().toISOString(),
-			overallStatus: "healthy",
+			overallStatus: "normal",
 			overallStatusLabel: "Normal",
 			server: {
 				uptimeSeconds: 3600,
 				uptimeFormatted: "1 jam",
-				cpu: { count: 2, model: "Virtual CPU", loadStatus: "Normal" },
+				platform: "linux",
+				cpu: {
+					cores: 2,
+					model: "Virtual CPU",
+					loadAvg1m: 0.5,
+					loadStatus: "Ringan",
+					statusLevel: "normal",
+					statusLabel: "Normal",
+				},
 				memory: {
 					totalBytes: 2147483648,
 					usedBytes: 1073741824,
@@ -110,6 +118,8 @@ describe("Server Alert WhatsApp Notifications", () => {
 					totalFormatted: "2.0 GB",
 					usedFormatted: "1.0 GB",
 					freeFormatted: "1.0 GB",
+					statusLevel: "normal",
+					statusLabel: "Normal",
 				},
 				storage: {
 					totalBytes: 20000000000,
@@ -119,21 +129,41 @@ describe("Server Alert WhatsApp Notifications", () => {
 					totalFormatted: "20.0 GB",
 					usedFormatted: "10.0 GB",
 					freeFormatted: "10.0 GB",
+					statusLevel: "normal",
+					statusLabel: "Normal",
 				},
 			},
 			database: {
 				status: "connected",
-				statusLabel: "Terhubung & Siap",
-				responseTimeMs: 5,
-				sizeBytes: 10485760,
+				statusLabel: "Normal",
+				statusLevel: "normal",
+				latencyMs: 5,
 				sizeFormatted: "10.0 MB",
+				sharedBuffersFormatted: "128 MB",
+				activeConnections: 3,
 			},
 			app: {
-				version: "1.0.0",
-				environment: "test",
+				isContainer: false,
+				name: "HomeeKost Web Service",
 				memoryUsedBytes: 52428800,
 				memoryUsedFormatted: "50.0 MB",
-				processUptimeFormatted: "1 jam",
+				memoryPercentOfServer: 2.5,
+				uptimeSeconds: 3600,
+				uptimeFormatted: "1 jam",
+				statusLevel: "normal",
+				statusLabel: "Normal",
+				description: "Aplikasi Web",
+			},
+			containers: {
+				detected: false,
+				summary: "Tidak ada container",
+				items: [],
+			},
+			recommendation: {
+				level: "normal",
+				headline: "Sistem Berjalan Normal",
+				description: "Semua metrik berada dalam batas aman.",
+				actionRequired: false,
 			},
 		};
 

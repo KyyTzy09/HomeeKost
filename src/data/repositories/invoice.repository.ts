@@ -610,7 +610,6 @@ export class InvoiceRepository {
 			existingInvoicesAcrossContracts.map((inv) => inv.contract.tenantId),
 		);
 
-		const timestamp = Date.now().toString().slice(-4);
 		const toCreate = [];
 
 		for (let i = 0; i < contracts.length; i++) {

@@ -7,7 +7,6 @@ import {
 	Cpu,
 	Database,
 	HardDrive,
-	Layers,
 	RefreshCw,
 	Server,
 	ShieldCheck,
@@ -96,7 +95,6 @@ function StatusPage() {
 	const storageBadge = statusData.server.storage
 		? getBadgeStyle(statusData.server.storage.statusLevel)
 		: null;
-	const databaseBadge = getBadgeStyle(statusData.database.statusLevel);
 
 	return (
 		<div className="min-h-screen bg-[#faf9f5] text-[#252925] flex flex-col font-sans">

@@ -732,6 +732,8 @@ export class TenantService {
 			},
 		);
 
+		const hadPaidInvoice = invoicesToCreate.some((inv) => inv.status === "PAID");
+
 		const unpaidPeriod = this.calculateUnpaidPeriod(
 			invoicesToCreate,
 			contract.startDate,

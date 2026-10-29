@@ -12,7 +12,6 @@ interface FinanceCostCompositionProps {
 export function FinanceCostComposition({
 	items = [],
 	totalExpense = 0,
-	expenseRatio = 0,
 	isLoading = false,
 }: FinanceCostCompositionProps) {
 	return (

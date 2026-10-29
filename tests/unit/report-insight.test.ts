@@ -91,7 +91,7 @@ describe("Financial Health Grade & Mid-Month Guardrail", () => {
 			complaintExpenses: {
 				totalCost: 0,
 				percentageOfExpense: 0,
-				complaintCount: 0,
+				totalComplaints: 0,
 			},
 		};
 
@@ -156,7 +156,7 @@ describe("Financial Health Grade & Mid-Month Guardrail", () => {
 			complaintExpenses: {
 				totalCost: 0,
 				percentageOfExpense: 0,
-				complaintCount: 0,
+				totalComplaints: 0,
 			},
 		};
 
@@ -210,7 +210,7 @@ describe("Financial Health Grade & Mid-Month Guardrail", () => {
 			complaintExpenses: {
 				totalCost: 0,
 				percentageOfExpense: 0,
-				complaintCount: 0,
+				totalComplaints: 0,
 			},
 		};
 

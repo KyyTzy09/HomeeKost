@@ -233,9 +233,7 @@ function ProfilePage() {
 					/>
 
 					{/* Pengaturan Notifikasi WhatsApp Kapasitas Server (Admin & SuperAdmin) */}
-					{(isSuperAdmin ||
-						currentProfile.role === "ADMIN" ||
-						user?.role === "ADMIN") && (
+					{(isSuperAdmin || currentProfile.role === "ADMIN") && (
 						<ProfileServerAlertCard onShowToast={showToast} />
 					)}
 

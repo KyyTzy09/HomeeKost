@@ -92,7 +92,9 @@ export function useSendTestServerAlert(): UseMutationResult<
 	>({
 		mutationFn: async (payload) => {
 			const targetPhone =
-				payload && ("targetPhone" in payload ? payload.targetPhone : payload.phone);
+				payload && typeof payload === "object"
+					? payload.targetPhone || payload.phone
+					: undefined;
 			return sendTestServerAlertServerFn({ data: { targetPhone } });
 		},
 	});
