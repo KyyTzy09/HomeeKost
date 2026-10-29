@@ -1,5 +1,4 @@
 import {
-	Activity,
 	AlertCircle,
 	CheckCircle2,
 	Clock,
@@ -54,21 +53,6 @@ export function getHealthGradeBadge(
 				className: "bg-[#e8f2ea] text-[#3e724d] border-[#b9dbbf]",
 				icon: CheckCircle2,
 			};
-		case "NORMAL":
-		case "SEHAT":
-			return {
-				label: "Status Finansial: NORMAL ✨",
-				className: "bg-[#edf4ee] text-[#4f6958] border-[#cde0d1]",
-				icon: Activity,
-			};
-		case "WASPADA":
-			return {
-				label: isClosedPeriod
-					? "Status Finansial: WASPADA ⚠️"
-					: "Status Finansial: WASPADA (Dalam Pemantauan) ⚠️",
-				className: "bg-[#fbf4e6] text-[#b18a4b] border-[#eed7b0]",
-				icon: AlertCircle,
-			};
 		case "BAHAYA":
 		case "KRITIS":
 			return {
@@ -76,9 +60,14 @@ export function getHealthGradeBadge(
 				className: "bg-[#fceeed] text-[#b66b68] border-[#f0c3c1]",
 				icon: AlertCircle,
 			};
+		case "WASPADA":
+		case "NORMAL":
+		case "SEHAT":
 		default:
 			return {
-				label: "Status Finansial: WASPADA ⚠️",
+				label: isClosedPeriod
+					? "Status Finansial: WASPADA ⚠️"
+					: "Status Finansial: WASPADA (Dalam Pemantauan) ⚠️",
 				className: "bg-[#fbf4e6] text-[#b18a4b] border-[#eed7b0]",
 				icon: AlertCircle,
 			};
@@ -89,7 +78,7 @@ export function ReportAiInsightPanel({
 	periodLabel,
 	propertyName,
 	isClosedPeriod,
-	financialHealthGrade = "NORMAL",
+	financialHealthGrade = "WASPADA",
 	narrativeSummary,
 	keyHighlights = [],
 	trendAnalysis,

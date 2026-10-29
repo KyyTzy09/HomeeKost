@@ -210,7 +210,7 @@ export class ReportService {
 			aiData = {
 				financialHealthGrade:
 					(savedSummary.financialHealthGrade as AiFinancialInsightData["financialHealthGrade"]) ||
-					"SEHAT",
+					"WASPADA",
 				executiveSummary:
 					(savedSummary.executiveSummary as string) ||
 					(savedSummary.narrativeSummary as string) ||

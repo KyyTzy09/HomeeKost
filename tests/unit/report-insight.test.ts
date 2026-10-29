@@ -10,13 +10,13 @@ describe("Financial Health Grade & Mid-Month Guardrail", () => {
 		expect(badge.label).toContain("🌟");
 	});
 
-	it("should return NORMAL for standard/healthy metrics and normalize SEHAT", () => {
+	it("should map legacy NORMAL and SEHAT to middle tier WASPADA", () => {
 		const badgeNormal = getHealthGradeBadge("NORMAL", true);
-		expect(badgeNormal.label).toContain("NORMAL");
-		expect(badgeNormal.label).toContain("✨");
+		expect(badgeNormal.label).toContain("WASPADA");
+		expect(badgeNormal.label).toContain("⚠️");
 
 		const badgeSehat = getHealthGradeBadge("SEHAT", true);
-		expect(badgeSehat.label).toContain("NORMAL");
+		expect(badgeSehat.label).toContain("WASPADA");
 	});
 
 	it("should return WASPADA for warning condition", () => {
