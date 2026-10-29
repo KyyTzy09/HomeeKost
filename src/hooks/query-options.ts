@@ -23,6 +23,7 @@ import {
 	getPropertyByIdServerFn,
 	getRoomByIdServerFn,
 	getRoomsByPropertyServerFn,
+	getServerAlertSettingsServerFn,
 	getTenantByIdServerFn,
 	getTenantsServerFn,
 	getTopbarNotificationsServerFn,
@@ -272,3 +273,13 @@ export const myProfileQueryOptions = () =>
 		queryKey: ["my-profile"] as const,
 		queryFn: () => getMyProfileServerFn(),
 	});
+
+/**
+ * 11. System & Server Alerts
+ */
+export const serverAlertSettingsQueryOptions = () =>
+	queryOptions({
+		queryKey: ["server-alert-settings"] as const,
+		queryFn: () => getServerAlertSettingsServerFn(),
+	});
+

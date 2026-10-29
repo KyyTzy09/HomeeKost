@@ -1,8 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SystemStatusData } from "../../common/types/system.types.ts";
+import {
+	type ServerAlertSettingsData,
+	type ServerAlertSettingsFormValues,
+	serverAlertSettingsSchema,
+} from "../../common/validations/index.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { userRepository } from "../repositories/user.repository.ts";
+import { serverAlertService } from "../services/server-alert.service.ts";
 import { systemStatusService } from "../services/system-status.service.ts";
 import {
 	type ResetDataStats,
@@ -16,7 +22,12 @@ export const getSystemStatusServerFn = createServerFn({
 		"getSystemStatusServerFn",
 		{},
 		async () => {
-			return systemStatusService.getSystemStatus();
+			const status = await systemStatusService.getSystemStatus();
+			// Pemeriksaan otomatis notifikasi WhatsApp jika kondisi mendekati kritis/kritis
+			serverAlertService.checkAndSendAlertIfDue(status).catch((err) => {
+				console.error("[ServerAlert] Error checking alert condition:", err);
+			});
+			return status;
 		},
 		{
 			method: "GET",
@@ -77,6 +88,73 @@ export const resetDataServerFn = createServerFn({
 					method: "POST",
 					summary: (res) =>
 						`Sukses reset data: ${res.stats.deletedTransactions} transaksi, ${res.stats.deletedTenants} penyewa dihapus.`,
+				},
+			);
+		},
+	);
+
+export const getServerAlertSettingsServerFn = createServerFn({
+	method: "GET",
+}).handler(async (): Promise<ServerAlertSettingsData> => {
+	return executeWithLogging(
+		"getServerAlertSettingsServerFn",
+		{},
+		async () => {
+			return serverAlertService.getSettings();
+		},
+		{
+			method: "GET",
+			requireAuth: true,
+			summary: (res) =>
+				`Server Alert Settings: ${res.enabled ? "Aktif" : "Nonaktif"} (Target: ${res.targetPhone || "-"})`,
+		},
+	);
+});
+
+export const updateServerAlertSettingsServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: ServerAlertSettingsFormValues) => {
+		return serverAlertSettingsSchema.parse(input);
+	})
+	.handler(async ({ data }): Promise<ServerAlertSettingsData> => {
+		return executeWithLogging(
+			"updateServerAlertSettingsServerFn",
+			data,
+			async () => {
+				return serverAlertService.updateSettings(data);
+			},
+			{
+				method: "POST",
+				requireAuth: true,
+				summary: (res) =>
+					`Perbarui Pengaturan Alert Server: ${res.enabled ? "Aktif" : "Nonaktif"} (HP: ${res.targetPhone})`,
+			},
+		);
+	});
+
+export const sendTestServerAlertServerFn = createServerFn({
+	method: "POST",
+})
+	.validator((input: { targetPhone: string }) => {
+		return z
+			.object({
+				targetPhone: z.string().min(8, "Nomor WhatsApp minimal 8 digit"),
+			})
+			.parse(input);
+	})
+	.handler(
+		async ({ data }): Promise<{ success: boolean; message: string }> => {
+			return executeWithLogging(
+				"sendTestServerAlertServerFn",
+				data,
+				async () => {
+					return serverAlertService.sendTestAlert(data.targetPhone);
+				},
+				{
+					method: "POST",
+					requireAuth: true,
+					summary: (res) => res.message,
 				},
 			);
 		},

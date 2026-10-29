@@ -407,4 +407,82 @@ Silakan buka Web Dashboard untuk melihat rincian laporan dan wawasan bisnis leng
 ━━━━━━━━━━━━━━━━━━━━━
 _Pesan otomatis dari Sistem Manajemen Kost_`;
 	},
+
+	/**
+	 * Template Peringatan Penggunaan Kapasitas Server (Mendekati Kritis / Kritis)
+	 */
+	serverStatusAlert(p: {
+		statusLabel: "Mendekati Kritis" | "Kritis";
+		headline: string;
+		description: string;
+		ramUsedFormatted: string;
+		ramTotalFormatted: string;
+		ramPercent: number;
+		storageUsedFormatted?: string;
+		storageTotalFormatted?: string;
+		storagePercent?: number;
+		cpuLoadStatus: string;
+		databaseStatus: string;
+		actionAdvice: string;
+		statusUrl?: string;
+	}): string {
+		const appUrl = process.env.APP_URL || "http://localhost:3000";
+		const url = p.statusUrl || `${appUrl}/status`;
+		const icon = p.statusLabel === "Kritis" ? "🚨" : "⚠️";
+		const title =
+			p.statusLabel === "Kritis"
+				? "PERINGATAN KRITIS SERVER"
+				: "PERINGATAN KAPASITAS SERVER";
+
+		const storageLine = p.storageTotalFormatted
+			? `• Penyimpanan: *${p.storagePercent}%* (${p.storageUsedFormatted} / ${p.storageTotalFormatted})`
+			: "• Penyimpanan: Dikelola Cloud";
+
+		return `${icon} *${title}* ${icon}
+━━━━━━━━━━━━━━━━━━━━━
+Halo Bapak/Ibu Pengelola,
+Sistem mendeteksi kondisi server kos yang memerlukan perhatian:
+
+• Status: *${p.statusLabel.toUpperCase()}*
+• Penggunaan RAM: *${p.ramPercent}%* (${p.ramUsedFormatted} / ${p.ramTotalFormatted})
+${storageLine}
+• Beban CPU: *${p.cpuLoadStatus}*
+• Basis Data: *${p.databaseStatus}*
+
+📌 *Kondisi:*
+${p.headline}
+${p.description}
+
+🛠️ *Tindakan yang Disarankan:*
+${p.actionAdvice}
+
+Pantau kapasitas dan panduan lengkap di:
+🔗 ${url}
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan otomatis dari Sistem Manajemen Kos_`;
+	},
+
+	/**
+	 * Template Uji Coba Pengiriman Pesan WhatsApp Server
+	 */
+	serverTestAlert(p: {
+		recipientPhone: string;
+		statusUrl?: string;
+	}): string {
+		const appUrl = process.env.APP_URL || "http://localhost:3000";
+		const url = p.statusUrl || `${appUrl}/status`;
+
+		return `🔔 *UJI COBA NOTIFIKASI WHATSAPP SERVER* 🔔
+━━━━━━━━━━━━━━━━━━━━━
+Halo Bapak/Ibu Pengelola,
+Ini adalah pesan uji coba dari sistem *HomeeKost Management*.
+
+✅ Nomor WhatsApp *${p.recipientPhone}* berhasil terhubung ke sistem peringatan server kos.
+Anda akan menerima notifikasi otomatis jika kapasitas server mendekati kritis atau memerlukan perhatian.
+
+Pantau status server secara berkala di:
+🔗 ${url}
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan pengujian berhasil dikirim._`;
+	},
 };

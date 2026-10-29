@@ -1,10 +1,21 @@
 import {
 	type UseMutationResult,
+	type UseQueryResult,
 	useMutation,
+	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { resetDataServerFn } from "../data/servers/system.fn.ts";
+import type {
+	ServerAlertSettingsData,
+	ServerAlertSettingsFormValues,
+} from "../common/validations/index.ts";
+import {
+	resetDataServerFn,
+	sendTestServerAlertServerFn,
+	updateServerAlertSettingsServerFn,
+} from "../data/servers/system.fn.ts";
 import type { ResetDataStats } from "../data/services/system.service.ts";
+import { serverAlertSettingsQueryOptions } from "./query-options.ts";
 
 export interface ResetDataResult {
 	success: boolean;
@@ -26,6 +37,61 @@ export function useResetData(): UseMutationResult<
 		onSuccess: () => {
 			// Invalidate all operational queries across dashboard
 			queryClient.invalidateQueries();
+		},
+	});
+}
+
+/**
+ * Hook untuk membaca pengaturan notifikasi WhatsApp kapasitas server
+ */
+export function useServerAlertSettings(): UseQueryResult<
+	ServerAlertSettingsData,
+	Error
+> {
+	return useQuery(serverAlertSettingsQueryOptions());
+}
+
+/**
+ * Hook untuk memperbarui pengaturan nomor WhatsApp peringatan server
+ */
+export function useUpdateServerAlertSettings(): UseMutationResult<
+	ServerAlertSettingsData,
+	Error,
+	ServerAlertSettingsFormValues
+> {
+	const queryClient = useQueryClient();
+
+	return useMutation<
+		ServerAlertSettingsData,
+		Error,
+		ServerAlertSettingsFormValues
+	>({
+		mutationFn: async (values) => {
+			return updateServerAlertSettingsServerFn({ data: values });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["server-alert-settings"],
+			});
+		},
+	});
+}
+
+/**
+ * Hook untuk mengirim pesan WhatsApp uji coba ke nomor tujuan
+ */
+export function useSendTestServerAlert(): UseMutationResult<
+	{ success: boolean; message: string },
+	Error,
+	{ phone?: string }
+> {
+	return useMutation<
+		{ success: boolean; message: string },
+		Error,
+		{ phone?: string }
+	>({
+		mutationFn: async (payload) => {
+			return sendTestServerAlertServerFn({ data: payload });
 		},
 	});
 }
