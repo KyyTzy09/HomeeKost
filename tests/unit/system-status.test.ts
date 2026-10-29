@@ -7,8 +7,8 @@ describe("SystemStatusService Unit Tests", () => {
 
 		expect(status).toBeDefined();
 		expect(typeof status.timestamp).toBe("string");
-		expect(["normal", "warning", "critical"]).toContain(status.overallStatus);
-		expect(typeof status.overallStatusLabel).toBe("string");
+		expect(["prima", "normal", "warning", "critical"]).toContain(status.overallStatus);
+		expect(["Prima", "Normal", "Waspada", "Kritis"]).toContain(status.overallStatusLabel);
 
 		// Server Hardware info
 		expect(status.server).toBeDefined();
@@ -18,7 +18,7 @@ describe("SystemStatusService Unit Tests", () => {
 		expect(status.server.memory.usedFormatted).toMatch(/GB|MB/);
 		expect(status.server.memory.usedPercent).toBeGreaterThanOrEqual(0);
 		expect(status.server.memory.usedPercent).toBeLessThanOrEqual(100);
-		expect(["normal", "warning", "critical"]).toContain(
+		expect(["prima", "normal", "warning", "critical"]).toContain(
 			status.server.memory.statusLevel,
 		);
 

@@ -1,4 +1,5 @@
-export type HealthLevel = "normal" | "warning" | "critical";
+export type HealthLevel = "prima" | "normal" | "warning" | "critical";
+export type SystemStatusLabel = "Prima" | "Normal" | "Waspada" | "Kritis";
 
 export interface SystemMemoryInfo {
 	totalFormatted: string;
@@ -9,7 +10,7 @@ export interface SystemMemoryInfo {
 	freeBytes: number;
 	usedPercent: number;
 	statusLevel: HealthLevel;
-	statusLabel: string;
+	statusLabel: SystemStatusLabel;
 }
 
 export interface SystemStorageInfo {
@@ -21,7 +22,7 @@ export interface SystemStorageInfo {
 	freeBytes: number;
 	usedPercent: number;
 	statusLevel: HealthLevel;
-	statusLabel: string;
+	statusLabel: SystemStatusLabel;
 }
 
 export interface SystemCpuInfo {
@@ -29,6 +30,8 @@ export interface SystemCpuInfo {
 	model: string;
 	loadAvg1m: number;
 	loadStatus: "Ringan" | "Sedang" | "Tinggi";
+	statusLevel: HealthLevel;
+	statusLabel: SystemStatusLabel;
 }
 
 export interface SystemAppInfo {
@@ -40,13 +43,13 @@ export interface SystemAppInfo {
 	uptimeFormatted: string;
 	uptimeSeconds: number;
 	statusLevel: HealthLevel;
-	statusLabel: string;
+	statusLabel: SystemStatusLabel;
 	description: string;
 }
 
 export interface SystemDatabaseInfo {
 	status: "connected" | "disconnected";
-	statusLabel: string;
+	statusLabel: SystemStatusLabel;
 	statusLevel: HealthLevel;
 	latencyMs: number;
 	sizeFormatted: string;
@@ -62,7 +65,7 @@ export interface ContainerServiceItem {
 	memoryLimitFormatted: string;
 	memoryPercentOfLimit: number;
 	statusLevel: HealthLevel;
-	statusLabel: string;
+	statusLabel: SystemStatusLabel;
 	description: string;
 }
 
@@ -82,7 +85,7 @@ export interface SystemRecommendation {
 export interface SystemStatusData {
 	timestamp: string;
 	overallStatus: HealthLevel;
-	overallStatusLabel: string;
+	overallStatusLabel: SystemStatusLabel;
 	server: {
 		memory: SystemMemoryInfo;
 		storage: SystemStorageInfo | null;

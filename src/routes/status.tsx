@@ -39,24 +39,31 @@ export const Route = createFileRoute("/status")({
 	component: StatusPage,
 });
 
-function getBadgeStyle(level: HealthLevel) {
-	if (level === "critical") {
+function getBadgeStyle(level: HealthLevel | string) {
+	if (level === "critical" || level === "Kritis") {
 		return {
-			container: "bg-rose-50 text-rose-700 border-rose-200",
-			dot: "bg-rose-500",
-			bar: "bg-rose-500",
+			container: "bg-[#fceeed] text-[#b66b68] border-[#f0c3c1]",
+			dot: "bg-[#b66b68]",
+			bar: "bg-[#b66b68]",
 		};
 	}
-	if (level === "warning") {
+	if (level === "warning" || level === "Waspada") {
 		return {
-			container: "bg-amber-50 text-amber-700 border-amber-200",
-			dot: "bg-amber-500",
-			bar: "bg-amber-500",
+			container: "bg-[#fbf4e6] text-[#b18a4b] border-[#eed7b0]",
+			dot: "bg-[#b18a4b]",
+			bar: "bg-[#b18a4b]",
+		};
+	}
+	if (level === "prima" || level === "Prima") {
+		return {
+			container: "bg-[#e8f2ea] text-[#3e724d] border-[#b9dbbf]",
+			dot: "bg-[#3e724d]",
+			bar: "bg-[#4f6958]",
 		};
 	}
 	return {
-		container: "bg-emerald-50 text-emerald-700 border-emerald-200",
-		dot: "bg-emerald-500",
+		container: "bg-[#edf5ee] text-[#4f6958] border-[#cde0d1]",
+		dot: "bg-[#4f6958]",
 		bar: "bg-[#4f6958]",
 	};
 }
@@ -141,16 +148,16 @@ function StatusPage() {
 					className={`p-5 sm:p-6 rounded-2xl border ${overallBadge.container} transition-all`}
 				>
 					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-						<div className="space-y-1">
+						<div className="space-y-1.5">
 							<div className="flex items-center gap-2">
 								<span
-									className={`w-2.5 h-2.5 rounded-full ${overallBadge.dot} animate-pulse`}
+									className={`w-2 h-2 rounded-full ${overallBadge.dot} animate-pulse`}
 								/>
-								<span className="text-xs font-bold uppercase tracking-wider">
-									Kondisi Operasional
+								<span className="text-xs font-bold tracking-wide">
+									Status Sistem: {statusData.overallStatusLabel}
 								</span>
 							</div>
-							<h2 className="text-lg sm:text-xl font-bold tracking-tight">
+							<h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#252925]">
 								{statusData.recommendation.headline}
 							</h2>
 							<p className="text-xs sm:text-sm text-[#4b554d] leading-relaxed max-w-3xl">
@@ -158,7 +165,7 @@ function StatusPage() {
 							</p>
 						</div>
 
-						<div className="shrink-0 text-left sm:text-right text-[11px] text-[#6b756d] border-t sm:border-t-0 pt-2 sm:pt-0 border-current/10">
+						<div className="shrink-0 text-left sm:text-right text-[11px] text-[#737873] border-t sm:border-t-0 pt-2 sm:pt-0 border-current/10">
 							<p className="font-medium">Pembaruan Terakhir</p>
 							<p className="font-semibold text-[#252925]">
 								{lastRefreshedAt.toLocaleTimeString("id-ID", {
@@ -191,7 +198,7 @@ function StatusPage() {
 								<div className="flex items-center gap-2">
 									<Activity className="w-4 h-4 text-[#4f6958]" />
 									<span className="text-xs font-bold text-[#252925]">
-										Memori Server (RAM)
+										Memori (RAM)
 									</span>
 								</div>
 								<span
@@ -244,13 +251,13 @@ function StatusPage() {
 							</div>
 						</div>
 
-						{/* Penyimpanan Server (Disk Storage) */}
+						{/* Penyimpanan Server (Storage) */}
 						<div className="p-5 rounded-2xl bg-white border border-[#e4e9e4] shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-3">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">
 									<HardDrive className="w-4 h-4 text-[#4f6958]" />
 									<span className="text-xs font-bold text-[#252925]">
-										Ruang Penyimpanan Server
+										Penyimpanan (Storage)
 									</span>
 								</div>
 								{storageBadge && (
@@ -306,8 +313,7 @@ function StatusPage() {
 								</div>
 							) : (
 								<p className="text-xs text-[#737873] py-4">
-									Informasi ruang penyimpanan tidak tersedia pada sistem
-									operasi saat ini.
+									Informasi ruang penyimpanan dikelola secara otomatis oleh cloud.
 								</p>
 							)}
 						</div>
@@ -320,16 +326,20 @@ function StatusPage() {
 								</div>
 								<div>
 									<h4 className="text-xs font-bold text-[#252925]">
-										Pemrosesan Server
+										Pemrosesan (CPU)
 									</h4>
 									<p className="text-[11px] text-[#737873]">
-										{statusData.server.cpu.model}
+										{statusData.server.cpu.model} · Beban {statusData.server.cpu.loadAvg1m}
 									</p>
 								</div>
 							</div>
-							<span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-								<span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-								Beban {statusData.server.cpu.loadStatus}
+							<span
+								className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${getBadgeStyle(statusData.server.cpu.statusLevel).container}`}
+							>
+								<span
+									className={`w-1.5 h-1.5 rounded-full ${getBadgeStyle(statusData.server.cpu.statusLevel).dot}`}
+								/>
+								{statusData.server.cpu.statusLabel}
 							</span>
 						</div>
 
@@ -341,10 +351,10 @@ function StatusPage() {
 								</div>
 								<div>
 									<h4 className="text-xs font-bold text-[#252925]">
-										Waktu Aktif Server
+										Waktu Aktif Sistem
 									</h4>
 									<p className="text-[11px] text-[#737873]">
-										Berjalan tanpa jeda sejak dinyalakan
+										Sistem beroperasi stabil
 									</p>
 								</div>
 							</div>
@@ -357,19 +367,14 @@ function StatusPage() {
 
 				{/* Level 2: Rincian Penggunaan Kontainer & Layanan */}
 				<section className="space-y-3">
-					<div className="flex items-center justify-between">
-						<div>
-							<h3 className="text-sm font-bold text-[#252925] flex items-center gap-2">
-								<Box className="w-4 h-4 text-[#4f6958]" />
-								Rincian Penggunaan Layanan Aplikasi & Basis Data
-							</h3>
-							<p className="text-xs text-[#737873]">
-								Beban memori tiap komponen aplikasi dan basis data terhadap batas alokasi aman
-							</p>
-						</div>
-						<span className="text-[11px] font-medium text-[#737873] bg-[#f0f4f1] px-2.5 py-1 rounded-lg border border-[#e2eae3]">
-							{statusData.containers.summary}
-						</span>
+					<div>
+						<h3 className="text-sm font-bold text-[#252925] flex items-center gap-2">
+							<Box className="w-4 h-4 text-[#4f6958]" />
+							Rincian Penggunaan Layanan Aplikasi & Basis Data
+						</h3>
+						<p className="text-xs text-[#737873]">
+							Beban alokasi memori tiap komponen aplikasi dan basis data terhadap batas aman
+						</p>
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -431,10 +436,10 @@ function StatusPage() {
 													{item.memoryPercentOfLimit}%
 												</strong>
 											</span>
-											<span className="text-[10.5px]">
+											<span>
 												{item.role === "database"
-													? `Data: ${statusData.database.sizeFormatted}`
-													: `Aktif: ${statusData.app.uptimeFormatted}`}
+													? `Ukuran Data: ${statusData.database.sizeFormatted}`
+													: `Durasi Aktif: ${statusData.app.uptimeFormatted}`}
 											</span>
 										</div>
 									</div>
@@ -448,60 +453,106 @@ function StatusPage() {
 					</div>
 				</section>
 
-				{/* Level 3: Panduan & Rekomendasi Kapasitas untuk Pemilik Kos */}
+				{/* Level 3: Panduan Status & Indikator Sistem untuk Pemilik Kos */}
 				<section className="p-6 rounded-2xl bg-white border border-[#e4e9e4] shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-4">
 					<div>
 						<h3 className="text-sm font-bold text-[#252925]">
-							Panduan Kapasitas & Rekomendasi Peningkatan Server
+							Panduan Status & Indikator Sistem
 						</h3>
 						<p className="text-xs text-[#737873] mt-0.5">
-							Informasi transparan agar pemilik kos dapat mengetahui kapan
-							saatnya meningkatkan spesifikasi server
+							Petunjuk mandiri untuk memahami arti status server kos Anda tanpa perlu akses terminal atau teknis
 						</p>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-						{/* Hijau */}
-						<div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-1.5">
-							<div className="flex items-center gap-1.5">
-								<span className="w-2 h-2 rounded-full bg-emerald-500" />
-								<strong className="text-xs font-bold text-emerald-800">
-									Kondisi Normal (&lt; 75%)
-								</strong>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+						{/* 1. Prima */}
+						<div className="p-4 rounded-xl border border-[#b9dbbf] bg-[#e8f2ea]/40 space-y-2.5">
+							<div className="flex items-center justify-between">
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-[#b9dbbf] bg-[#e8f2ea] text-[#3e724d]">
+									<span className="w-1.5 h-1.5 rounded-full bg-[#3e724d]" />
+									Prima
+								</span>
+								<span className="text-[11px] font-bold text-[#3e724d]">Sangat Sehat</span>
 							</div>
-							<p className="text-[11px] text-emerald-700 leading-relaxed">
-								Server bekerja dengan sangat longgar. Belum ada kebutuhan
-								tindakan atau peningkatan kapasitas dalam waktu dekat.
-							</p>
+							<div className="space-y-1 text-[11px] text-[#37443c] leading-relaxed">
+								<p className="font-semibold text-[#252925]">Syarat Terpenuhi:</p>
+								<ul className="list-disc list-inside space-y-0.5 text-[10.5px] text-[#556358]">
+									<li>RAM &lt; 60%</li>
+									<li>Penyimpanan &lt; 60%</li>
+									<li>Beban CPU Ringan</li>
+									<li>Database Lancar (&lt; 300ms)</li>
+								</ul>
+								<p className="pt-1.5 text-[10.5px]">
+									<strong>Tindakan:</strong> Tidak perlu tindakan apa pun. Sistem bekerja sangat longgar.
+								</p>
+							</div>
 						</div>
 
-						{/* Kuning */}
-						<div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-1.5">
-							<div className="flex items-center gap-1.5">
-								<span className="w-2 h-2 rounded-full bg-amber-500" />
-								<strong className="text-xs font-bold text-amber-800">
-									Batas Perhatian (75% - 85%)
-								</strong>
+						{/* 2. Normal */}
+						<div className="p-4 rounded-xl border border-[#cde0d1] bg-[#edf5ee]/40 space-y-2.5">
+							<div className="flex items-center justify-between">
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-[#cde0d1] bg-[#edf5ee] text-[#4f6958]">
+									<span className="w-1.5 h-1.5 rounded-full bg-[#4f6958]" />
+									Normal
+								</span>
+								<span className="text-[11px] font-bold text-[#4f6958]">Standar Harian</span>
 							</div>
-							<p className="text-[11px] text-amber-700 leading-relaxed">
-								Penggunaan server mulai meningkat. Pantau jika ada penambahan
-								kamar atau transaksi dalam jumlah besar.
-							</p>
+							<div className="space-y-1 text-[11px] text-[#37443c] leading-relaxed">
+								<p className="font-semibold text-[#252925]">Syarat Terpenuhi:</p>
+								<ul className="list-disc list-inside space-y-0.5 text-[10.5px] text-[#556358]">
+									<li>RAM 60% – 75%</li>
+									<li>Penyimpanan 60% – 80%</li>
+									<li>Beban CPU Ringan / Sedang</li>
+									<li>Database Terhubung Lancar</li>
+								</ul>
+								<p className="pt-1.5 text-[10.5px]">
+									<strong>Tindakan:</strong> Tidak perlu tindakan. Beban operasional kos berjalan stabil.
+								</p>
+							</div>
 						</div>
 
-						{/* Merah */}
-						<div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 space-y-1.5">
-							<div className="flex items-center gap-1.5">
-								<span className="w-2 h-2 rounded-full bg-rose-500" />
-								<strong className="text-xs font-bold text-rose-800">
-									Waktunya Peningkatan (&gt; 85%)
-								</strong>
+						{/* 3. Waspada */}
+						<div className="p-4 rounded-xl border border-[#eed7b0] bg-[#fbf4e6]/40 space-y-2.5">
+							<div className="flex items-center justify-between">
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-[#eed7b0] bg-[#fbf4e6] text-[#b18a4b]">
+									<span className="w-1.5 h-1.5 rounded-full bg-[#b18a4b]" />
+									Waspada
+								</span>
+								<span className="text-[11px] font-bold text-[#b18a4b]">Perlu Pemantauan</span>
 							</div>
-							<p className="text-[11px] text-rose-700 leading-relaxed">
-								Penggunaan memori bertahan tinggi selama beberapa hari.
-								Disarankan melakukan peningkatan paket server agar operasional
-								tetap lancar.
-							</p>
+							<div className="space-y-1 text-[11px] text-[#37443c] leading-relaxed">
+								<p className="font-semibold text-[#252925]">Syarat Terpenuhi:</p>
+								<ul className="list-disc list-inside space-y-0.5 text-[10.5px] text-[#7d6537]">
+									<li>RAM 75% – 90% (cache aktif) ATAU</li>
+									<li>Penyimpanan 80% – 90% ATAU</li>
+									<li>Beban CPU Sedang / Tinggi sesaat</li>
+								</ul>
+								<p className="pt-1.5 text-[10.5px]">
+									<strong>Tindakan:</strong> Jika RAM tinggi, biarkan saja (sistem merapikan otomatis). Jika penyimpanan tinggi, cukup bersihkan berkas sampah / bukti lama. <em>Tidak perlu upgrade VPS.</em>
+								</p>
+							</div>
+						</div>
+
+						{/* 4. Kritis */}
+						<div className="p-4 rounded-xl border border-[#f0c3c1] bg-[#fceeed]/40 space-y-2.5">
+							<div className="flex items-center justify-between">
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-[#f0c3c1] bg-[#fceeed] text-[#b66b68]">
+									<span className="w-1.5 h-1.5 rounded-full bg-[#b66b68]" />
+									Kritis
+								</span>
+								<span className="text-[11px] font-bold text-[#b66b68]">Tindakan Segera</span>
+							</div>
+							<div className="space-y-1 text-[11px] text-[#37443c] leading-relaxed">
+								<p className="font-semibold text-[#252925]">Syarat Terpenuhi:</p>
+								<ul className="list-disc list-inside space-y-0.5 text-[10.5px] text-[#8c4b48]">
+									<li>Database Terputus ATAU</li>
+									<li>Penyimpanan &gt; 92% ATAU</li>
+									<li>RAM &gt; 90% + CPU Tinggi + Kamar Ratusan</li>
+								</ul>
+								<p className="pt-1.5 text-[10.5px]">
+									<strong>Tindakan:</strong> Periksa koneksi basis data. Jika kos sudah berkembang ratusan kamar, baru saatnya meningkatkan paket spesifikasi VPS.
+								</p>
+							</div>
 						</div>
 					</div>
 				</section>

@@ -10,6 +10,7 @@ import type {
 	SystemMemoryInfo,
 	SystemRecommendation,
 	SystemStatusData,
+	SystemStatusLabel,
 	SystemStorageInfo,
 } from "../../common/types/system.types.ts";
 import { prisma } from "../../db.ts";
@@ -88,14 +89,20 @@ export class SystemStatusService {
 		);
 
 		let statusLevel: HealthLevel = "normal";
-		let statusLabel = "Kondisi Normal";
+		let statusLabel: SystemStatusLabel = "Normal";
 
 		if (usedPercent >= 90) {
 			statusLevel = "critical";
-			statusLabel = "Kritis / Mendekati Batas";
+			statusLabel = "Kritis";
 		} else if (usedPercent >= 75) {
 			statusLevel = "warning";
-			statusLabel = "Perlu Dipantau";
+			statusLabel = "Waspada";
+		} else if (usedPercent < 60) {
+			statusLevel = "prima";
+			statusLabel = "Prima";
+		} else {
+			statusLevel = "normal";
+			statusLabel = "Normal";
 		}
 
 		return {
@@ -127,17 +134,20 @@ export class SystemStatusService {
 				);
 
 				let statusLevel: HealthLevel = "normal";
-				let statusLabel = "Sangat Lega";
+				let statusLabel: SystemStatusLabel = "Normal";
 
-				if (usedPercent >= 95) {
+				if (usedPercent >= 90) {
 					statusLevel = "critical";
-					statusLabel = "Penuh / Kritis";
-				} else if (usedPercent >= 85) {
+					statusLabel = "Kritis";
+				} else if (usedPercent >= 80) {
 					statusLevel = "warning";
-					statusLabel = "Hampir Penuh";
-				} else if (usedPercent >= 70) {
+					statusLabel = "Waspada";
+				} else if (usedPercent < 60) {
+					statusLevel = "prima";
+					statusLabel = "Prima";
+				} else {
 					statusLevel = "normal";
-					statusLabel = "Cukup";
+					statusLabel = "Normal";
 				}
 
 				return {
@@ -166,17 +176,30 @@ export class SystemStatusService {
 		const normalizedLoad = load1m / cores;
 
 		let loadStatus: "Ringan" | "Sedang" | "Tinggi" = "Ringan";
+		let statusLevel: HealthLevel = "prima";
+		let statusLabel: SystemStatusLabel = "Prima";
+
 		if (normalizedLoad >= 1.0) {
 			loadStatus = "Tinggi";
+			statusLevel = "warning";
+			statusLabel = "Waspada";
 		} else if (normalizedLoad >= 0.7) {
 			loadStatus = "Sedang";
+			statusLevel = "normal";
+			statusLabel = "Normal";
+		} else {
+			loadStatus = "Ringan";
+			statusLevel = "prima";
+			statusLabel = "Prima";
 		}
 
 		return {
 			cores,
-			model: `${cores} Inti Pemroses`,
+			model: `${cores} Core`,
 			loadAvg1m: Math.round(load1m * 100) / 100,
 			loadStatus,
+			statusLevel,
+			statusLabel,
 		};
 	}
 
@@ -197,8 +220,8 @@ export class SystemStatusService {
 				memoryPercentOfServer: percentOfServer,
 				uptimeSeconds,
 				uptimeFormatted: formatDuration(uptimeSeconds),
-				statusLevel: "normal",
-				statusLabel: "Aktif Serverless",
+				statusLevel: "prima",
+				statusLabel: "Prima",
 				description:
 					"Aplikasi berjalan aktif pada cloud serverless Vercel (Auto-scaled).",
 			};
@@ -279,7 +302,7 @@ export class SystemStatusService {
 			uptimeSeconds,
 			uptimeFormatted: formatDuration(uptimeSeconds),
 			statusLevel: "normal",
-			statusLabel: "Berjalan Normal",
+			statusLabel: "Normal",
 			description: isContainer
 				? "Aplikasi berjalan aktif dalam lingkungan kontainer terisolasi."
 				: "Aplikasi berjalan aktif pada server utama (tanpa pembatasan kontainer khusus).",
@@ -304,10 +327,15 @@ export class SystemStatusService {
 			const latencyMs = Math.round(performance.now() - start);
 			const row = queryRes && queryRes[0] ? queryRes[0] : null;
 
+			const statusLevel: HealthLevel =
+				latencyMs > 600 ? "warning" : latencyMs < 300 ? "prima" : "normal";
+			const statusLabel: SystemStatusLabel =
+				latencyMs > 600 ? "Waspada" : latencyMs < 300 ? "Prima" : "Normal";
+
 			return {
 				status: "connected",
-				statusLabel: "Terhubung Normal",
-				statusLevel: latencyMs > 600 ? "warning" : "normal",
+				statusLabel,
+				statusLevel,
 				latencyMs,
 				sizeFormatted: row?.db_size || "12 MB",
 				sharedBuffersFormatted: row?.shared_buffers || "128 MB",
@@ -316,7 +344,7 @@ export class SystemStatusService {
 		} catch {
 			return {
 				status: "disconnected",
-				statusLabel: "Kendala Koneksi",
+				statusLabel: "Kritis",
 				statusLevel: "critical",
 				latencyMs: 0,
 				sizeFormatted: "Tidak Diketahui",
@@ -347,8 +375,8 @@ export class SystemStatusService {
 					memoryUsedFormatted: app.memoryUsedFormatted,
 					memoryLimitFormatted: "1024 MB (Serverless)",
 					memoryPercentOfLimit: appPercent,
-					statusLevel: appPercent > 85 ? "warning" : "normal",
-					statusLabel: "Aktif Serverless",
+					statusLevel: appPercent > 85 ? "warning" : "prima",
+					statusLabel: appPercent > 85 ? "Waspada" : "Prima",
 					description:
 						"Menjalankan antarmuka dashboard kos, API sistem, dan automasi notifikasi pada cloud serverless Vercel.",
 				},
@@ -360,9 +388,8 @@ export class SystemStatusService {
 						db.status === "connected" ? db.sharedBuffersFormatted : "0 MB",
 					memoryLimitFormatted: "Dikelola Cloud",
 					memoryPercentOfLimit: 0,
-					statusLevel: db.status === "connected" ? "normal" : "critical",
-					statusLabel:
-						db.status === "connected" ? "Terhubung Cloud" : "Terkendala",
+					statusLevel: db.status === "connected" ? "prima" : "critical",
+					statusLabel: db.status === "connected" ? "Prima" : "Kritis",
 					description:
 						db.status === "connected"
 							? `Menyimpan data kamar, penyewa, & transaksi pada database cloud (Ukuran data fisik: ${db.sizeFormatted}, ${db.activeConnections} koneksi aktif).`
@@ -402,8 +429,8 @@ export class SystemStatusService {
 				memoryUsedFormatted: app.memoryUsedFormatted,
 				memoryLimitFormatted: "512 MB (Batas Aman)",
 				memoryPercentOfLimit: appPercent,
-				statusLevel: appPercent > 85 ? "warning" : "normal",
-				statusLabel: appPercent > 85 ? "Mendekati Batas" : "Aktif Normal",
+				statusLevel: appPercent > 85 ? "warning" : "prima",
+				statusLabel: appPercent > 85 ? "Waspada" : "Prima",
 				description:
 					"Menjalankan antarmuka dashboard kos, API sistem, dan pengiriman notifikasi WhatsApp.",
 			},
@@ -415,9 +442,8 @@ export class SystemStatusService {
 					db.status === "connected" ? db.sharedBuffersFormatted : "0 MB",
 				memoryLimitFormatted: "256 MB (Batas Aman)",
 				memoryPercentOfLimit: db.status === "connected" ? dbPercent : 0,
-				statusLevel: db.status === "connected" ? "normal" : "critical",
-				statusLabel:
-					db.status === "connected" ? "Aktif Normal" : "Terkendala",
+				statusLevel: db.status === "connected" ? "prima" : "critical",
+				statusLabel: db.status === "connected" ? "Prima" : "Kritis",
 				description:
 					db.status === "connected"
 						? `Menyimpan data kamar, penyewa, & transaksi (Ukuran data fisik: ${db.sizeFormatted}, ${db.activeConnections} koneksi aktif).`
@@ -438,69 +464,81 @@ export class SystemStatusService {
 		memory: SystemMemoryInfo,
 		storage: SystemStorageInfo | null,
 		database: SystemDatabaseInfo,
+		cpu: SystemCpuInfo,
 		isVercel = false,
 	): SystemRecommendation {
 		if (database.status === "disconnected") {
 			return {
 				level: "critical",
-				headline: "Koneksi Basis Data Mengalami Kendala",
+				headline: "Koneksi Database Terputus",
 				description:
-					"Server saat ini kesulitan menjangkau basis data. Pastikan konfigurasi jaringan dan layanan basis data tetap aktif.",
+					"Server sedang kesulitan menjangkau basis data. Pastikan konfigurasi jaringan dan layanan basis data tetap aktif.",
 				actionRequired: true,
 			};
 		}
 
-		if (storage && storage.usedPercent >= 95) {
+		// KASUS KRITIS: Terjadi hanya jika RAM tinggi DAN (Penyimpanan tinggi ATAU CPU tinggi secara simultan)
+		if (
+			memory.usedPercent >= 90 &&
+			((storage && storage.usedPercent >= 90) || cpu.loadStatus === "Tinggi")
+		) {
 			return {
 				level: "critical",
-				headline: isVercel
-					? "Penyimpanan Sementara Vercel Hampir Habis"
-					: "Ruang Penyimpanan Server Penuh (Kritis)",
-				description: isVercel
-					? "Penyimpanan sementara (/tmp) pada runtime Vercel telah mencapai 95%. Bersihkan berkas sementara aplikasi jika diperlukan."
-					: "Kapasitas penyimpanan server telah melebihi 95%. Sangat disarankan untuk segera membersihkan cache Docker ('docker system prune -a') atau menambah kapasitas disk VPS.",
+				headline: "Kapasitas Server Mendekati Batas Maksimal",
+				description:
+					"Penggunaan RAM, CPU, dan penyimpanan secara bersamaan berada di batas atas karena pertumbuhan data dan aktivitas kos. Sudah saatnya mempertimbangkan peningkatan paket spesifikasi server VPS.",
 				actionRequired: true,
 			};
 		}
 
-		if (memory.usedPercent >= 90) {
+		// KASUS PENYIMPANAN KRITIS
+		if (storage && storage.usedPercent >= 92) {
 			return {
 				level: "critical",
-				headline: "Kapasitas Memori Server Mendekati Batas Maksimal",
+				headline: "Penyimpanan Server Hampir Penuh",
 				description:
-					"Penggunaan memori server saat ini berada di atas 90%. Disarankan untuk mempertimbangkan peningkatan spesifikasi server ke paket berikutnya agar performa aplikasi tetap lancar dan tidak terjadi gangguan mendadak.",
+					"Ruang penyimpanan server telah terpakai di atas 90%. Segera bersihkan berkas sampah, foto lama, atau riwayat log agar operasional tidak terganggu.",
 				actionRequired: true,
 			};
 		}
 
-		if (storage && storage.usedPercent >= 85) {
+		// KASUS PENYIMPANAN PERLU DIBERSIHKAN (RAM masih aman)
+		if (storage && storage.usedPercent >= 80) {
 			return {
 				level: "warning",
-				headline: "Ruang Penyimpanan Server Mendekati Penuh",
-				description:
-					"Kapasitas penyimpanan server telah melebihi 85%. Disarankan untuk memantau sisa ruang disk dan membersihkan berkas log lama.",
+				headline: "Penyimpanan Server Perlu Dibersihkan",
+				description: `Ruang penyimpanan telah terpakai ${storage.usedPercent}%. Berkas bukti pembayaran lama atau log mulai menumpuk. Cukup bersihkan berkas sampah berkala, belum perlu upgrade paket VPS.`,
 				actionRequired: false,
 			};
 		}
 
-		if (memory.usedPercent >= 75) {
+		// KASUS RAM TINGGI SEMENTARA (Penyimpanan & CPU masih aman)
+		if (memory.usedPercent >= 80) {
 			return {
 				level: "warning",
-				headline: "Kapasitas Memori Dalam Batas Perhatian",
+				headline: "RAM Server Sedang Aktif Digunakan",
+				description: `Penggunaan RAM mencapai ${memory.usedPercent}% untuk menampung cache data dan antrean proses agar web cepat. Ruang penyimpanan dan CPU masih sangat aman. Sistem akan melepaskan memori secara otomatis, tidak perlu upgrade VPS.`,
+				actionRequired: false,
+			};
+		}
+
+		// KASUS PRIMA
+		if (memory.usedPercent < 60 && (!storage || storage.usedPercent < 60)) {
+			return {
+				level: "prima",
+				headline: "Kondisi Server Sangat Prima",
 				description:
-					"Penggunaan memori berada di atas 75%. Kondisi masih aman untuk operasional harian, namun disarankan untuk memantau jika ada lonjakan transaksi atau penambahan banyak kamar baru.",
+					"Seluruh sumber daya RAM, penyimpanan, dan pemrosesan bekerja sangat longgar. Operasional sistem kos berjalan optimal tanpa kendala.",
 				actionRequired: false,
 			};
 		}
 
 		return {
 			level: "normal",
-			headline: isVercel
-				? "Layanan Serverless Vercel Berjalan Prima"
-				: "Kapasitas Server Berjalan Sangat Sehat",
+			headline: "Kondisi Server Normal",
 			description: isVercel
 				? "Seluruh layanan aplikasi cloud Vercel dan basis data terhubung dengan optimal."
-				: "Seluruh komponen server beroperasi dengan optimal. Penggunaan memori dan penyimpanan masih dalam batas aman, belum diperlukan peningkatan spesifikasi server saat ini.",
+				: "Seluruh komponen server beroperasi dengan stabil dalam batas wajar aktivitas harian. Transaksi dan pencatatan kos berjalan lancar.",
 			actionRequired: false,
 		};
 	}
@@ -531,19 +569,19 @@ export class SystemStatusService {
 			memory,
 			storage,
 			database,
+			cpu,
 			isVercel,
 		);
 
-		let overallStatus: HealthLevel = "normal";
-		let overallStatusLabel = "Semua Sistem Normal";
-
-		if (recommendation.level === "critical") {
-			overallStatus = "critical";
-			overallStatusLabel = "Perlu Perhatian Khusus";
-		} else if (recommendation.level === "warning") {
-			overallStatus = "warning";
-			overallStatusLabel = "Perlu Dipantau";
-		}
+		const overallStatus: HealthLevel = recommendation.level;
+		const overallStatusLabel: SystemStatusLabel =
+			overallStatus === "prima"
+				? "Prima"
+				: overallStatus === "critical"
+					? "Kritis"
+					: overallStatus === "warning"
+						? "Waspada"
+						: "Normal";
 
 		const platform = isVercel
 			? `Vercel Serverless (${process.env.VERCEL_REGION || "Cloud"})`
