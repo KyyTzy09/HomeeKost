@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { naturalCompare } from "./sort-utils.ts";
+import { naturalCompare } from "../../src/lib/sort-utils.ts";
 
 describe("naturalCompare Utility", () => {
 	it("correctly sorts pure numeric strings with leading zeroes", () => {
