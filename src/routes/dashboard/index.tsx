@@ -238,14 +238,9 @@ export function DashboardHomePage() {
 							<Sparkles className="w-5 h-5 text-[#4f6958]" />
 						</div>
 						<div className="min-w-0">
-							<div className="flex items-center gap-2 flex-wrap">
-								<h2 className="text-xs sm:text-sm font-bold text-[#252925] tracking-tight">
-									Laporan Finansial & AI Insight {prevMonthName} {prevYear} Telah Tersedia
-								</h2>
-								<span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d8e6db] text-[#334b3b] border border-[#c6d7c9]">
-									Periode Baru
-								</span>
-							</div>
+							<h2 className="text-xs sm:text-sm font-bold text-[#252925] tracking-tight">
+								Laporan Finansial & AI Insight {prevMonthName} {prevYear} Telah Tersedia
+							</h2>
 							<p className="text-[11px] sm:text-xs text-[#525b54] mt-0.5 leading-relaxed">
 								Rekapitulasi laba rugi, okupansi kamar, dan rekomendasi AI operasional bulan lalu siap dievaluasi.
 							</p>
