@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import {
 	Activity,
 	ArrowLeft,
@@ -11,7 +11,7 @@ import {
 	Server,
 	ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
 	HealthLevel,
 	SystemStatusData,
@@ -96,6 +96,17 @@ function StatusPage() {
 		? getBadgeStyle(statusData.server.storage.statusLevel)
 		: null;
 
+	const mainDashboardUrl = useMemo(() => {
+		if (typeof window === "undefined") return "/dashboard";
+		const host = window.location.hostname;
+		const port = window.location.port ? `:${window.location.port}` : "";
+		if (host.startsWith("status.")) {
+			const mainHost = host.replace(/^status\./, "");
+			return `${window.location.protocol}//${mainHost}${port}/dashboard`;
+		}
+		return "/dashboard";
+	}, []);
+
 	return (
 		<div className="min-h-screen bg-[#faf9f5] text-[#252925] flex flex-col font-sans">
 			{/* Top Navbar */}
@@ -128,13 +139,13 @@ function StatusPage() {
 							<span>{isRefreshing ? "Memperbarui..." : "Perbarui Data"}</span>
 						</button>
 
-						<Link
-							to="/dashboard"
+						<a
+							href={mainDashboardUrl}
 							className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#4f6958] hover:bg-[#3f5446] text-white text-xs font-semibold transition-all shadow-xs"
 						>
 							<ArrowLeft className="w-3.5 h-3.5" />
 							<span>Dashboard</span>
-						</Link>
+						</a>
 					</div>
 				</div>
 			</header>

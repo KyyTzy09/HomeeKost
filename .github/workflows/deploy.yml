@@ -50,6 +50,7 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             cd /var/www/homeekost
+            git reset --hard HEAD
             git pull origin main
             sudo docker compose run --rm --build app bunx prisma db push
             sudo docker compose up -d --build app
