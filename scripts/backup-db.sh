@@ -1,8 +1,8 @@
 #!/bin/bash
 # ==============================================================================
 # HOMEEKOST AUTOMATIC DATABASE BACKUP SCRIPT
-# Mendukung koneksi DATABASE_URL / DIRECT_URL (Supabase/Cloud),
-# Docker Container (homeekost_db), maupun Local PostgreSQL
+# Mendukung mode Docker Compose container (homeekost_db),
+# Cloud/Supabase (DATABASE_URL / DIRECT_URL), maupun Local PostgreSQL
 # Menyimpan backup terkompresi (.sql.gz) dan otomatis menghapus arsip > 7 hari
 # ==============================================================================
 
@@ -30,13 +30,20 @@ if [ -f "${ENV_FILE}" ]; then
     POSTGRES_PORT=$(get_env_var "POSTGRES_PORT")
 fi
 
-DB_USER="${POSTGRES_USER:-postgres}"
-DB_NAME="${POSTGRES_DB:-homeekost}"
-DB_PASSWORD="${POSTGRES_PASSWORD:-secret}"
+# Fallback: jika variabel POSTGRES_* tidak didefinisikan terpisah di .env,
+# ekstrak otomatis dari DATABASE_URL
+if [ -n "${DATABASE_URL}" ]; then
+    URL_USER=$(echo "${DATABASE_URL}" | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p' 2>/dev/null || true)
+    URL_PASS=$(echo "${DATABASE_URL}" | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p' 2>/dev/null || true)
+    URL_DB=$(echo "${DATABASE_URL}" | sed -e 's/.*\/[0-9]*\///' -e 's/.*:\/\/[^\/]*\///' -e 's/?.*//' 2>/dev/null || true)
+fi
+
+DB_USER="${POSTGRES_USER:-${URL_USER:-postgres}}"
+DB_NAME="${POSTGRES_DB:-${URL_DB:-homeekost}}"
+DB_PASSWORD="${POSTGRES_PASSWORD:-${URL_PASS:-secret}}"
 
 # Prioritaskan DIRECT_URL atau DATABASE_URL jika ada (misal Supabase / Cloud PG)
 TARGET_URL="${DIRECT_URL:-$DATABASE_URL}"
-# Bersihkan opsi pooler pgbouncer jika ada, karena pg_dump membutuhkan koneksi session langsung
 if [ -n "${TARGET_URL}" ]; then
     CLEAN_DB_URL=$(echo "${TARGET_URL}" | sed -e 's/[?&]pgbouncer=true//g' -e 's/\?$//')
 fi
@@ -46,10 +53,26 @@ mkdir -p "${BACKUP_DIR}"
 
 echo "[$(date +"%Y-%m-%d %T")] Memulai backup database HomeeKost..."
 
-# 1. Mode Docker Container (jika container homeekost_db aktif)
-if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -q "^homeekost_db$"; then
-    echo "[$(date +"%Y-%m-%d %T")] Menggunakan mode: Docker Container (homeekost_db)"
-    docker exec -e PGPASSWORD="${DB_PASSWORD}" homeekost_db pg_dump -U "${DB_USER}" -d "${DB_NAME}" | gzip > "${BACKUP_FILE}"
+# Deteksi perintah Docker (dengan atau tanpa sudo jika user belum di grup docker)
+DOCKER_CMD=""
+if command -v docker >/dev/null 2>&1; then
+    if docker ps >/dev/null 2>&1; then
+        DOCKER_CMD="docker"
+    elif command -v sudo >/dev/null 2>&1 && sudo -n docker ps >/dev/null 2>&1; then
+        DOCKER_CMD="sudo -n docker"
+    fi
+fi
+
+# Cek apakah ada container Postgres Docker aktif (homeekost_db atau sejenisnya)
+DOCKER_CONTAINER=""
+if [ -n "${DOCKER_CMD}" ]; then
+    DOCKER_CONTAINER=$(${DOCKER_CMD} ps --format '{{.Names}}' 2>/dev/null | grep -E "^homeekost_db$|homeekost.*db|postgres" | head -n 1 || true)
+fi
+
+# 1. Mode Docker Container (jika container Postgres terdeteksi aktif)
+if [ -n "${DOCKER_CONTAINER}" ]; then
+    echo "[$(date +"%Y-%m-%d %T")] Menggunakan mode: Docker Container (${DOCKER_CONTAINER})"
+    ${DOCKER_CMD} exec -e PGPASSWORD="${DB_PASSWORD}" "${DOCKER_CONTAINER}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" | gzip > "${BACKUP_FILE}"
 
 # 2. Mode Connection String URI (Supabase / Cloud Database / DIRECT_URL)
 elif [ -n "${CLEAN_DB_URL}" ] && command -v pg_dump >/dev/null 2>&1; then
@@ -61,11 +84,10 @@ elif command -v pg_dump >/dev/null 2>&1; then
     echo "[$(date +"%Y-%m-%d %T")] Menggunakan mode: Local Host PostgreSQL"
     PGPASSWORD="${DB_PASSWORD}" pg_dump -h "${POSTGRES_HOST:-localhost}" -p "${POSTGRES_PORT:-5432}" -U "${DB_USER}" -d "${DB_NAME}" | gzip > "${BACKUP_FILE}"
 
-# 4. Error handling jika pg_dump tidak terpasang
+# 4. Error handling jika pg_dump tidak terpasang dan container docker tidak ditemukan
 else
-    echo "[$(date +"%Y-%m-%d %T")] ERROR: pg_dump tidak ditemukan di sistem!" >&2
-    echo "Silakan pasang postgresql-client di VPS Anda dengan perintah:" >&2
-    echo "  sudo apt-get update && sudo apt-get install -y postgresql-client" >&2
+    echo "[$(date +"%Y-%m-%d %T")] ERROR: Container Docker PostgreSQL tidak ditemukan aktif dan pg_dump tidak terpasang di host!" >&2
+    echo "Pastikan container Docker PostgreSQL Anda sudah aktif (misal: docker compose up -d db)" >&2
     exit 1
 fi
 
