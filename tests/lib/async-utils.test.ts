@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sleepWithJitter } from "./async-utils.ts";
+import { sleepWithJitter } from "../../src/lib/async-utils.ts";
 
 describe("sleepWithJitter Utility", () => {
 	it("should sleep for at least baseMs and not exceed baseMs + jitterMs", async () => {

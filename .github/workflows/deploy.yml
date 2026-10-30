@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Deploy to VPS
+name: CI/CD
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
         run: bun run test:unit
 
   deploy:
-    name: Deploy to Biznet GIO VPS
+    name: Deploy to VPS
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
