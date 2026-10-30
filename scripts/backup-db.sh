@@ -18,7 +18,7 @@ RETENTION_DAYS=7
 ENV_FILE="${APP_DIR}/.env"
 if [ -f "${ENV_FILE}" ]; then
     get_env_var() {
-        grep -E "^${1}=" "${ENV_FILE}" | head -n 1 | cut -d '=' -f2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+        (grep -E "^${1}=" "${ENV_FILE}" 2>/dev/null || true) | head -n 1 | cut -d '=' -f2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
     }
 
     DATABASE_URL=$(get_env_var "DATABASE_URL")
