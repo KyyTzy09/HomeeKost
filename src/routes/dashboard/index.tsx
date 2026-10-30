@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
 	AlertCircle,
 	ArrowDownRight,
+	ArrowRight,
 	BedDouble,
 	Cake,
 	Calendar,
@@ -11,7 +12,9 @@ import {
 	CreditCard,
 	ExternalLink,
 	MessageSquare,
+	Sparkles,
 	Wrench,
+	X,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
@@ -23,6 +26,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../common/shadcn/select.tsx";
+import { MONTH_NAMES_ID } from "../../common/constants/months.const.ts";
 import type { UpcomingPaymentItem } from "../../common/types/index.ts";
 import { OccupancyDonutChart } from "../../components/dashboard/OccupancyDonutChart.tsx";
 import { RevenueExpenseChart } from "../../components/dashboard/RevenueExpenseChart.tsx";
@@ -133,6 +137,46 @@ export function DashboardHomePage() {
 		year: "numeric",
 	});
 
+	// Monthly report alert calculation (bulan sebelumnya)
+	const now = new Date();
+	const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+	const prevMonth = prevDate.getMonth() + 1;
+	const prevYear = prevDate.getFullYear();
+	const prevMonthName =
+		dashboardData?.monthlyReportAlert?.monthName ||
+		MONTH_NAMES_ID[prevMonth - 1]?.label ||
+		`Bulan ${prevMonth}`;
+
+	const bannerStorageKey = `hk_dismiss_report_banner_${prevYear}_${prevMonth}`;
+	const [isBannerDismissed, setIsBannerDismissed] = useState<boolean>(() => {
+		if (typeof window === "undefined") return false;
+		try {
+			return localStorage.getItem(bannerStorageKey) === "true";
+		} catch {
+			return false;
+		}
+	});
+
+	const handleDismissBanner = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		setIsBannerDismissed(true);
+		try {
+			localStorage.setItem(bannerStorageKey, "true");
+		} catch {
+			// ignore storage errors
+		}
+	};
+
+	const handleNavigateToReport = () => {
+		navigate({
+			to: "/dashboard/reports",
+			search: {
+				month: prevMonth,
+				year: prevYear,
+			},
+		});
+	};
+
 	if (isLoading) {
 		return <DashboardSkeleton />;
 	}
@@ -181,6 +225,50 @@ export function DashboardHomePage() {
 					</Button>
 				</div>
 			</div>
+
+			{/* Monthly Report Reminder Banner */}
+			{!isBannerDismissed && (
+				<div
+					onClick={handleNavigateToReport}
+					className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 rounded-xl bg-gradient-to-r from-[#eef4f0] via-[#f7f9f7] to-[#e8f0ea] border border-[#d2dfd4] shadow-xs cursor-pointer hover:border-[#adc4b2] hover:shadow-sm transition-all duration-200 -mt-1 mb-5"
+					role="alert"
+				>
+					<div className="flex items-start sm:items-center gap-3.5 min-w-0">
+						<div className="w-10 h-10 rounded-xl bg-white border border-[#d2dfd4] flex items-center justify-center text-[#3d5645] shrink-0 shadow-xs group-hover:scale-105 transition-transform duration-200">
+							<Sparkles className="w-5 h-5 text-[#4f6958]" />
+						</div>
+						<div className="min-w-0">
+							<div className="flex items-center gap-2 flex-wrap">
+								<h2 className="text-xs sm:text-sm font-bold text-[#252925] tracking-tight">
+									Laporan Finansial & AI Insight {prevMonthName} {prevYear} Telah Tersedia
+								</h2>
+								<span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#d8e6db] text-[#334b3b] border border-[#c6d7c9]">
+									Periode Baru
+								</span>
+							</div>
+							<p className="text-[11px] sm:text-xs text-[#525b54] mt-0.5 leading-relaxed">
+								Rekapitulasi laba rugi, okupansi kamar, dan rekomendasi AI operasional bulan lalu siap dievaluasi.
+							</p>
+						</div>
+					</div>
+
+					<div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+						<span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3d5645] group-hover:text-[#252925] group-hover:translate-x-0.5 transition-all">
+							Buka Laporan
+							<ArrowRight className="w-3.5 h-3.5" />
+						</span>
+						<button
+							type="button"
+							onClick={handleDismissBanner}
+							className="p-1 rounded-lg text-[#737873] hover:text-[#252925] hover:bg-[#e0eae2] transition-colors cursor-pointer"
+							title="Tutup pengingat ini"
+							aria-label="Tutup pengingat"
+						>
+							<X className="w-4 h-4" />
+						</button>
+					</div>
+				</div>
+			)}
 
 			{/* 4 KPI Stat Cards with Lucide Icons */}
 			<div className="stats">

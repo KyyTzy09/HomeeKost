@@ -2,33 +2,25 @@ import { useNavigate } from "@tanstack/react-router";
 import {
 	AlertTriangle,
 	Bell,
-	Building,
 	Building2,
 	Calendar,
 	Check,
 	ChevronDown,
 	CircleDollarSign,
 	FileText,
-	Home,
 	Loader2,
 	LogOut,
 	Menu,
-	Search,
 	User,
-	Users,
 	Wrench,
-	X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
-import { Input } from "../../common/shadcn/input.tsx";
 import type {
 	DashboardContextData,
-	GlobalSearchResultItem,
 	PropertySummary,
 } from "../../common/types/index.ts";
 import {
-	useGlobalSearch,
 	useSetActiveProperty,
 	useTopbarNotifications,
 } from "../../hooks/index.ts";
@@ -49,8 +41,6 @@ export function Topbar({
 	const [showNotif, setShowNotif] = useState(false);
 	const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
 	const [showUserDropdown, setShowUserDropdown] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [showSearchResults, setShowSearchResults] = useState(false);
 	const [isSwitchingProperty, setIsSwitchingProperty] = useState(false);
 	const [switchingPropertyId, setSwitchingPropertyId] = useState<string | null>(
 		null,
@@ -60,7 +50,6 @@ export function Topbar({
 	const propertyDropdownRef = useRef<HTMLDivElement>(null);
 	const userDropdownRef = useRef<HTMLDivElement>(null);
 	const notifDropdownRef = useRef<HTMLDivElement>(null);
-	const searchContainerRef = useRef<HTMLDivElement>(null);
 
 	const { user, isSuperAdmin, activeProperty, accessibleProperties } =
 		dashboardContext;
@@ -70,8 +59,6 @@ export function Topbar({
 	// Real-time Queries for Notifications and Global Search
 	const { data: rawNotifications = [], isLoading: isNotifsLoading } =
 		useTopbarNotifications();
-	const { data: searchResults = [], isLoading: isSearching } =
-		useGlobalSearch(searchQuery);
 
 	// Filter notifications with local read status
 	const notifications = rawNotifications.map((n) => ({
@@ -102,12 +89,6 @@ export function Topbar({
 				!notifDropdownRef.current.contains(target)
 			) {
 				setShowNotif(false);
-			}
-			if (
-				searchContainerRef.current &&
-				!searchContainerRef.current.contains(target)
-			) {
-				setShowSearchResults(false);
 			}
 		}
 
@@ -151,11 +132,6 @@ export function Topbar({
 		setReadNotifIds(allIds);
 	};
 
-	const handleSearchResultClick = (result: GlobalSearchResultItem) => {
-		setShowSearchResults(false);
-		setSearchQuery("");
-		navigate({ to: result.url });
-	};
 
 	const initials = user?.name
 		? user.name
@@ -292,125 +268,6 @@ export function Topbar({
 
 			{/* Top Actions */}
 			<div className="top-actions flex items-center gap-2.5">
-				{/* Global Search with Live Popup */}
-				<div
-					className="header-search-wrap relative hidden md:block"
-					ref={searchContainerRef}
-				>
-					<div className="relative flex items-center">
-						<Search className="absolute left-2.5 w-3.5 h-3.5 text-[#8a958d] pointer-events-none" />
-						<Input
-							id="globalSearch"
-							value={searchQuery}
-							onFocus={() => {
-								if (searchQuery.trim().length >= 2) {
-									setShowSearchResults(true);
-								}
-							}}
-							onChange={(e) => {
-								setSearchQuery(e.target.value);
-								if (e.target.value.trim().length >= 2) {
-									setShowSearchResults(true);
-								} else {
-									setShowSearchResults(false);
-								}
-							}}
-							onKeyDown={(e) => {
-								if (e.key === "Escape") {
-									setShowSearchResults(false);
-								}
-							}}
-							placeholder="Cari penghuni, kamar, invoice..."
-							autoComplete="off"
-							className="w-[220px] lg:w-[260px] h-[36px] pl-8 pr-7 text-xs bg-white border-[#e4e9e4] rounded-lg focus-visible:ring-[#8fa594]/20 focus-visible:border-[#8fa594]"
-						/>
-						{searchQuery && (
-							<button
-								type="button"
-								onClick={() => {
-									setSearchQuery("");
-									setShowSearchResults(false);
-								}}
-								className="absolute right-2 text-[#737873] hover:text-[#252925] cursor-pointer"
-								aria-label="Bersihkan pencarian"
-							>
-								<X className="w-3.5 h-3.5" />
-							</button>
-						)}
-					</div>
-
-					{/* Live Search Results Dropdown */}
-					{showSearchResults && searchQuery.trim().length >= 2 && (
-						<div className="absolute left-0 top-[42px] w-[320px] lg:w-[360px] bg-white border border-[#e4e9e4] rounded-xl shadow-[0_12px_36px_rgba(40,60,45,0.15)] p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-							<div className="flex items-center justify-between px-2 py-1 border-b border-[#edf1ed] mb-1.5 text-[11px] font-bold text-[#737873]">
-								<span>Hasil Pencarian</span>
-								{isSearching && (
-									<Loader2 className="w-3 h-3 text-[#4f6958] animate-spin" />
-								)}
-							</div>
-
-							{isSearching && searchResults.length === 0 ? (
-								<div className="p-4 text-center text-xs text-[#737873]">
-									<Loader2 className="w-4 h-4 text-[#4f6958] animate-spin mx-auto mb-1" />
-									Mencari data...
-								</div>
-							) : searchResults.length === 0 ? (
-								<div className="p-4 text-center text-xs text-[#737873]">
-									Tidak ditemukan data untuk "<b>{searchQuery}</b>"
-								</div>
-							) : (
-								<div className="max-h-72 overflow-y-auto space-y-1">
-									{searchResults.map((item) => (
-										<button
-											key={item.id}
-											type="button"
-											onClick={() => handleSearchResultClick(item)}
-											className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[#f3f7f3] transition-colors text-left cursor-pointer group"
-										>
-											<div className="flex items-start gap-2.5 min-w-0">
-												<div className="w-6 h-6 rounded bg-[#e8f0ea] flex items-center justify-center text-[#4f6958] shrink-0 mt-0.5 group-hover:bg-[#d8e6db]">
-													{item.category === "Penghuni" && (
-														<Users className="w-3.5 h-3.5" />
-													)}
-													{item.category === "Kamar" && (
-														<Home className="w-3.5 h-3.5" />
-													)}
-													{item.category === "Invoice" && (
-														<FileText className="w-3.5 h-3.5" />
-													)}
-													{item.category === "Transaksi" && (
-														<CircleDollarSign className="w-3.5 h-3.5" />
-													)}
-													{item.category === "Properti" && (
-														<Building className="w-3.5 h-3.5" />
-													)}
-												</div>
-												<div className="truncate">
-													<div className="flex items-center gap-1.5">
-														<span className="text-xs font-bold text-[#252925] truncate">
-															{item.title}
-														</span>
-														<span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-[#edf1ed] text-[#4f6958]">
-															{item.category}
-														</span>
-													</div>
-													<p className="text-[10px] text-[#737873] truncate">
-														{item.subtitle}
-													</p>
-												</div>
-											</div>
-											{item.badge && (
-												<span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#f3f7f3] text-[#4f6958] border border-[#d6dfd7] shrink-0 ml-2">
-													{item.badge}
-												</span>
-											)}
-										</button>
-									))}
-								</div>
-							)}
-						</div>
-					)}
-				</div>
 
 				{/* Notifications Popover */}
 				<div className="relative" ref={notifDropdownRef}>
@@ -478,7 +335,17 @@ export function Topbar({
 											key={n.id}
 											onClick={() => {
 												setShowNotif(false);
-												navigate({ to: n.route });
+												if (n.route.includes("?")) {
+													const [pathname, searchStr] = n.route.split("?");
+													const searchObj: Record<string, any> = {};
+													new URLSearchParams(searchStr).forEach((val, key) => {
+														const num = Number(val);
+														searchObj[key] = !isNaN(num) && val.trim() !== "" ? num : val;
+													});
+													navigate({ to: pathname as any, search: searchObj as any });
+												} else {
+													navigate({ to: n.route as any });
+												}
 											}}
 											className={`p-2.5 rounded-lg text-left text-xs transition-colors cursor-pointer ${
 												n.unread
@@ -499,6 +366,9 @@ export function Topbar({
 													)}
 													{n.type === "complaint" && (
 														<Wrench className="w-3.5 h-3.5 text-[#b66b68] shrink-0" />
+													)}
+													{n.type === "announcement" && (
+														<FileText className="w-3.5 h-3.5 text-[#4f6958] shrink-0" />
 													)}
 													<strong className="text-[11px] text-[#252925]">
 														{n.title}

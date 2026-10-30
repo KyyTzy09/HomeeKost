@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
 	AlertCircle,
 	Building2,
@@ -9,7 +9,7 @@ import {
 	RefreshCw,
 	Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
 	Select,
@@ -37,7 +37,33 @@ import {
 } from "../../hooks/index.ts";
 import { downloadAnnualFinancialExcel } from "../../lib/excel-exporter.ts";
 
+export interface ReportsSearchParams {
+	month?: number;
+	year?: number;
+}
+
 export const Route = createFileRoute("/dashboard/reports")({
+	validateSearch: (search: Record<string, unknown>): ReportsSearchParams => {
+		const month =
+			typeof search.month === "number"
+				? search.month
+				: typeof search.month === "string"
+					? parseInt(search.month, 10)
+					: undefined;
+		const year =
+			typeof search.year === "number"
+				? search.year
+				: typeof search.year === "string"
+					? parseInt(search.year, 10)
+					: undefined;
+		return {
+			month:
+				month && !isNaN(month) && month >= 1 && month <= 12 ? month : undefined,
+			year:
+				year && !isNaN(year) && year >= 2020 && year <= 2030 ? year : undefined,
+		};
+	},
+	loaderDeps: ({ search: { month, year } }) => ({ month, year }),
 	head: () => ({
 		meta: [
 			{
@@ -46,11 +72,11 @@ export const Route = createFileRoute("/dashboard/reports")({
 			},
 		],
 	}),
-	loader: async ({ context }) => {
+	loader: async ({ context, deps }) => {
 		const activePropertyId = context.dashboard?.activeProperty?.id;
 		const now = new Date();
-		const month = now.getMonth() + 1;
-		const year = now.getFullYear();
+		const month = deps.month ?? (now.getMonth() + 1);
+		const year = deps.year ?? now.getFullYear();
 
 		const prefetchPromises: Promise<unknown>[] = [
 			context.queryClient.ensureQueryData(
@@ -99,21 +125,56 @@ const DEFAULT_MONTH_OPTION = MONTHS[0];
 const DEFAULT_YEAR_OPTION = YEARS[2];
 
 function ReportsPage() {
+	const navigate = useNavigate();
 	const { user, userRole, isSuperAdmin, activeProperty } =
 		useDashboardContext();
 	const { data: properties } = useProperties();
 
+	const search = Route.useSearch();
 	const now = new Date();
 	const currentMonthNumber = now.getMonth() + 1;
-	const initialMonth =
-		MONTHS.find((m) => m.value === currentMonthNumber) || DEFAULT_MONTH_OPTION;
-	const initialYear =
-		YEARS.find((y) => y.value === currentYearNum) || DEFAULT_YEAR_OPTION;
+	const initialMonth = useMemo(() => {
+		if (search.month) {
+			const found = MONTHS.find((m) => m.value === search.month);
+			if (found) return found;
+		}
+		return (
+			MONTHS.find((m) => m.value === currentMonthNumber) || DEFAULT_MONTH_OPTION
+		);
+	}, [search.month, currentMonthNumber]);
+
+	const initialYear = useMemo(() => {
+		if (search.year) {
+			const found = YEARS.find((y) => y.value === search.year);
+			if (found) return found;
+		}
+		return (
+			YEARS.find((y) => y.value === currentYearNum) || DEFAULT_YEAR_OPTION
+		);
+	}, [search.year]);
 
 	const [selectedMonth, setSelectedMonth] =
 		useState<SelectOption<number>>(initialMonth);
 	const [selectedYear, setSelectedYear] =
 		useState<SelectOption<number>>(initialYear);
+
+	useEffect(() => {
+		if (search.month) {
+			const found = MONTHS.find((m) => m.value === search.month);
+			if (found && found.value !== selectedMonth.value) {
+				setSelectedMonth(found);
+			}
+		}
+	}, [search.month, selectedMonth.value]);
+
+	useEffect(() => {
+		if (search.year) {
+			const found = YEARS.find((y) => y.value === search.year);
+			if (found && found.value !== selectedYear.value) {
+				setSelectedYear(found);
+			}
+		}
+	}, [search.year, selectedYear.value]);
 	const [selectedProperty, setSelectedProperty] = useState<
 		SelectOption<string>
 	>({
@@ -302,7 +363,16 @@ function ReportsPage() {
 							value={selectedMonth.value.toString()}
 							onValueChange={(val) => {
 								const matched = MONTHS.find((m) => m.value.toString() === val);
-								if (matched) setSelectedMonth(matched);
+								if (matched) {
+									setSelectedMonth(matched);
+									navigate({
+										to: "/dashboard/reports",
+										search: {
+											month: matched.value,
+											year: selectedYear.value,
+										},
+									});
+								}
 							}}
 						>
 							<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594]">
@@ -331,7 +401,16 @@ function ReportsPage() {
 							value={selectedYear.value.toString()}
 							onValueChange={(val) => {
 								const matched = YEARS.find((y) => y.value.toString() === val);
-								if (matched) setSelectedYear(matched);
+								if (matched) {
+									setSelectedYear(matched);
+									navigate({
+										to: "/dashboard/reports",
+										search: {
+											month: selectedMonth.value,
+											year: matched.value,
+										},
+									});
+								}
 							}}
 						>
 							<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-9 bg-white focus:ring-[#8fa594]">
