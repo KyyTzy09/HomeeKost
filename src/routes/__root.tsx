@@ -3,11 +3,12 @@ import type { QueryClient } from "@tanstack/react-query";
 import {
 	createRootRouteWithContext,
 	HeadContent,
-	Link,
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import TanStackQueryDevtools from "../common/integrations/tanstack-query/devtools.tsx";
+import { Error500Page } from "../components/common/Error500Page.tsx";
+import { NotFoundPage } from "../components/common/NotFoundPage.tsx";
 import appCss from "../globals.css?url";
 
 interface MyRouterContext {
@@ -49,46 +50,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 		],
 	}),
 	shellComponent: RootDocument,
-	notFoundComponent: NotFoundPage,
+	notFoundComponent: () => <NotFoundPage />,
+	errorComponent: Error500Page,
 });
-
-function NotFoundPage() {
-	return (
-		<div className="min-h-screen bg-[#faf9f5] flex items-center justify-center p-6 text-center">
-			<div className="w-full max-w-[460px] bg-white border border-[#e2e9e3] rounded-[24px] p-8 shadow-[0_20px_60px_rgba(47,69,55,0.08)]">
-				<img
-					src="/logo.png"
-					alt="HomeeKost Logo"
-					className="w-36 max-h-16 object-contain mx-auto mb-5 opacity-90"
-				/>
-				<div className="inline-block bg-[#f3f7f3] border border-[#dce7de] text-[#4f6958] text-[11px] font-bold px-3 py-1 rounded-full mb-3">
-					404 · Halaman Tidak Ditemukan
-				</div>
-				<h1 className="text-[20px] font-bold text-[#26372c] m-0 mb-2">
-					Halaman Belum Tersedia
-				</h1>
-				<p className="text-[#687a6e] text-[12px] m-0 mb-6 leading-relaxed">
-					Halaman yang Anda tuju sedang dalam tahap integrasi operasional atau
-					URL tidak sesuai.
-				</p>
-				<div className="flex gap-3 justify-center">
-					<Link
-						to="/dashboard"
-						className="inline-flex items-center justify-center h-[38px] px-5 rounded-[10px] bg-[#6f8976] hover:bg-[#4f6958] text-white text-[12px] font-bold transition-colors no-underline"
-					>
-						Ke Dashboard
-					</Link>
-					<Link
-						to="/login"
-						className="inline-flex items-center justify-center h-[38px] px-5 rounded-[10px] bg-white border border-[#dfe7e0] hover:bg-[#f6faf6] text-[#34463a] text-[12px] font-bold transition-colors no-underline"
-					>
-						Ke Halaman Masuk
-					</Link>
-				</div>
-			</div>
-		</div>
-	);
-}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (

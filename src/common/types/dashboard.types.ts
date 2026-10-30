@@ -75,6 +75,12 @@ export interface DashboardOverviewData {
 		sixMonths: DashboardChartData;
 		twelveMonths: DashboardChartData;
 	};
+	monthlyReportAlert?: {
+		hasReport: boolean;
+		month: number;
+		year: number;
+		monthName: string;
+	};
 }
 
 export interface TopbarNotificationItem {

@@ -560,6 +560,43 @@ export class DashboardService {
 			}
 		}
 
+		// Cek alert notifikasi laporan AI bulanan aktif dari SystemSetting (idempotent, hanya jika ada notifikasi baru)
+		let monthlyReportAlert = undefined;
+		const reportAlertSetting = await this.db.systemSetting.findUnique({
+			where: { key: "latest_monthly_report_alert" },
+		});
+
+		if (reportAlertSetting?.value) {
+			try {
+				const alertData = JSON.parse(reportAlertSetting.value) as {
+					month: number;
+					year: number;
+					monthName: string;
+					notifiedAt: string;
+					active?: boolean;
+				};
+
+				if (alertData.active !== false) {
+					const notifiedAt = new Date(alertData.notifiedAt);
+					const diffDays = Math.floor(
+						(now.getTime() - notifiedAt.getTime()) / (1000 * 60 * 60 * 24),
+					);
+
+					// Hanya aktif dalam jendela 14 hari sejak notifikasi diterbitkan
+					if (diffDays >= 0 && diffDays <= 14) {
+						monthlyReportAlert = {
+							hasReport: true,
+							month: alertData.month,
+							year: alertData.year,
+							monthName: alertData.monthName,
+						};
+					}
+				}
+			} catch {
+				// Abaikan jika parsing gagal
+			}
+		}
+
 		return {
 			stats: {
 				totalRooms,
@@ -593,6 +630,7 @@ export class DashboardService {
 					expense: twelveMonthsExpense,
 				},
 			},
+			monthlyReportAlert,
 		};
 	}
 
@@ -811,6 +849,46 @@ export class DashboardService {
 					type: "complaint",
 					rawDate: comp.reportedDate,
 				});
+			}
+
+			// 5. Laporan Keuangan Bulanan Siap Ditinjau (Bulan Lalu)
+			// HANYA jika ada alert notifikasi aktif dari cron bulanan (idempotent & anti-spam)
+			const reportAlertSetting = await this.db.systemSetting.findUnique({
+				where: { key: "latest_monthly_report_alert" },
+			});
+
+			if (reportAlertSetting?.value) {
+				try {
+					const alertData = JSON.parse(reportAlertSetting.value) as {
+						month: number;
+						year: number;
+						monthName: string;
+						notifiedAt: string;
+						active?: boolean;
+					};
+
+					if (alertData.active !== false) {
+						const notifiedAt = new Date(alertData.notifiedAt);
+						const diffDays = Math.floor(
+							(now.getTime() - notifiedAt.getTime()) / (1000 * 60 * 60 * 24),
+						);
+
+						if (diffDays >= 0 && diffDays <= 14) {
+							notifs.push({
+								id: `notif-monthly-report-${alertData.year}-${alertData.month}`,
+								title: `Laporan Keuangan ${alertData.monthName} Siap`,
+								desc: `Laporan eksekutif & wawasan AI periode ${alertData.monthName} ${alertData.year} telah selesai dirangkum. Klik untuk meninjau.`,
+								time: formatRelativeNotificationTime(notifiedAt),
+								unread: diffDays <= 3,
+								route: `/dashboard/reports?month=${alertData.month}&year=${alertData.year}`,
+								type: "announcement",
+								rawDate: notifiedAt,
+							});
+						}
+					}
+				} catch {
+					// Abaikan parse error
+				}
 			}
 
 			// Urutkan: unread terlebih dahulu, lalu berdasarkan tanggal

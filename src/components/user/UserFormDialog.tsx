@@ -1,5 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import {
+	AlertCircle,
 	Eye,
 	EyeOff,
 	Loader2,
@@ -33,10 +34,7 @@ import type {
 	PropertyItem,
 	UserItem,
 } from "../../common/types/index.ts";
-import {
-	type UserFormValues,
-	userFormSchema,
-} from "../../common/validations/index.ts";
+import type { UserFormValues } from "../../common/validations/index.ts";
 
 interface UserFormDialogProps {
 	open: boolean;
@@ -79,76 +77,96 @@ export function UserFormDialog({
 	];
 
 	const [showPassword, setShowPassword] = useState(false);
+	const [formError, setFormError] = useState<string | null>(null);
+	const [isSubmitted, setIsSubmitted] = useState(false);
+
+	const defaultProp =
+		properties.length > 0 ? properties[0].name : "Semua Kost";
 
 	const form = useForm({
 		defaultValues: {
 			name: editingUser?.name || "",
 			email: editingUser?.email || "",
 			role: (editingUser?.role || "ADMIN") as AppUserRole,
-			assignedProperty: editingUser?.assignedProperty || "Semua Kost",
+			assignedProperty: editingUser?.assignedProperty || defaultProp,
 			status: (editingUser?.status || "ACTIVE") as AppUserStatus,
 			password: "",
 		},
-		validators: {
-			onSubmit: ({ value }) => {
-				const fieldErrors: Record<string, string> = {};
-
-				// Akun baru wajib memiliki password minimal 8 karakter
-				if (
-					!editingUser &&
-					(!value.password || value.password.trim().length < 8)
-				) {
-					fieldErrors.password =
-						"Password wajib diisi minimal 8 karakter untuk akun baru";
-				} else if (
-					value.password &&
-					value.password.trim().length > 0 &&
-					value.password.trim().length < 8
-				) {
-					fieldErrors.password = "Password minimal 8 karakter";
-				}
-
-				const res = userFormSchema.safeParse(value);
-				if (!res.success) {
-					for (const issue of res.error.issues) {
-						const field = issue.path[0];
-						if (field && !fieldErrors[String(field)]) {
-							fieldErrors[String(field)] = issue.message;
-						}
-					}
-				}
-				return Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined;
-			},
-		},
 		onSubmit: ({ value }) => {
-			onSubmit(value as UserFormValues);
+			setFormError(null);
+
+			const trimmedName = value.name?.trim() || "";
+			const trimmedEmail = value.email?.trim() || "";
+			const trimmedPassword = value.password?.trim() || "";
+
+			if (!trimmedName) {
+				setFormError("Nama lengkap pengguna wajib diisi.");
+				return;
+			}
+
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+				setFormError("Format alamat email tidak valid.");
+				return;
+			}
+
+			if (!editingUser) {
+				if (!trimmedPassword) {
+					setFormError("Password akun baru wajib diisi minimal 8 karakter.");
+					return;
+				}
+				if (trimmedPassword.length < 8) {
+					setFormError("Password akun baru minimal harus 8 karakter.");
+					return;
+				}
+			} else if (trimmedPassword && trimmedPassword.length < 8) {
+				setFormError("Password baru minimal harus 8 karakter jika ingin diubah.");
+				return;
+			}
+
+			const resolvedProperty =
+				value.role === "SUPER_ADMIN"
+					? "Semua Kost"
+					: value.assignedProperty || defaultProp;
+
+			onSubmit({
+				name: trimmedName,
+				email: trimmedEmail.toLowerCase(),
+				role: value.role as AppUserRole,
+				assignedProperty: resolvedProperty,
+				status: value.status as AppUserStatus,
+				password: trimmedPassword,
+			});
 		},
 	});
 
 	useEffect(() => {
 		if (open) {
 			setShowPassword(false);
+			setFormError(null);
+			setIsSubmitted(false);
+
 			if (editingUser) {
-				form.setFieldValue("name", editingUser.name);
-				form.setFieldValue("email", editingUser.email);
-				form.setFieldValue("role", editingUser.role);
-				form.setFieldValue("assignedProperty", editingUser.assignedProperty);
-				form.setFieldValue("status", editingUser.status);
-				form.setFieldValue("password", "");
+				form.reset({
+					name: editingUser.name,
+					email: editingUser.email,
+					role: editingUser.role,
+					assignedProperty: editingUser.assignedProperty || "Semua Kost",
+					status: editingUser.status || "ACTIVE",
+					password: "",
+				});
 			} else {
-				form.reset();
-				form.setFieldValue("name", "");
-				form.setFieldValue("email", "");
-				form.setFieldValue("role", "ADMIN");
-				form.setFieldValue(
-					"assignedProperty",
-					properties.length > 0 ? properties[0].name : "Semua Kost",
-				);
-				form.setFieldValue("status", "ACTIVE");
-				form.setFieldValue("password", "");
+				form.reset({
+					name: "",
+					email: "",
+					role: "ADMIN",
+					assignedProperty: defaultProp,
+					status: "ACTIVE",
+					password: "",
+				});
 			}
 		}
-	}, [open, editingUser, properties, form]);
+	}, [open, editingUser]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -181,131 +199,212 @@ export function UserFormDialog({
 					</div>
 				</DialogHeader>
 
+				{/* Error Notification Banner */}
+				{formError && (
+					<div className="flex items-center gap-2 p-3 bg-[#fff5f3] border border-[#f5cfcc] rounded-xl text-xs text-[#a45149] font-medium mt-3">
+						<AlertCircle className="w-4 h-4 shrink-0 text-[#b66b68]" />
+						<span>{formError}</span>
+					</div>
+				)}
+
 				<form
 					onSubmit={(e) => {
 						e.preventDefault();
 						e.stopPropagation();
+						setIsSubmitted(true);
 						form.handleSubmit();
 					}}
-					className="space-y-4 pt-4"
+					className="space-y-4 pt-2"
 				>
 					{/* Nama Lengkap */}
-					<form.Field name="name">
-						{(field) => (
-							<div className="space-y-1.5">
-								<Label
-									htmlFor={field.name}
-									className="text-xs font-semibold text-[#252925]"
-								>
-									Nama Lengkap <span className="text-[#b66b68]">*</span>
-								</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-									placeholder="Contoh: Budi Santoso"
-									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]"
-								/>
-								{field.state.meta.errors.length > 0 && (
-									<p className="text-[11px] text-[#b66b68]">
-										{field.state.meta.errors[0]}
-									</p>
-								)}
-							</div>
-						)}
-					</form.Field>
+					<form.Field
+						name="name"
+						validators={{
+							onChange: ({ value }) =>
+								!value || value.trim().length === 0
+									? "Nama lengkap pengguna wajib diisi"
+									: undefined,
+						}}
+					>
+						{(field) => {
+							const hasError =
+								(field.state.meta.isTouched || isSubmitted) &&
+								field.state.meta.errors.length > 0;
 
-					{/* Email Akun */}
-					<form.Field name="email">
-						{(field) => (
-							<div className="space-y-1.5">
-								<Label
-									htmlFor={field.name}
-									className="text-xs font-semibold text-[#252925]"
-								>
-									Alamat Email Pengguna{" "}
-									<span className="text-[#b66b68]">*</span>
-								</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									type="email"
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-									placeholder="budi@homeekost.id"
-									className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]"
-								/>
-								{field.state.meta.errors.length > 0 && (
-									<p className="text-[11px] text-[#b66b68]">
-										{field.state.meta.errors[0]}
-									</p>
-								)}
-							</div>
-						)}
-					</form.Field>
-
-					{/* Password Akun */}
-					<form.Field name="password">
-						{(field) => (
-							<div className="space-y-1.5">
-								<div className="flex items-center justify-between">
+							return (
+								<div className="space-y-1.5">
 									<Label
 										htmlFor={field.name}
-										className="text-xs font-semibold text-[#252925] flex items-center gap-1.5"
+										className="text-xs font-semibold text-[#252925]"
 									>
-										<Lock className="w-3.5 h-3.5 text-[#526e5b]" />
-										{editingUser
-											? "Ganti Password (Opsional)"
-											: "Password Akun"}
-										{!editingUser && <span className="text-[#b66b68]">*</span>}
+										Nama Lengkap <span className="text-[#b66b68]">*</span>
 									</Label>
-									<span className="text-[10.5px] text-[#737873]">
-										{editingUser
-											? "Kosongkan jika tidak diubah"
-											: "Minimal 8 karakter"}
-									</span>
-								</div>
-								<div className="relative">
 									<Input
 										id={field.name}
 										name={field.name}
-										type={showPassword ? "text" : "password"}
 										value={field.state.value}
 										onBlur={field.handleBlur}
 										onChange={(e) => field.handleChange(e.target.value)}
-										placeholder={
-											editingUser
-												? "Masukkan password baru jika ingin mereset..."
-												: "Masukkan password untuk login (min. 8 karakter)..."
-										}
-										className="border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594] pr-10"
+										placeholder="Contoh: Budi Santoso"
+										className={`text-xs h-10 bg-[#fbfcfb] transition-all ${
+											hasError
+												? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+												: "border-[#e4e9e4] focus:ring-[#8fa594]"
+										}`}
 									/>
-									<button
-										type="button"
-										onClick={() => setShowPassword(!showPassword)}
-										className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737873] hover:text-[#252925] transition-colors p-0.5"
-										tabIndex={-1}
-										aria-label={
-											showPassword ? "Sembunyikan password" : "Lihat password"
-										}
-									>
-										{showPassword ? (
-											<EyeOff className="w-4 h-4" />
-										) : (
-											<Eye className="w-4 h-4" />
-										)}
-									</button>
+									{hasError && (
+										<p className="text-[11px] text-[#b66b68]">
+											{field.state.meta.errors[0]}
+										</p>
+									)}
 								</div>
-								{field.state.meta.errors.length > 0 && (
-									<p className="text-[11px] text-[#b66b68]">
-										{field.state.meta.errors[0]}
-									</p>
-								)}
-							</div>
-						)}
+							);
+						}}
+					</form.Field>
+
+					{/* Email Akun */}
+					<form.Field
+						name="email"
+						validators={{
+							onChange: ({ value }) => {
+								if (!value || value.trim().length === 0) {
+									return "Alamat email wajib diisi";
+								}
+								const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+								if (!emailRegex.test(value)) {
+									return "Format email tidak valid (contoh: user@homeekost.id)";
+								}
+								return undefined;
+							},
+						}}
+					>
+						{(field) => {
+							const hasError =
+								(field.state.meta.isTouched || isSubmitted) &&
+								field.state.meta.errors.length > 0;
+
+							return (
+								<div className="space-y-1.5">
+									<Label
+										htmlFor={field.name}
+										className="text-xs font-semibold text-[#252925]"
+									>
+										Alamat Email Pengguna <span className="text-[#b66b68]">*</span>
+									</Label>
+									<Input
+										id={field.name}
+										name={field.name}
+										type="email"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+										placeholder="budi@homeekost.id"
+										className={`text-xs h-10 bg-[#fbfcfb] transition-all ${
+											hasError
+												? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+												: "border-[#e4e9e4] focus:ring-[#8fa594]"
+										}`}
+									/>
+									{hasError && (
+										<p className="text-[11px] text-[#b66b68]">
+											{field.state.meta.errors[0]}
+										</p>
+									)}
+								</div>
+							);
+						}}
+					</form.Field>
+
+					{/* Password Akun */}
+					<form.Field
+						name="password"
+						validators={{
+							onChange: ({ value }) => {
+								if (!editingUser) {
+									if (!value || value.trim().length === 0) {
+										return "Password wajib diisi minimal 8 karakter untuk akun baru";
+									}
+									if (value.trim().length < 8) {
+										return "Password minimal 8 karakter";
+									}
+								} else if (
+									value &&
+									value.trim().length > 0 &&
+									value.trim().length < 8
+								) {
+									return "Password minimal 8 karakter jika ingin diubah";
+								}
+								return undefined;
+							},
+						}}
+					>
+						{(field) => {
+							const hasError =
+								(field.state.meta.isTouched || isSubmitted) &&
+								field.state.meta.errors.length > 0;
+
+							return (
+								<div className="space-y-1.5">
+									<div className="flex items-center justify-between">
+										<Label
+											htmlFor={field.name}
+											className="text-xs font-semibold text-[#252925] flex items-center gap-1.5"
+										>
+											<Lock className="w-3.5 h-3.5 text-[#526e5b]" />
+											{editingUser
+												? "Ganti Password (Opsional)"
+												: "Password Akun"}
+											{!editingUser && <span className="text-[#b66b68]">*</span>}
+										</Label>
+										<span className="text-[10.5px] text-[#737873]">
+											{editingUser
+												? "Kosongkan jika tidak diubah"
+												: "Minimal 8 karakter"}
+										</span>
+									</div>
+									<div className="relative">
+										<Input
+											id={field.name}
+											name={field.name}
+											type={showPassword ? "text" : "password"}
+											value={field.state.value}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											placeholder={
+												editingUser
+													? "Masukkan password baru jika ingin mereset..."
+													: "Masukkan password untuk login (min. 8 karakter)..."
+											}
+											className={`text-xs h-10 bg-[#fbfcfb] pr-10 transition-all ${
+												hasError
+													? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+													: "border-[#e4e9e4] focus:ring-[#8fa594]"
+											}`}
+										/>
+										<button
+											type="button"
+											onClick={() => setShowPassword(!showPassword)}
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737873] hover:text-[#252925] transition-colors p-0.5 cursor-pointer"
+											tabIndex={-1}
+											aria-label={
+												showPassword ? "Sembunyikan password" : "Lihat password"
+											}
+										>
+											{showPassword ? (
+												<EyeOff className="w-4 h-4" />
+											) : (
+												<Eye className="w-4 h-4" />
+											)}
+										</button>
+									</div>
+									{hasError && (
+										<p className="text-[11px] text-[#b66b68]">
+											{field.state.meta.errors[0]}
+										</p>
+									)}
+								</div>
+							);
+						}}
 					</form.Field>
 
 					{/* Grid Role & Status */}
@@ -401,6 +500,7 @@ export function UserFormDialog({
 					{/* Penugasan Cabang Kos */}
 					<form.Field name="assignedProperty">
 						{(field) => {
+							const isSuperAdmin = form.state.values.role === "SUPER_ADMIN";
 							const selectedPropOption = propertyOptions.find(
 								(p) => p.value === field.state.value,
 							);
@@ -411,22 +511,25 @@ export function UserFormDialog({
 										<Label className="text-xs font-semibold text-[#252925]">
 											Penugasan Cabang Properti
 										</Label>
-										{form.state.values.role === "SUPER_ADMIN" && (
+										{isSuperAdmin && (
 											<span className="text-[10px] text-[#4f6958] font-medium flex items-center gap-1">
-												<ShieldCheck className="w-3 h-3" /> Akses Global Seluruh
-												Kos
+												<ShieldCheck className="w-3.5 h-3.5 text-[#4f6958]" />
+												Akses Global Seluruh Kos
 											</span>
 										)}
 									</div>
 									<Select
-										value={field.state.value}
+										value={isSuperAdmin ? "Semua Kost" : field.state.value}
+										disabled={isSuperAdmin}
 										onValueChange={(val) => {
 											if (val) field.handleChange(val);
 										}}
 									>
-										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594]">
+										<SelectTrigger className="w-full border-[#e4e9e4] text-xs h-10 bg-[#fbfcfb] focus:ring-[#8fa594] disabled:opacity-75 disabled:cursor-not-allowed">
 											<SelectValue placeholder="Pilih Cabang Properti">
-												{selectedPropOption?.label || field.state.value}
+												{isSuperAdmin
+													? "Semua Kost (Akses Multi-Cabang Global)"
+													: selectedPropOption?.label || field.state.value}
 											</SelectValue>
 										</SelectTrigger>
 										<SelectContent className="bg-white border-[#e4e9e4]">
