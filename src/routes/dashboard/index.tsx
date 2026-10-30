@@ -137,13 +137,14 @@ export function DashboardHomePage() {
 		year: "numeric",
 	});
 
-	// Monthly report alert calculation (bulan sebelumnya)
+	// Monthly report alert calculation (hanya jika ada alert notifikasi aktif dari server)
 	const now = new Date();
-	const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-	const prevMonth = prevDate.getMonth() + 1;
-	const prevYear = prevDate.getFullYear();
+	const reportAlert = dashboardData?.monthlyReportAlert;
+	const hasActiveReportAlert = Boolean(reportAlert?.hasReport);
+	const prevMonth = reportAlert?.month ?? (now.getMonth() === 0 ? 12 : now.getMonth());
+	const prevYear = reportAlert?.year ?? (now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear());
 	const prevMonthName =
-		dashboardData?.monthlyReportAlert?.monthName ||
+		reportAlert?.monthName ||
 		MONTH_NAMES_ID[prevMonth - 1]?.label ||
 		`Bulan ${prevMonth}`;
 
@@ -226,8 +227,8 @@ export function DashboardHomePage() {
 				</div>
 			</div>
 
-			{/* Monthly Report Reminder Banner */}
-			{!isBannerDismissed && (
+			{/* Monthly Report Reminder Banner (Hanya muncul jika ada notifikasi aktif) */}
+			{!isBannerDismissed && hasActiveReportAlert && (
 				<div
 					onClick={handleNavigateToReport}
 					className="group relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 rounded-xl bg-gradient-to-r from-[#eef4f0] via-[#f7f9f7] to-[#e8f0ea] border border-[#d2dfd4] shadow-xs cursor-pointer hover:border-[#adc4b2] hover:shadow-sm transition-all duration-200 -mt-1 mb-5"

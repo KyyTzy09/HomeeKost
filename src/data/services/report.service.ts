@@ -12,6 +12,7 @@ import type {
 import type { AutomationSettingsFormValues } from "../../common/validations/index.ts";
 import { generateAnnualFinancialCsv } from "../../lib/csv-exporter.ts";
 import { getTodayDateString } from "../../lib/date-utils.ts";
+import { isReportScheduleDue } from "../../lib/schedule-utils.ts";
 import {
 	type PropertyRepository,
 	propertyRepository,
@@ -639,6 +640,54 @@ export class ReportService {
 			year -= 1;
 		}
 
+		// 1. Cek Idempotency: Cegah duplikasi atau spam eksekusi dalam periode yang sama
+		const idempotencyKey =
+			options?.idempotencyKey ||
+			`cron_monthly_report_${year}_${month}${options?.propertyId ? `_${options.propertyId}` : ""}`;
+
+		if (!options?.forceSend) {
+			const existingRun =
+				await this.systemSettingRepo.getSetting<{ processedAt: string }>(
+					idempotencyKey,
+				);
+
+			if (existingRun) {
+				console.log(
+					`[Cron Report] Periode ${month}/${year} telah diproses sebelumnya pada ${existingRun.processedAt} (Idempotent: ${idempotencyKey}). Melewati eksekusi.`,
+				);
+				return {
+					success: true,
+					skipped: true,
+					idempotent: true,
+					reason: `Periode ${month}/${year} sudah diproses sebelumnya (Idempotent: ${idempotencyKey})`,
+					period: { month, year },
+					processedAt: existingRun.processedAt,
+				};
+			}
+
+			// 2. Jika cron dipanggil periodik tanpa parameter bulan spesifik, periksa apakah jadwal automasi sudah jatuh tempo
+			if (options?.month === undefined) {
+				const settings = await this.getAutomationSettings();
+				const isDue = isReportScheduleDue({
+					now,
+					scheduleDay: settings.scheduleDay,
+					scheduleTime: settings.scheduleTime,
+				});
+
+				if (!isDue) {
+					console.log(
+						`[Cron Report] Jadwal automasi laporan belum jatuh tempo (Jadwal: tgl ${settings.scheduleDay} jam ${settings.scheduleTime} WIB).`,
+					);
+					return {
+						success: true,
+						skipped: true,
+						reason: `Belum jatuh tempo jadwal (Jadwal: tgl ${settings.scheduleDay} jam ${settings.scheduleTime} WIB)`,
+						period: { month, year },
+					};
+				}
+			}
+		}
+
 		console.log(
 			`[Cron Report] Menjalankan pembaruan Laporan AI untuk Periode ${month}/${year}...`,
 		);
@@ -694,10 +743,34 @@ export class ReportService {
 			}
 		}
 
+		// 3. Simpan token idempotency untuk mencegah spam pada runner berikutnya
+		const processedRecord = {
+			processedAt: new Date().toISOString(),
+			month,
+			year,
+			propertyId: options?.propertyId || null,
+			resultsCount: results.length,
+		};
+		await this.systemSettingRepo.setSetting(idempotencyKey, processedRecord);
+
+		// 4. Publikasikan alert notifikasi laporan bulanan terbaru untuk Dashboard & Topbar
+		const alertPayload = {
+			month,
+			year,
+			monthName: MONTH_NAMES[month - 1] || `Bulan ${month}`,
+			notifiedAt: new Date().toISOString(),
+			active: true,
+		};
+		await this.systemSettingRepo.setSetting(
+			"latest_monthly_report_alert",
+			alertPayload,
+		);
+
 		return {
 			success: true,
 			processedCount: results.length,
 			period: { month, year },
+			idempotencyKey,
 		};
 	}
 
