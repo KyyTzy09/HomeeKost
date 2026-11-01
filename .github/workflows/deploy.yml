@@ -52,7 +52,9 @@ jobs:
           script: |
             set -e
             cd /var/www/homeekost
+            git remote set-url origin git@github.com:KyyTzy09/HomeeKost.git
             git reset --hard HEAD
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
             git pull origin main
             sudo docker compose run --rm --build app bunx prisma db push
             sudo docker compose up -d --build app
