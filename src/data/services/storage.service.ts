@@ -139,6 +139,19 @@ export class StorageService {
 		};
 	}
 
+	private static readonly ALLOWED_EXTENSIONS: Record<string, true> = {
+		jpg: true,
+		jpeg: true,
+		png: true,
+		webp: true,
+		pdf: true,
+	};
+	private static readonly ALLOWED_FOLDERS: Record<string, true> = {
+		properties: true,
+		documents: true,
+		general: true,
+	};
+
 	/**
 	 * Local Storage fallback (stored inside public/uploads)
 	 */
@@ -146,41 +159,59 @@ export class StorageService {
 		dataUrl: string,
 		options: StorageUploadOptions & { resourceType: string },
 	): Promise<StorageUploadResult> {
-		const matches = dataUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+		const matches = dataUrl.match(/^data:([A-Za-z0-9-+/]+);base64,(.+)$/);
 		let buffer: Buffer;
-		let ext = "png";
+		let ext = options.resourceType === "raw" ? "pdf" : "png";
 
 		if (matches && matches.length === 3) {
-			const mime = matches[1];
-			ext = mime.split("/")[1] || "png";
-			if (ext === "jpeg") ext = "jpg";
+			const mime = matches[1].toLowerCase();
+			let detectedExt = mime.split("/")[1] || ext;
+			if (detectedExt === "jpeg") detectedExt = "jpg";
+			if (StorageService.ALLOWED_EXTENSIONS[detectedExt]) {
+				ext = detectedExt;
+			}
 			buffer = Buffer.from(matches[2], "base64");
 		} else {
 			buffer = Buffer.from(dataUrl, "base64");
 		}
 
-		const filename = `${options.filename || `file-${Date.now()}`}.${ext}`;
-		const uploadsDir = path.resolve(
-			process.cwd(),
-			"public",
-			"uploads",
-			options.folder || "general",
-		);
+		if (!StorageService.ALLOWED_EXTENSIONS[ext]) {
+			throw new Error(
+				"Tipe file tidak didukung. Hanya file gambar (JPG, PNG, WEBP) dan PDF yang diizinkan.",
+			);
+		}
 
-		await fs.mkdir(uploadsDir, { recursive: true });
-		const filePath = path.join(uploadsDir, filename);
+		// Sanitize folder against path traversal
+		const rawFolder = (options.folder || "general").replace(/^homeekost\//, "");
+		const cleanFolder = StorageService.ALLOWED_FOLDERS[rawFolder]
+			? rawFolder
+			: "general";
+
+		// Generate random UUID filename to completely prevent path traversal and file overwrite
+		const safeId = crypto.randomUUID();
+		const filename = `${safeId}.${ext}`;
+
+		const baseUploadsDir = path.resolve(process.cwd(), "public", "uploads");
+		const targetDir = path.resolve(baseUploadsDir, cleanFolder);
+
+		// Prevent traversal out of public/uploads
+		if (!targetDir.startsWith(baseUploadsDir)) {
+			throw new Error("Akses direktori penyimpanan tidak valid.");
+		}
+
+		await fs.mkdir(targetDir, { recursive: true });
+		const filePath = path.join(targetDir, filename);
 		await fs.writeFile(filePath, buffer);
 
-		const relativeUrl = `/uploads/${options.folder || "general"}/${filename}`;
+		const relativeUrl = `/uploads/${cleanFolder}/${filename}`;
 
 		return {
 			url: relativeUrl,
-			publicId: filename,
+			publicId: safeId,
 			format: ext,
 			bytes: buffer.length,
 		};
 	}
-
 	private generateSignature(
 		params: Record<string, string | number>,
 		apiSecret: string,

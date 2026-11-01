@@ -3,14 +3,16 @@ import { z } from "zod";
 import type { TenantItem } from "../../common/types/index.ts";
 import {
 	type TenantFormValues,
-	type UpdateTenantFormValues,
 	tenantSchema,
+	type UpdateTenantFormValues,
 	updateTenantSchema,
 } from "../../common/validations/index.ts";
+import { assertUserPropertyAccess } from "../middlewares/auth.middleware.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import {
 	type KtpExtractedData,
 	ktpOcrService,
+	roomService,
 	tenantService,
 } from "../services/index.ts";
 
@@ -29,7 +31,18 @@ export const getTenantsServerFn = createServerFn({
 		return executeWithLogging(
 			"getTenantsServerFn",
 			data,
-			() => tenantService.getTenants(data?.propertyId),
+			(session) => {
+				let effectivePropId = data?.propertyId;
+				if (
+					session.user.role?.name === "ADMIN" &&
+					session.user.assignedPropertyId
+				) {
+					effectivePropId = session.user.assignedPropertyId;
+				} else if (effectivePropId) {
+					assertUserPropertyAccess(session.user, effectivePropId);
+				}
+				return tenantService.getTenants(effectivePropId);
+			},
 			{
 				method: "GET",
 				summary: (res) => `${res.length} penyewa ditemukan`,
@@ -51,7 +64,16 @@ export const getTenantByIdServerFn = createServerFn({
 		return executeWithLogging(
 			"getTenantByIdServerFn",
 			{ id },
-			() => tenantService.getTenantById(id),
+			async (session) => {
+				const tenant = await tenantService.getTenantById(id);
+				if (tenant?.roomId) {
+					const room = await roomService.getRoomById(tenant.roomId);
+					if (room) {
+						assertUserPropertyAccess(session.user, room.propertyId);
+					}
+				}
+				return tenant;
+			},
 			{
 				method: "GET",
 				summary: (res) => (res ? `${res.name}` : "Not Found"),
@@ -74,7 +96,10 @@ export const createTenantServerFn = createServerFn({
 		return executeWithLogging(
 			"createTenantServerFn",
 			{ propertyId, ...data },
-			(session) => tenantService.createTenant(propertyId, data, session.user),
+			(session) => {
+				assertUserPropertyAccess(session.user, propertyId);
+				return tenantService.createTenant(propertyId, data, session.user);
+			},
 			{
 				method: "POST",
 				summary: (res) => `Sukses dibuat: ${res.name}`,
@@ -104,7 +129,10 @@ export const updateTenantServerFn = createServerFn({
 		return executeWithLogging(
 			"updateTenantServerFn",
 			{ id, propertyId, ...data },
-			() => tenantService.updateTenant(id, propertyId, data),
+			(session) => {
+				assertUserPropertyAccess(session.user, propertyId);
+				return tenantService.updateTenant(id, propertyId, data);
+			},
 			{
 				method: "POST",
 				summary: (res) => `Sukses diperbarui: ${res.name}`,
@@ -127,7 +155,16 @@ export const deleteTenantServerFn = createServerFn({
 			return executeWithLogging(
 				"deleteTenantServerFn",
 				{ id },
-				() => tenantService.deleteTenant(id),
+				async (session) => {
+					const tenant = await tenantService.getTenantById(id);
+					if (tenant?.roomId) {
+						const room = await roomService.getRoomById(tenant.roomId);
+						if (room) {
+							assertUserPropertyAccess(session.user, room.propertyId);
+						}
+					}
+					return tenantService.deleteTenant(id);
+				},
 				{
 					method: "POST",
 					summary: () => `Sukses dihapus: ${id}`,
@@ -142,7 +179,13 @@ export const scanKtpServerFn = createServerFn({
 	.validator((input: { imageBase64: string }) => {
 		return z
 			.object({
-				imageBase64: z.string().min(1, "Data gambar KTP diperlukan"),
+				imageBase64: z
+					.string()
+					.min(1, "Data gambar KTP diperlukan")
+					.max(
+						10 * 1024 * 1024,
+						"Ukuran gambar KTP melebihi batas maksimal (7MB)",
+					),
 			})
 			.parse(input);
 	})

@@ -24,3 +24,33 @@ export async function requireAuthSession() {
 		},
 	};
 }
+
+export function assertUserPropertyAccess(
+	user: {
+		role?: { name?: string } | string;
+		assignedPropertyId?: string | null;
+		propertyAccesses?: Array<{ propertyId: string }>;
+	},
+	propertyId?: string | null,
+): void {
+	if (!propertyId) return;
+
+	const roleName =
+		typeof user.role === "string" ? user.role : user.role?.name;
+	if (roleName === "SUPER_ADMIN") {
+		return;
+	}
+
+	const hasAccess =
+		user.assignedPropertyId === propertyId ||
+		Boolean(
+			user.propertyAccesses &&
+				user.propertyAccesses.some((a) => a.propertyId === propertyId),
+		);
+
+	if (!hasAccess) {
+		throw new Error(
+			"Akses ditolak: Anda tidak memiliki wewenang pada cabang properti ini.",
+		);
+	}
+}

@@ -54,7 +54,14 @@ export const createPropertyServerFn = createServerFn({
 		return executeWithLogging(
 			"createPropertyServerFn",
 			data,
-			() => propertyService.createProperty(data),
+			(session) => {
+				if (session.user.role?.name !== "SUPER_ADMIN") {
+					throw new Error(
+						"Akses ditolak: Hanya SuperAdmin (Pemilik Kos) yang dapat menambahkan cabang properti.",
+					);
+				}
+				return propertyService.createProperty(data);
+			},
 			{
 				method: "POST",
 				summary: (res) => `Sukses dibuat: ${res.name}`,
@@ -77,7 +84,14 @@ export const updatePropertyServerFn = createServerFn({
 		return executeWithLogging(
 			"updatePropertyServerFn",
 			{ id, ...data },
-			() => propertyService.updateProperty(id, data),
+			(session) => {
+				if (session.user.role?.name !== "SUPER_ADMIN") {
+					throw new Error(
+						"Akses ditolak: Hanya SuperAdmin (Pemilik Kos) yang dapat mengubah data properti.",
+					);
+				}
+				return propertyService.updateProperty(id, data);
+			},
 			{
 				method: "POST",
 				summary: (res) => `Sukses diperbarui: ${res.name}`,
@@ -96,7 +110,14 @@ export const deletePropertyServerFn = createServerFn({
 			return executeWithLogging(
 				"deletePropertyServerFn",
 				{ id },
-				() => propertyService.deleteProperty(id),
+				(session) => {
+					if (session.user.role?.name !== "SUPER_ADMIN") {
+						throw new Error(
+							"Akses ditolak: Hanya SuperAdmin (Pemilik Kos) yang dapat menghapus properti.",
+						);
+					}
+					return propertyService.deleteProperty(id);
+				},
 				{
 					method: "POST",
 					summary: () => `Sukses dihapus: ${id}`,

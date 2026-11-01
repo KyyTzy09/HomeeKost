@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import { engagementService } from "../../../data/services/engagement.service.ts";
 import { reportService } from "../../../data/services/report.service.ts";
@@ -5,8 +6,18 @@ import { reportService } from "../../../data/services/report.service.ts";
 export const Route = createFileRoute("/api/cron/daily-tasks")({
 	server: {
 		handlers: {
-			GET: async ({ request }: { request: Request }) => {
-				return handleCronRequest(request);
+			GET: async () => {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						error:
+							"Method Not Allowed. Eksekusi cron wajib menggunakan method POST.",
+					}),
+					{
+						status: 405,
+						headers: { "Content-Type": "application/json" },
+					},
+				);
 			},
 			POST: async ({ request }: { request: Request }) => {
 				return handleCronRequest(request);
@@ -16,19 +27,38 @@ export const Route = createFileRoute("/api/cron/daily-tasks")({
 });
 
 async function handleCronRequest(request: Request): Promise<Response> {
-	const cronSecret = process.env.CRON_SECRET || "homeekost-daily-cron-secret";
+	const cronSecret = process.env.CRON_SECRET;
+	if (!cronSecret && process.env.NODE_ENV === "production") {
+		console.error(
+			"[CronApi] CRON_SECRET belum dikonfigurasi di environment production!",
+		);
+		return new Response(
+			JSON.stringify({
+				success: false,
+				error: "Server configuration error: CRON_SECRET is missing.",
+			}),
+			{ status: 500, headers: { "Content-Type": "application/json" } },
+		);
+	}
 
-	// Cek header Authorization atau query param ?key= / ?secret=
+	const effectiveSecret = cronSecret || "homeekost-daily-cron-secret";
 	const authHeader = request.headers.get("Authorization");
 	const url = new URL(request.url);
 	const queryKey =
 		url.searchParams.get("key") || url.searchParams.get("secret");
+	const bearerToken = authHeader?.startsWith("Bearer ")
+		? authHeader.slice(7)
+		: null;
+	const providedKey = bearerToken || queryKey;
 
 	const isAuthorized =
-		(authHeader && authHeader === `Bearer ${cronSecret}`) ||
-		queryKey === cronSecret ||
+		(providedKey &&
+			providedKey.length === effectiveSecret.length &&
+			crypto.timingSafeEqual(
+				Buffer.from(providedKey),
+				Buffer.from(effectiveSecret),
+			)) ||
 		process.env.NODE_ENV === "development";
-
 	if (!isAuthorized) {
 		return new Response(
 			JSON.stringify({

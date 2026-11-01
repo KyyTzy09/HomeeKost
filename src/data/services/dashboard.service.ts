@@ -192,9 +192,7 @@ export class DashboardService {
 				],
 				contract: {
 					status: "ACTIVE",
-					...(propertyIds
-						? { room: { propertyId: { in: propertyIds } } }
-						: {}),
+					...(propertyIds ? { room: { propertyId: { in: propertyIds } } } : {}),
 				},
 			},
 			include: {
@@ -231,12 +229,10 @@ export class DashboardService {
 
 		for (const inv of pendingInvoices) {
 			// Saring kontrak multi-bulan (Triwulan/Semesteran/Tahunan): jika masa sewa masih berjalan jauh di depan, lewati (Kamila #6)
-			if (
-				inv.contract.billingCycle !== "MONTHLY" &&
-				inv.contract.endDate
-			) {
+			if (inv.contract.billingCycle !== "MONTHLY" && inv.contract.endDate) {
 				const contractEnd = new Date(inv.contract.endDate);
-				const daysUntilEnd = (contractEnd.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24);
+				const daysUntilEnd =
+					(contractEnd.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24);
 				if (daysUntilEnd > 30 && inv.status !== "OVERDUE") {
 					continue;
 				}
@@ -247,7 +243,8 @@ export class DashboardService {
 				inv.transactions,
 			);
 			if (installmentSummary.remainingAmount > 0) {
-				const roomId = inv.contract.room?.id || inv.contract.roomId || inv.contractId;
+				const roomId =
+					inv.contract.room?.id || inv.contract.roomId || inv.contractId;
 				dueRoomsSet.add(roomId);
 				dueAmountRaw += installmentSummary.remainingAmount;
 
@@ -440,19 +437,20 @@ export class DashboardService {
 						},
 					},
 					include: {
-						contract: { select: { roomId: true, billingCycle: true, endDate: true } },
+						contract: {
+							select: { roomId: true, billingCycle: true, endDate: true },
+						},
 						transactions: true,
 					},
 				});
 
 				const dueRoomsForProp = new Set<string>();
 				for (const inv of propInvoices) {
-					if (
-						inv.contract.billingCycle !== "MONTHLY" &&
-						inv.contract.endDate
-					) {
+					if (inv.contract.billingCycle !== "MONTHLY" && inv.contract.endDate) {
 						const contractEnd = new Date(inv.contract.endDate);
-						const daysUntilEnd = (contractEnd.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24);
+						const daysUntilEnd =
+							(contractEnd.getTime() - todayDate.getTime()) /
+							(1000 * 60 * 60 * 24);
 						if (daysUntilEnd > 30 && inv.status !== "OVERDUE") {
 							continue;
 						}
@@ -472,7 +470,9 @@ export class DashboardService {
 					name: prop.name,
 					rooms: `${prop.rooms.length} kamar`,
 					dueBadge:
-						propDueCount > 0 ? `${propDueCount} kamar mendekati` : "Semua lunas",
+						propDueCount > 0
+							? `${propDueCount} kamar mendekati`
+							: "Semua lunas",
 					badgeColor: propDueCount > 0 ? "amber" : "green",
 				};
 			}),
@@ -909,6 +909,7 @@ export class DashboardService {
 	async globalSearch(
 		query: string,
 		propertyId?: string | null,
+		user?: SessionUser,
 	): Promise<GlobalSearchResultItem[]> {
 		const cleanQuery = (query || "").trim();
 		if (!cleanQuery || cleanQuery.length < 2) {
@@ -916,8 +917,14 @@ export class DashboardService {
 		}
 
 		const results: GlobalSearchResultItem[] = [];
-		const propertyIds = propertyId ? [propertyId] : undefined;
+		let propertyIds: string[] | undefined = propertyId
+			? [propertyId]
+			: undefined;
 
+		// RBAC Isolation: Admin hanya dapat mencari di properti yang ditugaskan
+		if (user?.role?.name === "ADMIN" && user.assignedPropertyId) {
+			propertyIds = [user.assignedPropertyId];
+		}
 		try {
 			// 1. Cari Penghuni (Tenants)
 			const tenants = await this.db.tenant.findMany({
