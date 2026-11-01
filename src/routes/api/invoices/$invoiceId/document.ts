@@ -3,6 +3,25 @@ import { prisma } from "../../../../db.ts";
 import { formatRupiah } from "../../../../lib/currency.ts";
 import { formatDate, formatRentalPeriod } from "../../../../lib/date-utils.ts";
 
+function escapeHtml(str: string | number | null | undefined): string {
+	if (str === null || str === undefined) return "";
+	return String(str).replace(/[&<>"']/g, (m) => {
+		switch (m) {
+			case "&":
+				return "&amp;";
+			case "<":
+				return "&lt;";
+			case ">":
+				return "&gt;";
+			case '"':
+				return "&quot;";
+			case "'":
+				return "&#39;";
+			default:
+				return m;
+		}
+	});
+}
 export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 	server: {
 		handlers: {
@@ -49,29 +68,35 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 					: isOverdue
 						? "#b8382e"
 						: "#b18a4b";
-				const propertyName = invoice.contract.room.property.name;
+				const propertyName = escapeHtml(invoice.contract.room.property.name);
 				const bankAccountInfo =
-					invoice.contract.room.property.bankAccountInfo?.trim();
-				const tenantName = invoice.contract.tenant.name;
-				const roomNumber = invoice.contract.room.roomNumber;
-				const tenantPhone =
+					invoice.contract.room.property.bankAccountInfo?.trim()
+						? escapeHtml(invoice.contract.room.property.bankAccountInfo.trim())
+						: null;
+				const tenantName = escapeHtml(invoice.contract.tenant.name);
+				const roomNumber = escapeHtml(invoice.contract.room.roomNumber);
+				const tenantPhone = escapeHtml(
 					invoice.contract.tenant.whatsappNumber ||
-					invoice.contract.tenant.phoneNumber ||
-					"-";
+						invoice.contract.tenant.phoneNumber ||
+						"-",
+				);
 				const amount = Number(invoice.amount);
-				const invoiceNumber = invoice.invoiceNumber;
-				const dueDate = formatDate(invoice.dueDate);
-				const createdDate = formatDate(invoice.createdAt);
-				const paidDate = invoice.paidAt ? formatDate(invoice.paidAt) : "-";
-				const period = formatRentalPeriod({
-					periodMonth: invoice.periodMonth,
-					periodYear: invoice.periodYear,
-					startDate: invoice.contract.startDate,
-					endDate: invoice.contract.endDate,
-					billingCycle: invoice.contract.billingCycle,
-					dueDate: invoice.dueDate,
-				});
-
+				const invoiceNumber = escapeHtml(invoice.invoiceNumber);
+				const dueDate = escapeHtml(formatDate(invoice.dueDate));
+				const createdDate = escapeHtml(formatDate(invoice.createdAt));
+				const paidDate = invoice.paidAt
+					? escapeHtml(formatDate(invoice.paidAt))
+					: "-";
+				const period = escapeHtml(
+					formatRentalPeriod({
+						periodMonth: invoice.periodMonth,
+						periodYear: invoice.periodYear,
+						startDate: invoice.contract.startDate,
+						endDate: invoice.contract.endDate,
+						billingCycle: invoice.contract.billingCycle,
+						dueDate: invoice.dueDate,
+					}),
+				);
 				const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -418,7 +443,7 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 					status: 200,
 					headers: {
 						"Content-Type": "text/html; charset=utf-8",
-						"Cache-Control": "public, max-age=3600",
+						"Cache-Control": "private, no-cache, no-store, must-revalidate",
 					},
 				});
 			},

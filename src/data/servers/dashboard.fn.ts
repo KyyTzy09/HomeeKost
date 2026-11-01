@@ -76,10 +76,15 @@ export const globalSearchServerFn = createServerFn({
 		return executeWithLogging(
 			"globalSearchServerFn",
 			{ query: data.query, activePropertyId },
-			() => dashboardService.globalSearch(data.query, activePropertyId),
+			(session) =>
+				dashboardService.globalSearch(
+					data.query,
+					activePropertyId,
+					session.user,
+				),
 			{
 				method: "POST",
-				requireAuth: false,
+				requireAuth: true,
 				summary: (res) => `${res.length} hasil ditemukan untuk "${data.query}"`,
 			},
 		);

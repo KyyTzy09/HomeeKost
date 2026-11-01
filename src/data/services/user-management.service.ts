@@ -522,10 +522,18 @@ export class UserManagementService {
 	}> {
 		const cleanEmail = email.trim().toLowerCase();
 		const user = await this.userRepo.findByEmail(cleanEmail);
-		if (!user) {
-			throw new Error("Email tidak terdaftar dalam sistem akun pengelola kos.");
-		}
+		const genericMessage =
+			"Jika alamat email terdaftar di sistem, tautan verifikasi pemulihan kata sandi telah dikirimkan ke kotak masuk atau folder spam email Anda.";
 
+		if (!user) {
+			return {
+				success: true,
+				role: "ADMIN",
+				email: cleanEmail,
+				name: "",
+				message: genericMessage,
+			};
+		}
 		const roleName = (user.role?.name || "ADMIN") as AppUserRole;
 		const roleLabel =
 			roleName === "SUPER_ADMIN"
@@ -583,7 +591,7 @@ export class UserManagementService {
 			role: roleName,
 			email: user.email,
 			name: user.name,
-			message: `Tautan verifikasi pemulihan kata sandi telah dikirimkan ke alamat email ${roleLabel} Anda (${user.email}). Silakan periksa kotak masuk atau folder spam email Anda.`,
+			message: genericMessage,
 		};
 	}
 

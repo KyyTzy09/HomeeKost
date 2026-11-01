@@ -7,7 +7,10 @@ import {
 } from "../services/storage.service.ts";
 
 const uploadImageInputSchema = z.object({
-	dataUrl: z.string().min(1, "Data gambar wajib diisi"),
+	dataUrl: z
+		.string()
+		.min(1, "Data gambar wajib diisi")
+		.max(10 * 1024 * 1024, "Ukuran gambar melebihi batas maksimal (7MB)"),
 	folder: z.string().optional().default("homeekost/properties"),
 	filename: z.string().optional(),
 });
@@ -15,12 +18,14 @@ const uploadImageInputSchema = z.object({
 export type UploadImageInput = z.infer<typeof uploadImageInputSchema>;
 
 const uploadDocumentInputSchema = z.object({
-	dataUrl: z.string().min(1, "Data dokumen wajib diisi"),
+	dataUrl: z
+		.string()
+		.min(1, "Data dokumen wajib diisi")
+		.max(10 * 1024 * 1024, "Ukuran dokumen melebihi batas maksimal (7MB)"),
 	folder: z.string().optional().default("homeekost/documents"),
 	filename: z.string().optional(),
 	mimeType: z.string().optional(),
 });
-
 export type UploadDocumentInput = z.infer<typeof uploadDocumentInputSchema>;
 
 export const uploadImageServerFn = createServerFn({

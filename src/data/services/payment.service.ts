@@ -11,9 +11,7 @@ import type {
 	CreateManualInvoiceInput,
 	GenerateMonthlyInvoicesInput,
 } from "../../common/validations/index.ts";
-import type {
-	PaymentMethod,
-} from "../../generated/prisma/client.js";
+import type { PaymentMethod } from "../../generated/prisma/client.js";
 import { formatDate, formatRentalPeriod } from "../../lib/date-utils.ts";
 import {
 	calculateInstallmentSummary,
@@ -302,6 +300,16 @@ export class PaymentService {
 			throw new Error("Invoice tidak ditemukan.");
 		}
 
+		// RBAC Guard: Staf hanya dapat konfirmasi invoice properti yang ditugaskan
+		if (user && user.role?.name === "ADMIN") {
+			const propId = invoice.contract.room.property.id;
+			if (user.assignedPropertyId && user.assignedPropertyId !== propId) {
+				throw new Error(
+					"Akses ditolak: Anda tidak memiliki wewenang pada cabang properti ini.",
+				);
+			}
+		}
+
 		if (invoice.status === "PAID") {
 			throw new Error("Invoice ini sudah lunas sebelumnya.");
 		}
@@ -453,6 +461,16 @@ export class PaymentService {
 			}
 		}
 
+		// RBAC Guard: Staf hanya dapat membuat invoice untuk properti yang ditugaskan
+		if (_user && _user.role?.name === "ADMIN") {
+			const propId = contract.room.propertyId;
+			if (_user.assignedPropertyId && _user.assignedPropertyId !== propId) {
+				throw new Error(
+					"Akses ditolak: Anda tidak memiliki wewenang pada cabang properti ini.",
+				);
+			}
+		}
+
 		// 2. Cek apakah tagihan untuk periode ini sudah pernah dibuat untuk penghuni ini (lintas seluruh kontrak)
 		const existingInvoice = await this.invoiceRepo.findExistingInvoiceForTenant(
 			contract.tenantId,
@@ -564,6 +582,17 @@ export class PaymentService {
 		input: GenerateMonthlyInvoicesInput,
 		_user?: SessionUser,
 	) {
+		// RBAC Guard: Staf hanya dapat men-generate tagihan untuk properti yang ditugaskan
+		if (_user && _user.role?.name === "ADMIN") {
+			if (
+				_user.assignedPropertyId &&
+				_user.assignedPropertyId !== input.propertyId
+			) {
+				throw new Error(
+					"Akses ditolak: Anda tidak memiliki wewenang pada cabang properti ini.",
+				);
+			}
+		}
 		const created = await this.invoiceRepo.generateMonthlyInvoicesForProperty(
 			input.propertyId,
 			input.periodMonth,
@@ -591,6 +620,16 @@ export class PaymentService {
 		const invoice = await this.invoiceRepo.findById(invoiceId);
 		if (!invoice) {
 			throw new Error("Invoice tidak ditemukan.");
+		}
+
+		// RBAC Guard: Staf hanya dapat mengirim notifikasi untuk invoice properti yang ditugaskan
+		if (_user && _user.role?.name === "ADMIN") {
+			const propId = invoice.contract.room.property.id;
+			if (_user.assignedPropertyId && _user.assignedPropertyId !== propId) {
+				throw new Error(
+					"Akses ditolak: Anda tidak memiliki wewenang pada cabang properti ini.",
+				);
+			}
 		}
 
 		const tenantPhone =
@@ -705,7 +744,22 @@ export class PaymentService {
 		});
 	}
 
-	async deleteInvoice(id: string, _user?: SessionUser) {
+	async deleteInvoice(id: string, user?: SessionUser) {
+		const invoice = await this.invoiceRepo.findById(id);
+		if (!invoice) {
+			throw new Error("Invoice tidak ditemukan.");
+		}
+
+		// RBAC Guard: Staf hanya dapat menghapus invoice properti yang ditugaskan
+		if (user && user.role?.name === "ADMIN") {
+			const propId = invoice.contract.room.property.id;
+			if (user.assignedPropertyId && user.assignedPropertyId !== propId) {
+				throw new Error(
+					"Akses ditolak: Anda tidak memiliki wewenang pada cabang properti ini.",
+				);
+			}
+		}
+
 		await this.invoiceRepo.deleteInvoice(id);
 		return { success: true, id };
 	}

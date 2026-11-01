@@ -5,6 +5,7 @@ import {
 	type RoomFormValues,
 	roomFormSchema,
 } from "../../common/validations/index.ts";
+import { assertUserPropertyAccess } from "../middlewares/auth.middleware.ts";
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { roomService } from "../services/room.service.ts";
 
@@ -18,7 +19,10 @@ export const getRoomsByPropertyServerFn = createServerFn({
 		return executeWithLogging(
 			"getRoomsByPropertyServerFn",
 			{ propertyId },
-			() => roomService.getRoomsByProperty(propertyId),
+			(session) => {
+				assertUserPropertyAccess(session.user, propertyId);
+				return roomService.getRoomsByProperty(propertyId);
+			},
 			{
 				method: "GET",
 				summary: (res) => `${res.length} kamar ditemukan`,
@@ -36,7 +40,13 @@ export const getRoomByIdServerFn = createServerFn({
 		return executeWithLogging(
 			"getRoomByIdServerFn",
 			{ id },
-			() => roomService.getRoomById(id),
+			async (session) => {
+				const room = await roomService.getRoomById(id);
+				if (room) {
+					assertUserPropertyAccess(session.user, room.propertyId);
+				}
+				return room;
+			},
 			{
 				method: "GET",
 				summary: (res) => (res ? `Kamar ${res.roomNo}` : "Not Found"),
@@ -59,7 +69,10 @@ export const createRoomServerFn = createServerFn({
 		return executeWithLogging(
 			"createRoomServerFn",
 			{ propertyId, ...data },
-			() => roomService.createRoom(propertyId, data),
+			(session) => {
+				assertUserPropertyAccess(session.user, propertyId);
+				return roomService.createRoom(propertyId, data);
+			},
 			{
 				method: "POST",
 				summary: (res) => `Sukses dibuat: Kamar ${res.roomNo}`,
@@ -82,7 +95,13 @@ export const updateRoomServerFn = createServerFn({
 		return executeWithLogging(
 			"updateRoomServerFn",
 			{ id, ...data },
-			() => roomService.updateRoom(id, data),
+			async (session) => {
+				const existing = await roomService.getRoomById(id);
+				if (existing) {
+					assertUserPropertyAccess(session.user, existing.propertyId);
+				}
+				return roomService.updateRoom(id, data);
+			},
 			{
 				method: "POST",
 				summary: (res) => `Sukses diubah: Kamar ${res.roomNo}`,
@@ -101,7 +120,13 @@ export const deleteRoomServerFn = createServerFn({
 			return executeWithLogging(
 				"deleteRoomServerFn",
 				{ id },
-				() => roomService.deleteRoom(id),
+				async (session) => {
+					const existing = await roomService.getRoomById(id);
+					if (existing) {
+						assertUserPropertyAccess(session.user, existing.propertyId);
+					}
+					return roomService.deleteRoom(id);
+				},
 				{
 					method: "POST",
 					summary: () => `Sukses dihapus: ${id}`,

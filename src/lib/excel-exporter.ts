@@ -33,6 +33,19 @@ const PALETTE = {
 	greenMuted: "5F896D",
 };
 
+function sanitizeExcelString(val: string): string {
+	if (!val) return val;
+	const firstChar = val.charAt(0);
+	if (
+		firstChar === "=" ||
+		firstChar === "+" ||
+		firstChar === "-" ||
+		firstChar === "@"
+	) {
+		return `'${val}`;
+	}
+	return val;
+}
 const IDR_FORMAT = '_-"Rp"* #,##0_-;[Red]-"Rp"* #,##0_-;_-"Rp"* "-"_-;_-@_-';
 const PERCENT_FORMAT = "0.0%";
 
@@ -464,8 +477,7 @@ export async function createAnnualFinancialExcelWorkbook(
 			const row = wsDetail.getRow(curRow);
 			row.height = 20;
 			const cellName = row.getCell(1);
-			cellName.value = prop.propertyName;
-			cellName.font = { name: "Arial", size: 10, bold: true };
+			cellName.value = sanitizeExcelString(prop.propertyName);
 			cellName.alignment = {
 				vertical: "middle",
 				horizontal: "left",
@@ -805,9 +817,7 @@ export async function createMonthlyFinancialExcelWorkbook(
 			size: row.isTotal ? 10.5 : row.isSubItem ? 9.5 : 10,
 			bold: Boolean(row.isTotal || row.isProfit),
 			color: {
-				argb: row.isProfit
-					? `FF${PALETTE.sageDark}`
-					: `FF${PALETTE.textDark}`,
+				argb: row.isProfit ? `FF${PALETTE.sageDark}` : `FF${PALETTE.textDark}`,
 			},
 		};
 		cellA.alignment = {
@@ -834,9 +844,7 @@ export async function createMonthlyFinancialExcelWorkbook(
 			bold: Boolean(row.isTotal || row.isProfit),
 			color: {
 				argb:
-					row.amount < 0
-						? `FF${PALETTE.redMuted}`
-						: `FF${PALETTE.textDark}`,
+					row.amount < 0 ? `FF${PALETTE.redMuted}` : `FF${PALETTE.textDark}`,
 			},
 		};
 		cellC.alignment = { vertical: "middle", horizontal: "right" };
@@ -1047,19 +1055,16 @@ export async function createMonthlyFinancialExcelWorkbook(
 				size: 9.5,
 				bold: true,
 				color: {
-					argb: isIncome
-						? `FF${PALETTE.greenMuted}`
-						: `FF${PALETTE.redMuted}`,
+					argb: isIncome ? `FF${PALETTE.greenMuted}` : `FF${PALETTE.redMuted}`,
 				},
 			};
 
 			const cellD = r.getCell(4); // Kategori
-			cellD.value = tx.category || "-";
+			cellD.value = sanitizeExcelString(tx.category || "-");
 			cellD.alignment = { vertical: "middle", horizontal: "center" };
 
 			const cellE = r.getCell(5); // Deskripsi
-			cellE.value = tx.description || "-";
-			cellE.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+			cellE.value = sanitizeExcelString(tx.description || "-");
 
 			const cellF = r.getCell(6); // Pemasukan
 			cellF.value = isIncome ? tx.amount : 0;
@@ -1201,8 +1206,7 @@ export async function createMonthlyFinancialExcelWorkbook(
 		}
 
 		const netLabelCell = netRow.getCell(1);
-		netLabelCell.value =
-			"SURPLUS / LABA BERSIH KAS (Pemasukan - Pengeluaran):";
+		netLabelCell.value = "SURPLUS / LABA BERSIH KAS (Pemasukan - Pengeluaran):";
 		netLabelCell.font = {
 			name: "Arial",
 			size: 10,

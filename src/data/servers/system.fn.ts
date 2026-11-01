@@ -9,11 +9,11 @@ import {
 import { executeWithLogging } from "../middlewares/logging.middleware.ts";
 import { userRepository } from "../repositories/user.repository.ts";
 import { serverAlertService } from "../services/server-alert.service.ts";
-import { systemStatusService } from "../services/system-status.service.ts";
 import {
 	type ResetDataStats,
 	systemService,
 } from "../services/system.service.ts";
+import { systemStatusService } from "../services/system-status.service.ts";
 
 export const getSystemStatusServerFn = createServerFn({
 	method: "GET",
@@ -121,7 +121,12 @@ export const updateServerAlertSettingsServerFn = createServerFn({
 		return executeWithLogging(
 			"updateServerAlertSettingsServerFn",
 			data,
-			async () => {
+			async (session) => {
+				if (session.user.role?.name !== "SUPER_ADMIN") {
+					throw new Error(
+						"Akses ditolak: Hanya SuperAdmin yang berhak mengubah konfigurasi alert server.",
+					);
+				}
 				return serverAlertService.updateSettings(data);
 			},
 			{
@@ -147,29 +152,32 @@ export const sendTestServerAlertServerFn = createServerFn({
 			})
 			.parse({ targetPhone: raw || undefined });
 	})
-	.handler(
-		async ({ data }): Promise<{ success: boolean; message: string }> => {
-			return executeWithLogging(
-				"sendTestServerAlertServerFn",
-				data,
-				async () => {
-					let phone = data?.targetPhone;
-					if (!phone) {
-						const settings = await serverAlertService.getSettings();
-						phone = settings.targetPhone;
-					}
-					if (!phone || phone.length < 8) {
-						throw new Error(
-							"Nomor WhatsApp tujuan belum diisi (minimal 8 digit).",
-						);
-					}
-					return serverAlertService.sendTestAlert(phone);
-				},
-				{
-					method: "POST",
-					requireAuth: true,
-					summary: (res) => res.message,
-				},
-			);
-		},
-	);
+	.handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+		return executeWithLogging(
+			"sendTestServerAlertServerFn",
+			data,
+			async (session) => {
+				if (session.user.role?.name !== "SUPER_ADMIN") {
+					throw new Error(
+						"Akses ditolak: Hanya SuperAdmin yang berhak mengirim pesan uji coba alert server.",
+					);
+				}
+				let phone = data?.targetPhone;
+				if (!phone) {
+					const settings = await serverAlertService.getSettings();
+					phone = settings.targetPhone;
+				}
+				if (!phone || phone.length < 8) {
+					throw new Error(
+						"Nomor WhatsApp tujuan belum diisi (minimal 8 digit).",
+					);
+				}
+				return serverAlertService.sendTestAlert(phone);
+			},
+			{
+				method: "POST",
+				requireAuth: true,
+				summary: (res) => res.message,
+			},
+		);
+	});
