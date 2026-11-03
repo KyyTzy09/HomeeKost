@@ -549,7 +549,7 @@ export class InvoiceRepository {
 		propertyId: string,
 		periodMonth: number,
 		periodYear: number,
-		dueDateDay: number = 10,
+		dueDateDay: number = 5,
 	) {
 		const contracts = await this.db.rentalContract.findMany({
 			where: {
@@ -632,12 +632,8 @@ export class InvoiceRepository {
 			) {
 				continue;
 			}
-			// Utamakan tanggal jatuh tempo masing-masing kontrak penghuni (dihitung dari tanggal mulai sewa)
-			const effectiveDueDay =
-				contract.dueDateDay ||
-				(contract.startDate
-					? new Date(contract.startDate).getDate()
-					: dueDateDay || 10);
+			// Tanggal tenggat penagihan bulanan seragam di tanggal 5 bulan berjalan (sesuai SOP kost)
+			const effectiveDueDay = contract.dueDateDay || dueDateDay || 5;
 			const dueDate = new Date(periodYear, periodMonth - 1, effectiveDueDay);
 			const invoiceNumber = formatDeterministicInvoiceNumber({
 				date: dueDate,

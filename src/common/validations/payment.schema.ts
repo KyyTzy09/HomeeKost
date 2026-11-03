@@ -68,7 +68,7 @@ export const generateMonthlyInvoicesSchema = z.object({
 	propertyId: z.string().min(1, "Cabang kos wajib dipilih"),
 	periodMonth: z.number().min(1).max(12),
 	periodYear: z.number().min(2020).max(2050),
-	dueDateDay: z.number().min(1).max(31).optional().default(10),
+	dueDateDay: z.number().min(1).max(31).optional().default(5),
 });
 
 export type GenerateMonthlyInvoicesInput = z.infer<

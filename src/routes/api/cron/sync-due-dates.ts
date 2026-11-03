@@ -1,46 +1,20 @@
-// import crypto from "node:crypto";
+import crypto from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
-// import { systemService } from "../../../data/services/system.service.ts";
+import { systemService } from "../../../data/services/system.service.ts";
 
-/**
- * [DINONAKTIFKAN / DIKOMENTARI SEMENTARA]
- * Fungsi sinkronisasi massal tanggal tenggat kontrak & invoice sengaja dikomentari
- * terlebih dahulu sesuai instruksi pengguna.
- */
 export const Route = createFileRoute("/api/cron/sync-due-dates")({
 	server: {
 		handlers: {
-			GET: async () => {
-				return new Response(
-					JSON.stringify({
-						success: false,
-						message:
-							"Fungsi sinkronisasi tanggal tenggat sedang dinonaktifkan sementara (dikomentari).",
-					}),
-					{
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					},
-				);
+			GET: async ({ request }: { request: Request }) => {
+				return handleSyncRequest(request);
 			},
-			POST: async () => {
-				return new Response(
-					JSON.stringify({
-						success: false,
-						message:
-							"Fungsi sinkronisasi tanggal tenggat sedang dinonaktifkan sementara (dikomentari).",
-					}),
-					{
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					},
-				);
+			POST: async ({ request }: { request: Request }) => {
+				return handleSyncRequest(request);
 			},
 		},
 	},
 });
 
-/*
 async function handleSyncRequest(request: Request): Promise<Response> {
 	const cronSecret = process.env.CRON_SECRET;
 	const effectiveSecret = cronSecret || "homeekost-daily-cron-secret";
@@ -83,7 +57,7 @@ async function handleSyncRequest(request: Request): Promise<Response> {
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {
-		console.error("[SyncDueDatesApi] Gagal menyinkronkan tanggal tenggat:", error);
+		console.error("[SyncDueDatesApi] Gagal menyinkronkan tanggal tenggat ke tanggal 5:", error);
 		return new Response(
 			JSON.stringify({
 				success: false,
@@ -96,4 +70,3 @@ async function handleSyncRequest(request: Request): Promise<Response> {
 		);
 	}
 }
-*/
