@@ -616,9 +616,6 @@ export class EngagementService {
 						invoiceNumber: rem.invoiceNumber,
 						period: rem.period,
 						amount: rem.amount,
-						bankName: "BCA",
-						bankAccount: "8735081290",
-						accountHolder: "Bude Frisda",
 						bankAccountInfo: rem.bankAccountInfo,
 						documentUrl: rem.documentUrl,
 					})
@@ -629,9 +626,6 @@ export class EngagementService {
 						invoiceNumber: rem.invoiceNumber,
 						period: rem.period,
 						amount: rem.amount,
-						bankName: "BCA",
-						bankAccount: "8735081290",
-						accountHolder: "Bude Frisda",
 						bankAccountInfo: rem.bankAccountInfo,
 						documentUrl: rem.documentUrl,
 					});

@@ -282,13 +282,13 @@ export function InvoiceDocPreview({
 							) : (
 								<div className="bg-white p-3 rounded-lg border border-[#e4e9e4]">
 									<span className="text-[10px] text-[#737873] block">
-										Transfer Bank BCA:
+										Rekening Pembayaran:
 									</span>
-									<b className="text-sm tabular-nums font-bold text-[#252925] tracking-wider block mt-0.5">
-										8735081290
+									<b className="text-xs font-bold text-[#252925] block mt-0.5">
+										Rekening Pengelola Kos
 									</b>
 									<span className="text-[11px] text-[#737873] block mt-0.5">
-										a.n. <b>Bude Frisda / Pengelola Kos</b>
+										Hubungi admin kos untuk konfirmasi rekening transfer
 									</span>
 								</div>
 							)}

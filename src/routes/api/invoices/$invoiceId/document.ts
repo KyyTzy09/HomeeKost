@@ -415,9 +415,8 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
         <div style="font-size: 11px; color: #737873; margin-top: 4px;">Rekening Resmi Pembayaran Kos</div>
         `
 						: `
-        <div style="font-size: 11px; color: #737873;">Bank Central Asia (BCA)</div>
-        <div style="font-size: 16px; font-weight: 800; letter-spacing: 1px; margin: 4px 0; color: #252925;">8735081290</div>
-        <div style="font-size: 11px; color: #737873;">Atas Nama: <b>Bude Frisda / Pengelola Kos</b></div>
+        <div style="font-size: 13px; font-weight: 700; color: #252925;">Rekening Resmi Pengelola Kos</div>
+        <div style="font-size: 11px; color: #737873; margin-top: 4px;">Silakan hubungi admin pengelola kos untuk konfirmasi nomor rekening transfer.</div>
         `
 				}
       </div>

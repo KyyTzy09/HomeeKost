@@ -26,7 +26,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "HomeeKost — Sistem Pengelolaan Kos Bude Frisda",
+				title: "HomeeKost — Sistem Pengelolaan Kos",
 			},
 		],
 		links: [

@@ -389,28 +389,16 @@ export async function generateInvoicePdf(
 				color: mutedGray,
 			});
 		} else {
-			page.drawText(`Bank: ${data.bankName || "BCA (Bank Central Asia)"}`, {
-				x: margin + 12,
-				y: currentY - 28,
-				size: 9,
-				font: fontRegular,
-				color: mutedGray,
-			});
-			page.drawText(`No. Rekening: ${data.bankAccount || "8735081290"}`, {
-				x: margin + 12,
-				y: currentY - 42,
-				size: 11,
-				font: fontBold,
-				color: charcoal,
-			});
 			page.drawText(
-				`Atas Nama: ${data.accountHolder || "Bude Frisda / Pengelola Kos"}`,
+				data.bankAccount
+					? `Rekening: ${data.bankName ? `${data.bankName} ` : ""}${data.bankAccount} a.n. ${data.accountHolder || "Pengelola Kos"}`
+					: "Rekening Pembayaran: Silakan hubungi Admin / Pengelola Kos",
 				{
-					x: width / 2 + 10,
-					y: currentY - 42,
-					size: 9,
+					x: margin + 12,
+					y: currentY - 34,
+					size: 10,
 					font: fontBold,
-					color: mutedGray,
+					color: charcoal,
 				},
 			);
 		}
