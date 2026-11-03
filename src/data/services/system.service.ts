@@ -1,6 +1,6 @@
 import { prisma } from "../../db.ts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
-// import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
+import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 
 export interface SyncDueDatesDetail {
 	tenantName: string;
@@ -110,12 +110,10 @@ export class SystemService {
 	}
 
 	/**
-	 * [DIKOMENTARI SEMENTARA SESUAI INSTRUKSI]
 	 * Sinkronisasi massal seluruh kontrak sewa aktif dan invoice berjalan
-	 * agar tanggal jatuh temponya (dueDateDay & invoice.dueDate) 100% konsisten
-	 * mengikuti tanggal mulai sewa (startDate) masing-masing penghuni.
+	 * agar tanggal jatuh temponya serempak di tanggal 5 bulan berjalan
+	 * sesuai SOP operasional kost yang dikonfirmasi oleh pemilik kos.
 	 */
-	/*
 	async syncContractAndInvoiceDueDates(): Promise<SyncDueDatesResult> {
 		return this.db.$transaction(
 			async (tx) => {
@@ -131,24 +129,23 @@ export class SystemService {
 				let contractsUpdated = 0;
 				let invoicesUpdated = 0;
 				const details: SyncDueDatesDetail[] = [];
+				const targetDueDay = 5;
 
 				for (const contract of contracts) {
-					const startDate = new Date(contract.startDate);
-					const correctDueDay = startDate.getDate();
 					let contractChanged = false;
 					let invChangedCount = 0;
 
-					// 1. Perbarui dueDateDay pada kontrak jika berbeda dari tanggal mulai sewa
-					if (contract.dueDateDay !== correctDueDay) {
+					// 1. Perbarui dueDateDay pada kontrak ke tanggal 5 jika belum tanggal 5
+					if (contract.dueDateDay !== targetDueDay) {
 						await tx.rentalContract.update({
 							where: { id: contract.id },
-							data: { dueDateDay: correctDueDay },
+							data: { dueDateDay: targetDueDay },
 						});
 						contractChanged = true;
 						contractsUpdated++;
 					}
 
-					// 2. Perbarui seluruh invoice PENDING dan OVERDUE agar tanggalnya sesuai correctDueDay
+					// 2. Perbarui seluruh invoice PENDING dan OVERDUE agar jatuh tempo tanggal 5
 					for (const inv of contract.invoices) {
 						if (inv.status === "CANCELLED") continue;
 
@@ -156,16 +153,10 @@ export class SystemService {
 						const invMonth = inv.periodMonth
 							? inv.periodMonth - 1
 							: inv.dueDate.getMonth();
-						const maxDaysInMonth = new Date(
-							invYear,
-							invMonth + 1,
-							0,
-						).getDate();
-						const safeDueDay = Math.min(correctDueDay, maxDaysInMonth);
-						const correctDueDate = new Date(invYear, invMonth, safeDueDay);
+						const correctDueDate = new Date(invYear, invMonth, targetDueDay);
 
-						// Cek jika tanggal jatuh tempo berbeda
-						if (inv.dueDate.getDate() !== safeDueDay) {
+						// Cek jika tanggal jatuh tempo berbeda dari tanggal 5
+						if (inv.dueDate.getDate() !== targetDueDay) {
 							const updateData: { dueDate: Date; invoiceNumber?: string } = {
 								dueDate: correctDueDate,
 							};
@@ -198,9 +189,9 @@ export class SystemService {
 						details.push({
 							tenantName: contract.tenant.name,
 							roomNumber: contract.room.roomNumber,
-							startDate: startDate.toISOString().slice(0, 10),
+							startDate: new Date(contract.startDate).toISOString().slice(0, 10),
 							oldDueDateDay: contract.dueDateDay,
-							newDueDateDay: correctDueDay,
+							newDueDateDay: targetDueDay,
 							invoicesUpdatedCount: invChangedCount,
 						});
 					}
@@ -208,7 +199,7 @@ export class SystemService {
 
 				return {
 					success: true,
-					message: `Sukses menyinkronkan ${contractsUpdated} kontrak sewa dan ${invoicesUpdated} tagihan invoice ke tanggal tenggat yang benar.`,
+					message: `Sukses menyinkronkan ${contractsUpdated} kontrak sewa dan ${invoicesUpdated} tagihan invoice serentak ke tanggal 5 bulan berjalan.`,
 					stats: {
 						totalActiveContracts: contracts.length,
 						contractsUpdated,
@@ -223,7 +214,6 @@ export class SystemService {
 			},
 		);
 	}
-	*/
 }
 
 export const systemService = new SystemService();

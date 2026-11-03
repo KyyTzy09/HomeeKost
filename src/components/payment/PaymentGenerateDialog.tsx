@@ -63,7 +63,7 @@ export function PaymentGenerateDialog({
 	);
 	const [periodMonth, setPeriodMonth] = useState<number>(now.getMonth() + 1);
 	const [periodYear, setPeriodYear] = useState<number>(currentYear);
-	const [dueDateDay, setDueDateDay] = useState<number>(10);
+	const [dueDateDay, setDueDateDay] = useState<number>(5);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -197,11 +197,11 @@ export function PaymentGenerateDialog({
 							min="1"
 							max="28"
 							value={dueDateDay}
-							onChange={(e) => setDueDateDay(Number(e.target.value) || 10)}
+							onChange={(e) => setDueDateDay(Number(e.target.value) || 5)}
 							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 						<p className="text-[11px] text-[#737873] mt-1">
-							Tanggal default cadangan (Secara otomatis, sistem memprioritaskan tanggal sewa masing-masing penghuni).
+							Standar SOP penagihan kost: tanggal 5 pada bulan berjalan.
 						</p>
 					</div>
 
