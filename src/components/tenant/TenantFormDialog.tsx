@@ -2,7 +2,6 @@ import { useForm } from "@tanstack/react-form";
 import {
 	AlertCircle,
 	ArrowRightLeft,
-	CalendarDays,
 	Check,
 	CheckCircle2,
 	ChevronsUpDown,
@@ -1682,148 +1681,147 @@ export function TenantFormDialog({
 								</form.Subscribe>
 							)}
 
-							{/* Tanggal Mulai Sewa & Settlement Option & Due Date Preview (Hanya Pendaftaran Baru) */}
+							{/* Tanggal Mulai Sewa (Input Date) */}
+							<form.Field
+								name="startDate"
+								validators={{
+									onChange: ({ value }) =>
+										!value ? "Tanggal mulai sewa wajib diisi" : undefined,
+								}}
+							>
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.startDate;
+									const hasError = Boolean(errorMsg);
+									return (
+										<div className="space-y-1">
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Tanggal Mulai Sewa *
+											</Label>
+											<Input
+												type="date"
+												value={field.state.value}
+												onChange={(e) => {
+													clearFieldError("startDate");
+													handleChangeStartDate(e.target.value);
+												}}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
+											/>
+											{hasError && (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											)}
+										</div>
+									);
+								}}
+							</form.Field>
+
+							{/* Tanggal Jatuh Tempo Berikutnya (Editable Date Input with Auto-Calculation) */}
+							<form.Field
+								name="dueDate"
+								validators={{
+									onChange: ({ value }) =>
+										!value ? "Tanggal jatuh tempo wajib diisi" : undefined,
+								}}
+							>
+								{(field) => {
+									const errorMsg =
+										field.state.meta.errors[0] || formErrors.dueDate;
+									const hasError = Boolean(errorMsg);
+									return (
+										<div className="space-y-1">
+											<div className="flex items-center justify-between">
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Tanggal Jatuh Tempo Berikutnya *
+												</Label>
+												<span className="text-[9.5px] text-[#4f6958] font-medium bg-[#e4ede6] px-1.5 py-0.5 rounded-[5px]">
+													Otomatis / Bisa Diedit
+												</span>
+											</div>
+											<Input
+												type="date"
+												name={field.name}
+												value={field.state.value}
+												onChange={(e) => {
+													clearFieldError("dueDate");
+													field.handleChange(e.target.value);
+												}}
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+													hasError
+														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+												}`}
+											/>
+											{hasError ? (
+												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+													{errorMsg}
+												</p>
+											) : (
+												<p className="text-[9.5px] text-[#718276] leading-tight m-0">
+													Otomatis terhitung dari tanggal mulai sewa ({field.state.value ? formatDate(field.state.value) : "—"}), bebas diubah manual jika ada kesepakatan.
+												</p>
+											)}
+										</div>
+									);
+								}}
+							</form.Field>
+
+							{/* Multi-Period or Initial Period Settlement Option (Hanya Pendaftaran Baru) */}
 							{!isEditing && (
-								<>
-									{/* Tanggal Mulai Sewa (Input Date) */}
-									<form.Field
-										name="startDate"
-										validators={{
-											onChange: ({ value }) =>
-												!value ? "Tanggal mulai sewa wajib diisi" : undefined,
-										}}
-									>
-										{(field) => {
-											const errorMsg =
-												field.state.meta.errors[0] || formErrors.startDate;
-											const hasError = Boolean(errorMsg);
-											return (
-												<div className="space-y-1">
-													<Label className="text-[11px] font-bold text-[#506257]">
-														Tanggal Mulai Sewa
-													</Label>
-													<Input
-														type="date"
-														value={field.state.value}
-														onChange={(e) => {
-															clearFieldError("startDate");
-															handleChangeStartDate(e.target.value);
-														}}
-														className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-															hasError
-																? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-																: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-														}`}
-													/>
-													{hasError && (
-														<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-															{errorMsg}
-														</p>
+								<form.Subscribe selector={(state) => state.values.startDate}>
+									{(startDateValue) => {
+										const isPast = Boolean(
+											startDateValue &&
+												new Date(startDateValue) < new Date(todayStr),
+										);
+
+										return (
+											<div className="col-span-1 sm:col-span-2 bg-[#f4f8f4] border border-[#cfdfd1] rounded-[12px] p-3 text-[11.5px] space-y-2 mt-1">
+												<div className="flex items-center gap-2 text-[#314a38] font-bold">
+													{isPast ? (
+														<History className="w-4 h-4 text-[#4f6958]" />
+													) : (
+														<CheckCircle2 className="w-4 h-4 text-[#4f6958]" />
 													)}
-												</div>
-											);
-										}}
-									</form.Field>
-
-									{/* Multi-Period or Initial Period Settlement Option */}
-									<form.Subscribe selector={(state) => state.values.startDate}>
-										{(startDateValue) => {
-											const isPast = Boolean(
-												startDateValue &&
-													new Date(startDateValue) < new Date(todayStr),
-											);
-
-											return (
-												<div className="col-span-1 sm:col-span-2 bg-[#f4f8f4] border border-[#cfdfd1] rounded-[12px] p-3 text-[11.5px] space-y-2 mt-1">
-													<div className="flex items-center gap-2 text-[#314a38] font-bold">
-														{isPast ? (
-															<History className="w-4 h-4 text-[#4f6958]" />
-														) : (
-															<CheckCircle2 className="w-4 h-4 text-[#4f6958]" />
-														)}
-														<span>
-															{isPast
-																? `Deteksi Migrasi Data Lampau (Mulai: ${startDateValue})`
-																: "Status Pembayaran Sewa Periode Pertama"}
-														</span>
-													</div>
-													<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
+													<span>
 														{isPast
-															? "Tanggal mulai sewa berada di masa lalu. Sistem dapat otomatis mencatat seluruh periode sewa lampau yang telah berjalan sejak tanggal tersebut sebagai LUNAS (PAID) dalam 1 kali simpan."
-															: "Centang opsi ini jika penghuni langsung melunasi tagihan sewa periode awal saat pendaftaran kamar (otomatis berstatus LUNAS & tercatat di kas)."}
-													</p>
-													<form.Field name="markPastPeriodsPaid">
-														{(pastField) => (
-															<label className="flex items-center gap-2 cursor-pointer pt-1 font-semibold text-[#273a2d]">
-																<input
-																	type="checkbox"
-																	checked={Boolean(pastField.state.value)}
-																	onChange={(e) =>
-																		pastField.handleChange(e.target.checked)
-																	}
-																	className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer"
-																/>
-																<span>
-																	{isPast
-																		? "Tandai semua periode sewa lampau sebagai LUNAS"
-																		: "Tandai tagihan sewa pertama sebagai LUNAS (Sudah Bayar)"}
-																</span>
-															</label>
-														)}
-													</form.Field>
+															? `Deteksi Migrasi Data Lampau (Mulai: ${startDateValue})`
+															: "Status Pembayaran Sewa Periode Pertama"}
+													</span>
 												</div>
-											);
-										}}
-									</form.Subscribe>
-
-									{/* Tanggal Jatuh Tempo (Read-Only Dynamic Preview Card) */}
-									<form.Subscribe
-										selector={(state) => [
-											state.values.startDate,
-											state.values.duration,
-											state.values.dueDate,
-										]}
-									>
-										{([startDateVal, durationVal, dueDateVal]) => {
-											const currentDuration =
-												(durationVal as RentDuration) || "Bulanan";
-											const months = getDurationMonths(currentDuration);
-											const effectiveDueDate =
-												(dueDateVal as string) ||
-												calculateDueDate(
-													startDateVal as string,
-													currentDuration,
-												);
-
-											const formattedDue = effectiveDueDate
-												? formatDate(effectiveDueDate)
-												: "Pilih tanggal mulai sewa";
-
-											return (
-												<div className="space-y-1">
-													<Label className="text-[11px] font-bold text-[#506257]">
-														Tanggal Jatuh Tempo Berikutnya
-													</Label>
-													<div className="h-[41px] border border-[#d6e2d9] rounded-[11px] px-3 bg-[#f4f7f4] flex items-center justify-between">
-														<div className="flex items-center gap-2 min-w-0">
-															<CalendarDays className="w-4 h-4 text-[#4f6958] shrink-0" />
-															<span className="text-[12px] font-bold text-[#233528] truncate">
-																{formattedDue}
+												<p className="text-[11px] text-[#55695a] leading-relaxed m-0">
+													{isPast
+														? "Tanggal mulai sewa berada di masa lalu. Sistem dapat otomatis mencatat seluruh periode sewa lampau yang telah berjalan sejak tanggal tersebut sebagai LUNAS (PAID) dalam 1 kali simpan."
+														: "Centang opsi ini jika penghuni langsung melunasi tagihan sewa periode awal saat pendaftaran kamar (otomatis berstatus LUNAS & tercatat di kas)."}
+												</p>
+												<form.Field name="markPastPeriodsPaid">
+													{(pastField) => (
+														<label className="flex items-center gap-2 cursor-pointer pt-1 font-semibold text-[#273a2d]">
+															<input
+																type="checkbox"
+																checked={Boolean(pastField.state.value)}
+																onChange={(e) =>
+																	pastField.handleChange(e.target.checked)
+																}
+																className="w-4 h-4 accent-[#4f6958] rounded cursor-pointer"
+															/>
+															<span>
+																{isPast
+																	? "Tandai semua periode sewa lampau sebagai LUNAS"
+																	: "Tandai tagihan sewa pertama sebagai LUNAS (Sudah Bayar)"}
 															</span>
-														</div>
-														<span className="text-[10px] font-medium text-[#4f6958] bg-[#e4ede6] px-2 py-0.5 rounded-[6px] shrink-0">
-															+{months} Bulan
-														</span>
-													</div>
-													<p className="text-[9.5px] text-[#718276] leading-tight m-0">
-														Dihitung otomatis dari tanggal mulai sewa &amp;
-														durasi.
-													</p>
-												</div>
-											);
-										}}
-									</form.Subscribe>
-								</>
+														</label>
+													)}
+												</form.Field>
+											</div>
+										);
+									}}
+								</form.Subscribe>
 							)}
 
 							{/* No Kendaraan */}

@@ -201,8 +201,7 @@ export function PaymentGenerateDialog({
 							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
 						/>
 						<p className="text-[11px] text-[#737873] mt-1">
-							Misal: Isi 10 jika jatuh tempo setiap tanggal 10 pada bulan
-							berjalan.
+							Tanggal default cadangan (Secara otomatis, sistem memprioritaskan tanggal sewa masing-masing penghuni).
 						</p>
 					</div>
 

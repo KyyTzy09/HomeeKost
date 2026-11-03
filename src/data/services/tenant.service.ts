@@ -250,7 +250,7 @@ export class TenantService {
 			const room = activeContract?.room || null;
 
 			// Determine payment status (Standardized to 3 statuses: Lunas, Belum Lunas, Terlambat)
-			let paymentStatus: TenantPaymentStatus = "Belum Lunas";
+			let paymentStatus: TenantPaymentStatus = activeContract ? "Belum Lunas" : "Lunas";
 			const invoices = activeContract?.invoices || [];
 
 			if (invoices.length > 0) {
@@ -277,7 +277,6 @@ export class TenantService {
 					paymentStatus = allSettled ? "Lunas" : "Belum Lunas";
 				}
 			}
-
 			const phoneCanonical = sanitizePhone(t.phoneNumber);
 			const cycleMonths = this.getCycleMonths(activeContract?.billingCycle);
 			const baseMonthlyRent =
@@ -296,7 +295,11 @@ export class TenantService {
 				totalCycleRent = Number(latestInvoice.amount);
 			}
 
-			const dueDateDay = activeContract?.dueDateDay || 10;
+			const dueDateDay =
+				activeContract?.dueDateDay ||
+				(activeContract?.startDate
+					? new Date(activeContract.startDate).getDate()
+					: 10);
 			const depositAmount = t.deposit ? Number(t.deposit) : 0;
 			const unpaidPeriod = this.calculateUnpaidPeriod(
 				activeContract?.invoices || [],
@@ -327,13 +330,15 @@ export class TenantService {
 				startDate: activeContract?.startDate
 					? this.formatDate(activeContract.startDate)
 					: "—",
-				dueDate: this.formatDueDate(
-					dueDateDay,
-					activeContract?.invoices,
-					activeContract?.startDate,
-					activeContract?.endDate,
-					cycleMonths,
-				),
+				dueDate: activeContract
+					? this.formatDueDate(
+							dueDateDay,
+							activeContract?.invoices,
+							activeContract?.startDate,
+							activeContract?.endDate,
+							cycleMonths,
+						)
+					: "—",
 				unpaidPeriod,
 				vehicle: t.vehicle || null,
 				deposit: formatRupiah(depositAmount),
@@ -360,9 +365,8 @@ export class TenantService {
 		const room = activeContract?.room || null;
 
 		// Determine payment status (Standardized to 3 statuses: Lunas, Belum Lunas, Terlambat)
-		let paymentStatus: TenantPaymentStatus = "Belum Lunas";
+		let paymentStatus: TenantPaymentStatus = activeContract ? "Belum Lunas" : "Lunas";
 		const invoices = activeContract?.invoices || [];
-
 		if (invoices.length > 0) {
 			const todayWib = getWibStartOfDay();
 			const hasOverdue = invoices.some((inv) => {
@@ -405,8 +409,11 @@ export class TenantService {
 		) {
 			totalCycleRent = Number(latestInvoice.amount);
 		}
-
-		const dueDateDay = activeContract?.dueDateDay || 10;
+		const dueDateDay =
+			activeContract?.dueDateDay ||
+			(activeContract?.startDate
+				? new Date(activeContract.startDate).getDate()
+				: 10);
 		const depositAmount = t.deposit ? Number(t.deposit) : 0;
 		const unpaidPeriod = this.calculateUnpaidPeriod(
 			activeContract?.invoices || [],
@@ -437,13 +444,15 @@ export class TenantService {
 			startDate: activeContract?.startDate
 				? this.formatDate(activeContract.startDate)
 				: "—",
-			dueDate: this.formatDueDate(
-				dueDateDay,
-				activeContract?.invoices,
-				activeContract?.startDate,
-				activeContract?.endDate,
-				cycleMonths,
-			),
+			dueDate: activeContract
+				? this.formatDueDate(
+						dueDateDay,
+						activeContract?.invoices,
+						activeContract?.startDate,
+						activeContract?.endDate,
+						cycleMonths,
+					)
+				: "—",
 			unpaidPeriod,
 			vehicle: t.vehicle || null,
 			deposit: formatRupiah(depositAmount),
@@ -493,7 +502,12 @@ export class TenantService {
 
 		const startDate = new Date(input.startDate || new Date());
 		const birthDate = input.birthDate ? new Date(input.birthDate) : null;
-		const dueDateDay = startDate.getDate() || 10;
+		const dueDateDay = input.dueDate
+			? new Date(input.dueDate).getDate() || startDate.getDate() || 10
+			: startDate.getDate() || 10;
+		const initialDueDate = input.dueDate
+			? new Date(input.dueDate)
+			: startDate;
 		const emergencyPhoneClean = input.emergencyPhone
 			? sanitizePhone(input.emergencyPhone)
 			: null;
@@ -612,7 +626,7 @@ export class TenantService {
 				periodMonth: pMonth,
 				periodYear: pYear,
 				amount: totalCycleRent,
-				dueDate: startDate,
+				dueDate: initialDueDate,
 				paidAt: now,
 				status: "PAID",
 			});
@@ -672,7 +686,7 @@ export class TenantService {
 				periodMonth: pMonth,
 				periodYear: pYear,
 				amount: remainingAmount,
-				dueDate: startDate,
+				dueDate: initialDueDate,
 				status: "PENDING",
 			});
 		} else {
@@ -695,7 +709,7 @@ export class TenantService {
 				periodMonth: pMonth,
 				periodYear: pYear,
 				amount: totalCycleRent,
-				dueDate: startDate,
+				dueDate: initialDueDate,
 				status: "PENDING",
 			});
 		}
@@ -805,7 +819,9 @@ export class TenantService {
 			: undefined;
 		const startDate = input.startDate ? new Date(input.startDate) : undefined;
 		const birthDate = input.birthDate ? new Date(input.birthDate) : null;
-		const dueDateDay = startDate?.getDate();
+		const dueDateDay = input.dueDate
+			? new Date(input.dueDate).getDate()
+			: startDate?.getDate();
 		const depositAmount = input.deposit
 			? parseRupiah(input.deposit)
 			: undefined;

@@ -775,6 +775,31 @@ export class TenantRepository {
 						});
 					}
 
+					// Jika dueDateDay atau startDate diperbarui, sesuaikan juga tanggal jatuh tempo seluruh tagihan PENDING
+					if (data.dueDateDay || data.startDate) {
+						const newDueDay =
+							data.dueDateDay ||
+							(data.startDate ? new Date(data.startDate).getDate() : undefined);
+						if (newDueDay) {
+							const pendingInvoices = await tx.invoice.findMany({
+								where: {
+									contractId: activeContract.id,
+									status: "PENDING",
+								},
+							});
+							for (const inv of pendingInvoices) {
+								const invYear = inv.periodYear || inv.dueDate.getFullYear();
+								const invMonth = inv.periodMonth
+									? inv.periodMonth - 1
+									: inv.dueDate.getMonth();
+								const updatedDueDate = new Date(invYear, invMonth, newDueDay);
+								await tx.invoice.update({
+									where: { id: inv.id },
+									data: { dueDate: updatedDueDate },
+								});
+							}
+						}
+					}
 					// Sesuaikan tagihan & catatan kas masuk jika bukan TRANSFER dan updatePendingInvoiceAmount !== false
 					if (
 						data.roomChangeMode !== "TRANSFER" &&

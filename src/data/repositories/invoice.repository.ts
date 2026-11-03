@@ -564,6 +564,7 @@ export class InvoiceRepository {
 				billingCycle: true,
 				startDate: true,
 				endDate: true,
+				dueDateDay: true,
 				room: {
 					select: {
 						price: true,
@@ -631,8 +632,13 @@ export class InvoiceRepository {
 			) {
 				continue;
 			}
-
-			const dueDate = new Date(periodYear, periodMonth - 1, dueDateDay);
+			// Utamakan tanggal jatuh tempo masing-masing kontrak penghuni (dihitung dari tanggal mulai sewa)
+			const effectiveDueDay =
+				contract.dueDateDay ||
+				(contract.startDate
+					? new Date(contract.startDate).getDate()
+					: dueDateDay || 10);
+			const dueDate = new Date(periodYear, periodMonth - 1, effectiveDueDay);
 			const invoiceNumber = formatDeterministicInvoiceNumber({
 				date: dueDate,
 				roomNumber: contract.room.roomNumber,
