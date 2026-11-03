@@ -40,7 +40,6 @@ import { useScanKtp } from "../../hooks/use-tenants.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import {
 	calculateDueDate,
-	formatDate,
 	getDurationMonths,
 	getTodayDateString,
 } from "../../lib/date-utils.ts";
@@ -1735,14 +1734,9 @@ export function TenantFormDialog({
 									const hasError = Boolean(errorMsg);
 									return (
 										<div className="space-y-1">
-											<div className="flex items-center justify-between">
-												<Label className="text-[11px] font-bold text-[#506257]">
-													Tanggal Jatuh Tempo Berikutnya *
-												</Label>
-												<span className="text-[9.5px] text-[#4f6958] font-medium bg-[#e4ede6] px-1.5 py-0.5 rounded-[5px]">
-													Otomatis / Bisa Diedit
-												</span>
-											</div>
+											<Label className="text-[11px] font-bold text-[#506257]">
+												Tanggal Jatuh Tempo *
+											</Label>
 											<Input
 												type="date"
 												name={field.name}
@@ -1757,13 +1751,9 @@ export function TenantFormDialog({
 														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
 												}`}
 											/>
-											{hasError ? (
+											{hasError && (
 												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
 													{errorMsg}
-												</p>
-											) : (
-												<p className="text-[9.5px] text-[#718276] leading-tight m-0">
-													Otomatis terhitung dari tanggal mulai sewa ({field.state.value ? formatDate(field.state.value) : "—"}), bebas diubah manual jika ada kesepakatan.
 												</p>
 											)}
 										</div>

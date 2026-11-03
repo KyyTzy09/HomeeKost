@@ -1,6 +1,6 @@
 import { prisma } from "../../db.ts";
 import type { PrismaClient } from "../../generated/prisma/client.js";
-import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
+// import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
 
 export interface SyncDueDatesDetail {
 	tenantName: string;
@@ -110,10 +110,12 @@ export class SystemService {
 	}
 
 	/**
+	 * [DIKOMENTARI SEMENTARA SESUAI INSTRUKSI]
 	 * Sinkronisasi massal seluruh kontrak sewa aktif dan invoice berjalan
 	 * agar tanggal jatuh temponya (dueDateDay & invoice.dueDate) 100% konsisten
 	 * mengikuti tanggal mulai sewa (startDate) masing-masing penghuni.
 	 */
+	/*
 	async syncContractAndInvoiceDueDates(): Promise<SyncDueDatesResult> {
 		return this.db.$transaction(
 			async (tx) => {
@@ -221,6 +223,7 @@ export class SystemService {
 			},
 		);
 	}
+	*/
 }
 
 export const systemService = new SystemService();
