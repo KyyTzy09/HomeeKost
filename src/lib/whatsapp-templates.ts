@@ -111,10 +111,9 @@ export const whatsappTemplates = {
 
 		const bankSection = p.bankAccountInfo?.trim()
 			? `💳 *Metode Pembayaran:*\n🏦 *${p.bankAccountInfo.trim()}*`
-			: `💳 *Metode Pembayaran:*
-- Bank: *${p.bankName || "BCA"}*
-- No. Rekening: *${p.bankAccount || "8735081290"}*
-- Atas Nama: *${p.accountHolder || "Bude Frisda"}*`;
+			: p.bankAccount
+				? `💳 *Metode Pembayaran:*\n- Bank: *${p.bankName || "Transfer Bank"}*\n- No. Rekening: *${p.bankAccount}*\n- Atas Nama: *${p.accountHolder || "Pengelola Kos"}*`
+				: `💳 *Metode Pembayaran:*\n- Silakan konfirmasi ke Pengelola Kos untuk rekening transfer resmi.`;
 
 		return `Halo Kak *${p.tenantName}*! 👋
 
@@ -156,7 +155,9 @@ _— Admin Kos ${p.propertyName}_`;
 
 		const bankLine = p.bankAccountInfo?.trim()
 			? `🏦 *${p.bankAccountInfo.trim()}*`
-			: `🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+			: p.bankAccount
+				? `🏦 *${p.bankAccount}* a.n. *${p.accountHolder || "Pengelola Kos"}*`
+				: `🏦 *Rekening Pengelola Kos* (Silakan konfirmasi ke admin pengelola)`;
 
 		return `Halo Kak *${p.tenantName}*! 👋
 
@@ -185,7 +186,9 @@ _— Admin Kos ${p.propertyName}_`;
 
 		const bankLine = p.bankAccountInfo?.trim()
 			? `🏦 *${p.bankAccountInfo.trim()}*`
-			: `🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+			: p.bankAccount
+				? `🏦 *${p.bankName ? `${p.bankName} ` : ""}${p.bankAccount}* a.n. *${p.accountHolder || "Pengelola Kos"}*`
+				: `🏦 *Rekening Pengelola Kos* (Silakan konfirmasi ke admin pengelola)`;
 
 		return `Halo Kak *${p.tenantName}*! 👋
 
@@ -213,7 +216,9 @@ _— Admin Kos ${p.propertyName}_`;
 
 		const bankLine = p.bankAccountInfo?.trim()
 			? `🏦 *${p.bankAccountInfo.trim()}*`
-			: `🏦 *${p.bankName || "BCA"} ${p.bankAccount || "8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+			: p.bankAccount
+				? `🏦 *${p.bankName ? `${p.bankName} ` : ""}${p.bankAccount}* a.n. *${p.accountHolder || "Pengelola Kos"}*`
+				: `🏦 *Rekening Pengelola Kos* (Silakan konfirmasi ke admin pengelola)`;
 
 		return `Halo Kak *${p.tenantName}*! 👋
 
@@ -308,7 +313,9 @@ _— Admin Kos ${p.propertyName}_`;
 
 		const bankLine = p.bankAccountInfo?.trim()
 			? `🏦 *${p.bankAccountInfo.trim()}*`
-			: `🏦 *${p.bankAccount || "BCA 8735081290"}* a.n. *${p.accountHolder || "Bude Frisda"}*`;
+			: p.bankAccount
+				? `🏦 *${p.bankAccount}* a.n. *${p.accountHolder || "Pengelola Kos"}*`
+				: `🏦 *Rekening Pengelola Kos* (Silakan konfirmasi ke admin pengelola)`;
 
 		return `🔔 *PENGINGAT SISA CICILAN SEWA*
 
