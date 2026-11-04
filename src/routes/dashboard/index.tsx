@@ -326,7 +326,7 @@ export function DashboardHomePage() {
 							<span className="up">Semua lunas</span>
 						) : (
 							<>
-								<span className="warn">{stats.dueAmount}</span> belum lunas
+								<span className="warn">{stats.dueCount} kamar</span> belum lunas
 							</>
 						)}
 					</div>
