@@ -161,9 +161,14 @@ export function TenantTable({
 							>
 								{status}
 							</span>
-							{isTerlambat && tenant.unpaidPeriod && (
-								<span className="text-[10px] text-[#b66b68] font-semibold whitespace-nowrap">
-									Tunggakan: {unpaidMonthName} {tenant.unpaidPeriod.year}
+							{!isLunas && tenant.unpaidPeriod && (
+								<span
+									className={`text-[10px] font-semibold whitespace-nowrap ${
+										isTerlambat ? "text-[#b66b68]" : "text-[#99773d]"
+									}`}
+								>
+									{isTerlambat ? "Tunggakan" : "Periode"}: {unpaidMonthName}{" "}
+									{tenant.unpaidPeriod.year}
 								</span>
 							)}
 						</div>
