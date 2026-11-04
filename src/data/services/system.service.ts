@@ -145,9 +145,10 @@ export class SystemService {
 						contractsUpdated++;
 					}
 
-					// 2. Perbarui seluruh invoice PENDING dan OVERDUE agar jatuh tempo tanggal 5
+					// 2. Perbarui seluruh invoice PENDING dan OVERDUE agar jatuh tempo tanggal 5 & status akurat
 					for (const inv of contract.invoices) {
-						if (inv.status === "CANCELLED") continue;
+						// Jika sudah LUNAS (PAID) atau BATAL (CANCELLED), jangan sentuh statusnya!
+						if (inv.status === "PAID" || inv.status === "CANCELLED") continue;
 
 						const invYear = inv.periodYear || inv.dueDate.getFullYear();
 						const invMonth = inv.periodMonth
@@ -155,14 +156,26 @@ export class SystemService {
 							: inv.dueDate.getMonth();
 						const correctDueDate = new Date(invYear, invMonth, targetDueDay);
 
-						// Cek jika tanggal jatuh tempo berbeda dari tanggal 5
-						if (inv.dueDate.getDate() !== targetDueDay) {
-							const updateData: { dueDate: Date; invoiceNumber?: string } = {
-								dueDate: correctDueDate,
-							};
+						const todayDate = new Date();
+						todayDate.setHours(0, 0, 0, 0);
+						const dueDayDate = new Date(correctDueDate);
+						dueDayDate.setHours(0, 0, 0, 0);
 
-							// Jika invoice belum lunas, perbarui juga penomoran invoice jika menggunakan format deterministik
-							if (inv.status === "PENDING" || inv.status === "OVERDUE") {
+						const targetStatus: "PENDING" | "OVERDUE" =
+							dueDayDate.getTime() < todayDate.getTime() ? "OVERDUE" : "PENDING";
+
+						const isDateDifferent = inv.dueDate.getDate() !== targetDueDay;
+						const isStatusDifferent = inv.status !== targetStatus;
+
+						if (isDateDifferent || isStatusDifferent) {
+							const updateData: {
+								dueDate?: Date;
+								invoiceNumber?: string;
+								status?: "PENDING" | "OVERDUE";
+							} = {};
+
+							if (isDateDifferent) {
+								updateData.dueDate = correctDueDate;
 								const newInvoiceNum = formatDeterministicInvoiceNumber({
 									date: correctDueDate,
 									roomNumber: contract.room.roomNumber,
@@ -174,6 +187,10 @@ export class SystemService {
 								if (!duplicateCheck || duplicateCheck.id === inv.id) {
 									updateData.invoiceNumber = newInvoiceNum;
 								}
+							}
+
+							if (isStatusDifferent) {
+								updateData.status = targetStatus;
 							}
 
 							await tx.invoice.update({

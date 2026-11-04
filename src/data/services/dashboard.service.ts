@@ -177,19 +177,12 @@ export class DashboardService {
 
 		const currentMonthExpense = Number(currentMonthExpenseAgg._sum.amount ?? 0);
 
-		// 4. Tagihan Jatuh Tempo & Belum Lunas BULAN INI (Hanya tagihan bulan ini / overdue, tidak mencakup bulan depan)
+		// 4. Tagihan Jatuh Tempo & Belum Lunas BULAN INI (Hanya tagihan periode bulan berjalan)
 		const pendingInvoices = await this.db.invoice.findMany({
 			where: {
 				status: { in: ["PENDING", "OVERDUE"] },
-				dueDate: { lte: endOfCurrentMonth },
-				OR: [
-					{ periodYear: { lt: currentYear } },
-					{
-						periodYear: currentYear,
-						periodMonth: { lte: currentMonth },
-					},
-					{ periodMonth: null },
-				],
+				periodMonth: currentMonth,
+				periodYear: currentYear,
 				contract: {
 					status: "ACTIVE",
 					...(propertyIds ? { room: { propertyId: { in: propertyIds } } } : {}),
@@ -422,15 +415,8 @@ export class DashboardService {
 				const propInvoices = await this.db.invoice.findMany({
 					where: {
 						status: { in: ["PENDING", "OVERDUE"] },
-						dueDate: { lte: endOfCurrentMonth },
-						OR: [
-							{ periodYear: { lt: currentYear } },
-							{
-								periodYear: currentYear,
-								periodMonth: { lte: currentMonth },
-							},
-							{ periodMonth: null },
-						],
+						periodMonth: currentMonth,
+						periodYear: currentYear,
 						contract: {
 							status: "ACTIVE",
 							room: { propertyId: prop.id },

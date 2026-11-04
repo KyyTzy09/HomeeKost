@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageSquare } from "lucide-react";
+import { AlertTriangle, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "../../common/shadcn/button.tsx";
 import type { PaymentItem } from "../../common/types/index.ts";
 import type {
 	ConfirmPaymentInput,
@@ -198,6 +199,29 @@ function PaymentsPage() {
 		year: selectedYear,
 	});
 
+	const { data: allPeriodStats } = usePaymentStats({
+		propertyId: activePropertyId,
+	});
+
+	const hiddenOverdueCount = useMemo(() => {
+		if (periodFilter === "ALL") return 0;
+		const totalAllOverdue = allPeriodStats?.overdueCount || 0;
+		const currentOverdue = paymentStats?.overdueCount || 0;
+		return Math.max(0, totalAllOverdue - currentOverdue);
+	}, [periodFilter, allPeriodStats?.overdueCount, paymentStats?.overdueCount]);
+
+	const selectedTenantOlderUnpaidPeriod = useMemo(() => {
+		if (!selectedPayment) return null;
+		const matching = allTenants.find((t) => t.id === selectedPayment.tenantId);
+		if (!matching?.unpaidPeriod) return null;
+
+		const isEarlier =
+			matching.unpaidPeriod.year < selectedPayment.periodYear ||
+			(matching.unpaidPeriod.year === selectedPayment.periodYear &&
+				matching.unpaidPeriod.month < selectedPayment.periodMonth);
+
+		return isEarlier ? matching.unpaidPeriod : null;
+	}, [selectedPayment, allTenants]);
 	// Mutations
 	const confirmPaymentMutation = useConfirmPayment();
 	const createInvoiceMutation = useCreateManualInvoice();
@@ -334,6 +358,29 @@ function PaymentsPage() {
 				isLoading={isLoadingStats}
 				periodLabel={periodLabel}
 			/>
+			{/* ─── Solusi B: Alert Banner Tunggakan Bulan Lalu Tersembunyi ──── */}
+			{hiddenOverdueCount > 0 && (
+				<div className="bg-[#fef7ee] border border-[#f6d8ae] text-[#87551d] rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-xs animate-in fade-in duration-200">
+					<div className="flex items-center gap-2">
+						<AlertTriangle className="w-4 h-4 text-[#b18a4b] shrink-0" />
+						<span>
+							<strong>Perhatian:</strong> Terdapat{" "}
+							<strong className="underline text-[#734311]">
+								{hiddenOverdueCount} tagihan menunggak
+							</strong>{" "}
+							dari bulan-bulan sebelumnya yang belum dilunasi di sistem.
+						</span>
+					</div>
+					<Button
+						type="button"
+						variant="outline"
+						onClick={() => setPeriodFilter("ALL")}
+						className="h-7 text-[11px] font-bold border-[#e3bf91] text-[#734311] hover:bg-[#faebd7] bg-white cursor-pointer shrink-0 self-start sm:self-auto"
+					>
+						Tampilkan Semua Periode ➔
+					</Button>
+				</div>
+			)}
 
 			{/* ─── TanStack Table View with Filters & Real-time Search ───────── */}
 			<PaymentTable
@@ -374,6 +421,7 @@ function PaymentsPage() {
 				payment={selectedPayment}
 				onConfirm={handleConfirmPayment}
 				isSubmitting={confirmPaymentMutation.isPending}
+				olderUnpaidPeriod={selectedTenantOlderUnpaidPeriod}
 			/>
 
 			<PaymentGenerateDialog

@@ -306,13 +306,10 @@ export function DashboardHomePage() {
 				<Card
 					className="stat clickable p-[18px_19px] ring-0 border-[#e4e9e4] rounded-[10px]"
 					onClick={() => {
-						const hasOverdue = upcomingPayments.some(
-							(p) => p.badgeClass === "red",
-						);
 						navigate({
 							to: "/dashboard/payments",
 							search: {
-								status: hasOverdue ? "OVERDUE" : "PENDING",
+								status: "PENDING",
 							},
 						});
 					}}
@@ -329,7 +326,7 @@ export function DashboardHomePage() {
 							<span className="up">Semua lunas</span>
 						) : (
 							<>
-								<span className="warn">{stats.dueAmount}</span> belum lunas
+								<span className="warn">{stats.dueCount} kamar</span> belum lunas
 							</>
 						)}
 					</div>
