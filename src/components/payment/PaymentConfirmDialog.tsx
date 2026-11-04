@@ -1,4 +1,4 @@
-import { CheckCircle2, MessageSquare, Save } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageSquare, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Checkbox } from "../../common/shadcn/checkbox.tsx";
@@ -22,7 +22,7 @@ import {
 import type { PaymentItem } from "../../common/types/index.ts";
 import type { ConfirmPaymentInput } from "../../common/validations/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
-import { getTodayDateString } from "../../lib/date-utils.ts";
+import { getMonthName, getTodayDateString } from "../../lib/date-utils.ts";
 
 interface PaymentConfirmDialogProps {
 	open: boolean;
@@ -30,6 +30,7 @@ interface PaymentConfirmDialogProps {
 	payment: PaymentItem | null;
 	onConfirm: (data: ConfirmPaymentInput) => void;
 	isSubmitting?: boolean;
+	olderUnpaidPeriod?: { month: number; year: number } | null;
 }
 
 const PAYMENT_METHOD_OPTIONS: {
@@ -49,6 +50,7 @@ export function PaymentConfirmDialog({
 	payment,
 	onConfirm,
 	isSubmitting = false,
+	olderUnpaidPeriod,
 }: PaymentConfirmDialogProps) {
 	const todayStr = useMemo(() => getTodayDateString(), []);
 
@@ -140,6 +142,24 @@ export function PaymentConfirmDialog({
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="space-y-4 py-2">
+					{/* Peringatan Tunggakan Periode Sebelumnya (Solusi C) */}
+					{olderUnpaidPeriod && (
+						<div className="bg-[#fef4f2] border border-[#fbdcd7] text-[#9c4d48] rounded-xl p-3 text-xs space-y-1 animate-in fade-in">
+							<div className="font-bold flex items-center gap-1.5 text-[#8c3b36]">
+								<AlertTriangle className="w-4 h-4 text-[#b66b68] shrink-0" />
+								<span>Peringatan: Penghuni Memiliki Tunggakan Periode Sebelumnya!</span>
+							</div>
+							<p className="text-[11px] leading-relaxed text-[#7a3b37] m-0">
+								Penghuni ini terdata masih memiliki tagihan yang belum lunas untuk periode{" "}
+								<strong>
+									{getMonthName(olderUnpaidPeriod.month)}{" "}
+									{olderUnpaidPeriod.year}
+								</strong>
+								. Pastikan dana transfer dialokasikan untuk menyelesaikan tagihan periode tertua terlebih dahulu.
+							</p>
+						</div>
+					)}
+
 					{/* Ringkasan Invoice Card */}
 					<div className="bg-[#f8faf8] border border-[#e4e9e4] rounded-xl p-3.5 space-y-1.5 text-xs">
 						<div className="flex items-center justify-between">

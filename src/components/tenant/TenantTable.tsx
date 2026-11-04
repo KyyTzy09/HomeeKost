@@ -7,7 +7,7 @@ import {
 import { ArrowDown, ArrowDownUp, ArrowUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TenantItem } from "../../common/types/index.ts";
-import { formatShortDueDate } from "../../lib/date-utils.ts";
+import { formatShortDueDate, getMonthName } from "../../lib/date-utils.ts";
 import { formatDisplayPhone } from "../../lib/phone-utils.ts";
 
 interface TenantTableProps {
@@ -141,21 +141,32 @@ export function TenantTable({
 				id: "paymentStatus",
 				header: () => renderSortHeader("Pembayaran", "paymentStatus"),
 				cell: (info) => {
+					const tenant = info.row.original;
 					const status = info.getValue();
 					const isLunas = status === "Lunas";
 					const isTerlambat = status === "Terlambat";
+					const unpaidMonthName = tenant.unpaidPeriod
+						? getMonthName(tenant.unpaidPeriod.month)
+						: null;
 					return (
-						<span
-							className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-bold ${
-								isLunas
-									? "bg-[#e8f2ea] text-[#568062]"
-									: isTerlambat
-										? "bg-[#f7e9e8] text-[#a65f5b]"
-										: "bg-[#fbf4ea] text-[#99773d]"
-							}`}
-						>
-							{status}
-						</span>
+						<div className="flex flex-col items-start gap-0.5">
+							<span
+								className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-bold ${
+									isLunas
+										? "bg-[#e8f2ea] text-[#568062]"
+										: isTerlambat
+											? "bg-[#f7e9e8] text-[#a65f5b]"
+											: "bg-[#fbf4ea] text-[#99773d]"
+								}`}
+							>
+								{status}
+							</span>
+							{isTerlambat && tenant.unpaidPeriod && (
+								<span className="text-[10px] text-[#b66b68] font-semibold whitespace-nowrap">
+									Tunggakan: {unpaidMonthName} {tenant.unpaidPeriod.year}
+								</span>
+							)}
+						</div>
 					);
 				},
 			}),
