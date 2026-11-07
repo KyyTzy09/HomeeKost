@@ -8,6 +8,7 @@ import {
 } from "../types.ts";
 
 export const KtpExtractedSchema = z.object({
+	isValidKtp: z.boolean().default(true),
 	nik: z.string().default(""),
 	name: z.string().default(""),
 	birthDate: z.string().default(""), // YYYY-MM-DD
@@ -264,6 +265,7 @@ export class GeminiAdapter {
 
 					this.currentKeyIndex = keyIndex;
 					return KtpExtractedSchema.parse({
+						isValidKtp: parsed.isValidKtp !== false,
 						nik: String(parsed.nik || "")
 							.replace(/\D/g, "")
 							.slice(0, 16),

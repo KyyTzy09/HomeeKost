@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { BedDouble } from "lucide-react";
+import { AlertTriangle, BedDouble, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../common/shadcn/button.tsx";
 import {
@@ -36,6 +36,7 @@ interface RoomFormDialogProps {
 	propertyName: string;
 	editingRoom: RoomItem | null;
 	onSubmit: (values: RoomFormValues) => void;
+	isSubmitting?: boolean;
 }
 
 const ROOM_TYPE_OPTIONS: { label: string; value: RoomType }[] = [
@@ -56,8 +57,16 @@ export function RoomFormDialog({
 	propertyName,
 	editingRoom,
 	onSubmit,
+	isSubmitting = false,
 }: RoomFormDialogProps) {
 	const [errorMsg, setErrorMsg] = useState<string | null>(null);
+	const [occupiedAlertTarget, setOccupiedAlertTarget] = useState<string | null>(
+		null,
+	);
+
+	const isOccupiedRoom = Boolean(
+		editingRoom && (editingRoom.status === "Terisi" || editingRoom.tenantName),
+	);
 
 	const form = useForm({
 		defaultValues: {
@@ -68,6 +77,11 @@ export function RoomFormDialog({
 			facilities: editingRoom?.facilities ?? "",
 		},
 		onSubmit: async ({ value }) => {
+			if (isOccupiedRoom && value.status !== "Terisi") {
+				setOccupiedAlertTarget(value.status);
+				form.setFieldValue("status", "Terisi");
+				return;
+			}
 			const result = roomSchema.safeParse(value);
 			if (!result.success) {
 				const errorMessages = result.error.issues
@@ -77,10 +91,8 @@ export function RoomFormDialog({
 				return;
 			}
 			onSubmit(result.data);
-			onOpenChange(false);
 		},
 	});
-
 	useEffect(() => {
 		if (open) {
 			if (editingRoom) {
@@ -99,11 +111,13 @@ export function RoomFormDialog({
 				form.reset();
 			}
 			setErrorMsg(null);
+			setOccupiedAlertTarget(null);
 		}
 	}, [open, editingRoom]);
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<>
+			<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-[540px] rounded-[20px] border-[#e1e8e2] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.18)]">
 				<DialogHeader>
 					<div className="flex items-center gap-2.5 mb-1">
@@ -270,9 +284,13 @@ export function RoomFormDialog({
 										</Label>
 										<Select
 											value={field.state.value}
-											onValueChange={(val) =>
-												field.handleChange(val as RoomStatus)
-											}
+											onValueChange={(val) => {
+												if (isOccupiedRoom && val !== "Terisi") {
+													setOccupiedAlertTarget(val as string);
+													return;
+												}
+												field.handleChange(val as RoomStatus);
+											}}
 										>
 											<SelectTrigger className="w-full h-[41px] border-[#dfe7e0] rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925]">
 												<SelectValue placeholder="Pilih Status">
@@ -312,24 +330,110 @@ export function RoomFormDialog({
 						</div>
 					</div>
 
-					<DialogFooter className="pt-3 border-t border-[#edf1ed] flex gap-2 justify-end">
+					<form.Subscribe selector={(state) => state.values}>
+						{(values) => {
+							const hasChanges = editingRoom
+								? values.roomNo.trim() !== editingRoom.roomNo.trim() ||
+									values.type !== (editingRoom.type || "Standard") ||
+									String(values.price || "").replace(/\D/g, "") !==
+										String(editingRoom.price || "").replace(/\D/g, "") ||
+									values.status !== (editingRoom.status || "Kosong") ||
+									(values.facilities || "").trim() !==
+										(editingRoom.facilities || "").trim()
+								: true;
+
+							return (
+								<DialogFooter className="pt-3 border-t border-[#edf1ed] flex gap-2 justify-end">
+									<Button
+										type="button"
+										variant="outline"
+										disabled={isSubmitting}
+										onClick={() => onOpenChange(false)}
+										className="h-[38px] px-4 rounded-[10px] border-[#dfe7e0] bg-white text-[#29382e] text-[12px] font-semibold hover:bg-[#f6faf6] disabled:opacity-50"
+									>
+										Batal
+									</Button>
+									<Button
+										type="submit"
+										disabled={
+											isSubmitting || (Boolean(editingRoom) && !hasChanges)
+										}
+										className="h-[38px] px-4 rounded-[10px] bg-[#4f6958] text-white text-[12px] font-semibold hover:bg-[#435b4b] shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+									>
+										{isSubmitting ? (
+											<>
+												<Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+												Menyimpan...
+											</>
+										) : editingRoom ? (
+											"Simpan Perubahan"
+										) : (
+											"Tambah Kamar"
+										)}
+									</Button>
+								</DialogFooter>
+							);
+						}}
+					</form.Subscribe>
+				</form>
+				</DialogContent>
+			</Dialog>
+
+			{/* Alert Modal ketika mencoba mengubah status kamar yang masih Terisi */}
+			<Dialog
+				open={Boolean(occupiedAlertTarget)}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) setOccupiedAlertTarget(null);
+				}}
+			>
+				<DialogContent className="max-w-[420px] rounded-[20px] border-[#f0cfcc] bg-white p-6 shadow-[0_25px_80px_rgba(25,40,30,0.22)]">
+					<DialogHeader>
+						<div className="flex items-center gap-3 mb-2">
+							<div className="w-10 h-10 rounded-[12px] bg-[#fdf0ee] text-[#b66b68] border border-[#f5cfcc] flex items-center justify-center shrink-0">
+								<AlertTriangle className="w-5 h-5" />
+							</div>
+							<div>
+								<DialogTitle className="text-[16px] font-bold text-[#252925]">
+									Status Kamar Tidak Dapat Diubah
+								</DialogTitle>
+								<DialogDescription className="text-[11px] text-[#737873]">
+									Kamar masih ditempati oleh penghuni aktif
+								</DialogDescription>
+							</div>
+						</div>
+					</DialogHeader>
+
+					<div className="bg-[#fdf8f7] border border-[#f5d5d3] rounded-[12px] p-3.5 text-[12px] text-[#4a3533] leading-relaxed space-y-1.5">
+						<p className="m-0">
+							Kamar <strong>{editingRoom?.roomNo}</strong> saat ini masih berstatus{" "}
+							<strong>Terisi</strong>
+							{editingRoom?.tenantName ? (
+								<>
+									{" "}
+									oleh penghuni <strong>{editingRoom.tenantName}</strong>
+								</>
+							) : null}
+							.
+						</p>
+						<p className="m-0 text-[11.5px] text-[#6e4f4d]">
+							Anda tidak dapat mengubah status kamar menjadi{" "}
+							<strong>{occupiedAlertTarget}</strong> secara langsung. Silakan
+							pindahkan kamar atau lakukan <strong>Check-Out</strong> penghuni
+							terlebih dahulu pada menu <strong>Penghuni</strong>.
+						</p>
+					</div>
+
+					<DialogFooter className="pt-2 flex justify-end">
 						<Button
 							type="button"
-							variant="outline"
-							onClick={() => onOpenChange(false)}
-							className="h-[38px] px-4 rounded-[10px] border-[#dfe7e0] bg-white text-[#29382e] text-[12px] font-semibold hover:bg-[#f6faf6]"
+							onClick={() => setOccupiedAlertTarget(null)}
+							className="h-[38px] px-5 rounded-[10px] bg-[#4f6958] text-white text-[12px] font-semibold hover:bg-[#425949] cursor-pointer"
 						>
-							Batal
-						</Button>
-						<Button
-							type="submit"
-							className="h-[38px] px-4 rounded-[10px] bg-[#4f6958] text-white text-[12px] font-semibold hover:bg-[#435b4b] shadow-2xs"
-						>
-							{editingRoom ? "Simpan Perubahan" : "Tambah Kamar"}
+							Mengerti
 						</Button>
 					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }

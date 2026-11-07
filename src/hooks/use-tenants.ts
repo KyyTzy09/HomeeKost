@@ -148,6 +148,7 @@ export function useScanKtp(): UseMutationResult<
 		success: boolean;
 		ktpUrl?: string;
 		data?: {
+			isValidKtp?: boolean;
 			nik: string;
 			name: string;
 			birthDate: string;

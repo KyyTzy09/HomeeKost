@@ -178,7 +178,7 @@ export class ReportService {
 		};
 
 		// 4. Cari apakah ada Analisis AI yang sudah digenerate sebelumnya di database
-		const storedAiReport = await this.reportRepo.findStoredAiReport(
+		let storedAiReport = await this.reportRepo.findStoredAiReport(
 			effectivePropertyId || null,
 			targetMonth,
 			targetYear,
@@ -229,8 +229,34 @@ export class ReportService {
 						: 0;
 			}
 		} else {
-			// Jika belum digenerate via Cron atau tombol AI, gunakan Rule-Based deterministic fallback instan (0ms)
+			// Jika belum ada snapshot AI di database, buat snapshot awal dan kunci di DB
+			// agar saat ada update pembayaran/transaksi, hanya nominal KPI yang terupdate otomatis
+			// sedangkan AI Insight baru berubah ketika tombol "Refresh AI" ditekan.
 			aiData = generateDeterministicFinancialInsight(aiPayload);
+			if (typeof this.reportRepo.saveStoredAiReport === "function") {
+				try {
+					storedAiReport = await this.reportRepo.saveStoredAiReport({
+						propertyId: effectivePropertyId || null,
+						periodMonth: targetMonth,
+						periodYear: targetYear,
+						totalIncome: summary.totalIncome,
+						totalExpense: summary.totalExpense,
+						netProfit: summary.netProfit,
+						occupancyRate: summary.roomStatus.occupancyRate,
+						aiNarrativeSummary: {
+							...aiData,
+							lastRefreshedDate: todayStr,
+							refreshCountToday: 0,
+							providerUsed: aiProviderUsed,
+						},
+					});
+				} catch (saveErr) {
+					console.warn(
+						"[ReportService] Gagal menyimpan snapshot awal AI Report:",
+						saveErr,
+					);
+				}
+			}
 		}
 
 		const remainingRefreshesToday = Math.max(

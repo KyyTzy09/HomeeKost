@@ -249,6 +249,14 @@ export class RoomService {
 		const priceNum = Number(String(input.price).replace(/\D/g, "")) || 0;
 		const prismaStatus = this.mapStatusToPrisma(input.status);
 
+		if (existing.rentalContracts.length > 0 && prismaStatus !== "OCCUPIED") {
+			const activeTenantName =
+				existing.rentalContracts[0]?.tenant?.name || "penghuni aktif";
+			throw new Error(
+				`Tidak dapat mengubah status kamar menjadi ${input.status} karena kamar masih ditempati oleh ${activeTenantName}. Silakan lakukan Check-Out penghuni terlebih dahulu.`,
+			);
+		}
+
 		const updated = await this.roomRepo.updateRoom(id, {
 			roomNumber: input.roomNo,
 			type: input.type,

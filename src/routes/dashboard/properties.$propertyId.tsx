@@ -469,6 +469,9 @@ function PropertyDetailPage() {
 				editingRoom={editingRoom}
 				propertyName={property.name}
 				onSubmit={handleSaveRoom}
+				isSubmitting={
+					createRoomMutation.isPending || updateRoomMutation.isPending
+				}
 			/>
 
 			<RoomDetailDialog
