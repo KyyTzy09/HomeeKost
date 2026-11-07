@@ -38,6 +38,19 @@ export class KtpOcrService {
 		try {
 			const { mimeType, base64 } = this.parseDataUrl(base64OrDataUrl);
 			const data = await this.llmAdapter.extractKtpVision(base64, mimeType);
+			const hasValidNik = Boolean(
+				data.nik && data.nik.replace(/\D/g, "").length >= 12,
+			);
+			const hasValidName = Boolean(data.name && data.name.trim().length >= 2);
+
+			if (data.isValidKtp === false || (!hasValidNik && !hasValidName)) {
+				return {
+					success: false,
+					error:
+						"Foto tidak terdeteksi sebagai KTP yang valid. Pastikan mengunggah foto KTP asli yang jelas dan terbaca.",
+				};
+			}
+
 			return {
 				success: true,
 				data,

@@ -537,7 +537,12 @@ export function TenantFormDialog({
 					imageBase64: compressedBase64,
 				});
 
-				if (res.success && res.data) {
+				if (
+					res.success &&
+					res.data &&
+					res.data.isValidKtp !== false &&
+					(res.data.nik || res.data.name)
+				) {
 					if (res.data.nik) form.setFieldValue("nik", res.data.nik);
 					if (res.data.name) form.setFieldValue("name", res.data.name);
 					if (res.data.birthDate) {
@@ -558,14 +563,17 @@ export function TenantFormDialog({
 
 					setScanStatus("success");
 					setScanFeedback(
-						"Data identitas berhasil dipindai dan terisi otomatis!",
+						"Data identitas KTP berhasil dipindai dan terisi otomatis!",
 					);
 				} else {
-					setScanStatus("warning");
-					setScanFeedback(
+					const errText =
 						res.error ||
-							"Layanan AI sedang sibuk, silakan lengkapi data formulir secara manual.",
-					);
+						"Foto tidak terdeteksi sebagai KTP yang valid. Pastikan mengunggah foto KTP asli yang jelas dan terbaca.";
+					const isInvalidImage =
+						errText.toLowerCase().includes("tidak terdeteksi") ||
+						errText.toLowerCase().includes("tidak valid");
+					setScanStatus(isInvalidImage ? "error" : "warning");
+					setScanFeedback(errText);
 				}
 			} catch (aiErr) {
 				console.warn("[TenantFormDialog] AI OCR fallback:", aiErr);
