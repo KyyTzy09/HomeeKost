@@ -31,6 +31,7 @@ import {
 	useTenants,
 	useUpdateTenant,
 } from "../../hooks/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import { parseRupiah } from "../../lib/currency.ts";
 import { parseIndonesianDate } from "../../lib/date-utils.ts";
 import { naturalCompare } from "../../lib/sort-utils.ts";
@@ -253,7 +254,7 @@ function TenantsPage() {
 			{
 				onSuccess: () => {
 					showToast(
-						`Penghuni "${deletingTenant.name}" berhasil di-checkout. Kamar ${deletingTenant.roomNo} telah kembali kosong.`,
+						`Penghuni "${deletingTenant.name}" berhasil di-checkout. ${formatRoomTitle(deletingTenant.roomNo)} telah kembali kosong.`,
 					);
 					setDeletingTenant(null);
 					setSelectedDetailTenant(null);

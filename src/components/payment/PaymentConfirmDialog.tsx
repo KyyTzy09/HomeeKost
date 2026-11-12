@@ -21,6 +21,7 @@ import {
 } from "../../common/shadcn/select.tsx";
 import type { PaymentItem } from "../../common/types/index.ts";
 import type { ConfirmPaymentInput } from "../../common/validations/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 import { getMonthName, getTodayDateString } from "../../lib/date-utils.ts";
 
@@ -169,7 +170,7 @@ export function PaymentConfirmDialog({
 						<div className="flex items-center justify-between">
 							<span className="text-[#737873]">Nama Penghuni</span>
 							<span className="font-semibold text-[#252925]">
-								{payment.tenantName} (Kamar {payment.roomNumber})
+								{payment.tenantName} ({formatRoomTitle(payment.roomNumber)})
 							</span>
 						</div>
 						<div className="flex items-center justify-between">

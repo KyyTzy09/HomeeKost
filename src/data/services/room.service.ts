@@ -1,4 +1,4 @@
-import { compareRoomNumbers } from "../../common/helpers/index.ts";
+import { cleanRoomNumber, compareRoomNumbers } from "../../common/helpers/index.ts";
 import type { RoomItem, RoomStatusType } from "../../common/types/index.ts";
 import type { RoomFormValues } from "../../common/validations/index.ts";
 import type { RoomStatus } from "../../generated/prisma/client.js";
@@ -192,14 +192,15 @@ export class RoomService {
 		propertyId: string,
 		input: RoomFormValues,
 	): Promise<RoomItem> {
+		const normalizedRoomNo = cleanRoomNumber(input.roomNo) || input.roomNo.trim();
 		// Check for duplicate roomNumber in this property
 		const existing = await this.roomRepo.findByRoomNumber(
 			propertyId,
-			input.roomNo,
+			normalizedRoomNo,
 		);
 		if (existing) {
 			throw new Error(
-				`Kamar dengan nomor ${input.roomNo} sudah ada pada properti ini.`,
+				`Kamar dengan nomor ${normalizedRoomNo} sudah ada pada properti ini.`,
 			);
 		}
 
@@ -208,7 +209,7 @@ export class RoomService {
 
 		const created = await this.roomRepo.createRoom({
 			propertyId,
-			roomNumber: input.roomNo,
+			roomNumber: normalizedRoomNo,
 			type: input.type,
 			price: priceNum,
 			facilities: input.facilities,
@@ -234,14 +235,16 @@ export class RoomService {
 			throw new Error("Kamar tidak ditemukan.");
 		}
 
-		if (input.roomNo !== existing.roomNumber) {
+		const normalizedRoomNo = cleanRoomNumber(input.roomNo) || input.roomNo.trim();
+
+		if (normalizedRoomNo !== existing.roomNumber) {
 			const duplicate = await this.roomRepo.findByRoomNumber(
 				existing.propertyId,
-				input.roomNo,
+				normalizedRoomNo,
 			);
 			if (duplicate && duplicate.id !== id) {
 				throw new Error(
-					`Kamar dengan nomor ${input.roomNo} sudah ada pada properti ini.`,
+					`Kamar dengan nomor ${normalizedRoomNo} sudah ada pada properti ini.`,
 				);
 			}
 		}
@@ -258,7 +261,7 @@ export class RoomService {
 		}
 
 		const updated = await this.roomRepo.updateRoom(id, {
-			roomNumber: input.roomNo,
+			roomNumber: normalizedRoomNo,
 			type: input.type,
 			price: priceNum,
 			facilities: input.facilities,

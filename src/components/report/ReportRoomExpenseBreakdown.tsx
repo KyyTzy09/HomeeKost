@@ -190,7 +190,11 @@ export function ReportRoomExpenseBreakdown({
 
 				<div className="mt-4 pt-3 border-t border-[#e4e9e4] text-[11px] text-[#737873]">
 					Tingkat okupansi tercatat <b>{roomStatus.occupancyRate}%</b> (
-					{roomStatus.occupiedRooms} dari {roomStatus.totalRooms} kamar aktif).
+					{roomStatus.occupiedRooms} dari{" "}
+					{roomStatus.totalRooms - roomStatus.maintenanceRooms} kamar siap huni
+					{roomStatus.maintenanceRooms > 0
+						? `, ${roomStatus.maintenanceRooms} maintenance`
+						: ""}).
 				</div>
 			</Card>
 		</div>

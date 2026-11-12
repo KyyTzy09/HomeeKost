@@ -9,6 +9,7 @@ import {
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 
 interface TenantDeleteDialogProps {
 	open: boolean;
@@ -47,8 +48,7 @@ export function TenantDeleteDialog({
 				<div className="space-y-2.5 my-2">
 					<div className="text-[12px] text-[#556358] bg-[#fdfaf7] border border-[#f2e6dc] rounded-[11px] p-3 leading-relaxed">
 						Apakah Anda yakin ingin menyelesaikan masa sewa untuk penghuni{" "}
-						<strong className="text-[#252925]">{tenant.name}</strong> (Kamar{" "}
-						<strong className="text-[#252925]">{tenant.roomNo}</strong>)?
+						<strong className="text-[#252925]">{tenant.name}</strong> ({formatRoomTitle(tenant.roomNo)})?
 					</div>
 
 					<div className="bg-[#f4f8f4] border border-[#d8e6da] rounded-[11px] p-3 text-[11px] text-[#4f6958] space-y-1.5">
@@ -58,7 +58,7 @@ export function TenantDeleteDialog({
 						</div>
 						<ul className="list-disc pl-4 space-y-0.5 m-0 text-[#4c6252]">
 							<li>
-								Kamar {tenant.roomNo} otomatis kembali{" "}
+								{formatRoomTitle(tenant.roomNo)} otomatis kembali{" "}
 								<strong>Kosong (Vacant)</strong>.
 							</li>
 							<li>

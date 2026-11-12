@@ -1,4 +1,5 @@
 import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import { prisma } from "../../db.ts";
 import type {
 	BillingCycle,
@@ -159,7 +160,7 @@ export class TenantRepository {
 				});
 
 				const payload = {
-					name: params.tenantPayload.name,
+					name: params.tenantPayload.name.trim().toUpperCase(),
 					phoneNumber: params.tenantPayload.phone,
 					whatsappNumber:
 						params.tenantPayload.whatsappNumber || params.tenantPayload.phone,
@@ -305,6 +306,7 @@ export class TenantRepository {
 			billingCycle?: BillingCycle;
 			startDate?: Date;
 			dueDateDay?: number;
+			targetDueDate?: Date;
 			roomChangeMode?: "CORRECTION" | "TRANSFER" | null;
 			updatePendingInvoiceAmount?: boolean;
 			createDifferenceInvoice?: boolean;
@@ -340,7 +342,7 @@ export class TenantRepository {
 				const updatedTenant = await tx.tenant.update({
 					where: { id: tenantId },
 					data: {
-						name: data.name,
+						name: data.name.trim().toUpperCase(),
 						NIK: data.nik,
 						phoneNumber: data.phone,
 						whatsappNumber: data.whatsappNumber || data.phone,
@@ -537,8 +539,12 @@ export class TenantRepository {
 								tenantId,
 								billingCycle: effectiveBillingCycle,
 								startDate: effectiveStartDate,
-								endDate: effectiveEndDate,
-								dueDateDay: effectiveStartDate.getDate() || 10,
+								endDate: data.targetDueDate || effectiveEndDate,
+								dueDateDay:
+									data.dueDateDay ||
+									data.targetDueDate?.getDate() ||
+									effectiveStartDate.getDate() ||
+									10,
 								status: "ACTIVE",
 							},
 						});
@@ -566,7 +572,7 @@ export class TenantRepository {
 
 						if (hadPaidInvoice) {
 							const adminUser = await tx.user.findFirst({ select: { id: true } });
-							const desc = `Pembayaran Sewa Kamar ${effectiveRoom.roomNumber} - ${updatedTenant.name}`;
+							const desc = `Pembayaran Sewa ${formatRoomTitle(effectiveRoom.roomNumber)} - ${updatedTenant.name}`;
 							await tx.transaction.create({
 								data: {
 									propertyId: effectiveRoom.propertyId,
@@ -604,7 +610,7 @@ export class TenantRepository {
 							targetRoom.id !== activeContract.roomId
 						) {
 							throw new Error(
-								`Kamar ${targetRoom.roomNumber} sudah ditempati oleh penghuni lain.`,
+								`${formatRoomTitle(targetRoom.roomNumber)} sudah ditempati oleh penghuni lain.`,
 							);
 						}
 
@@ -743,12 +749,18 @@ export class TenantRepository {
 									}),
 									...(data.startDate && { startDate: data.startDate }),
 									...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
+									...(data.targetDueDate && { endDate: data.targetDueDate }),
 								},
 							});
 						}
-					} else if (data.billingCycle || data.startDate || data.dueDateDay) {
-						let newEndDate = activeContract.endDate;
-						if (data.billingCycle) {
+					} else if (
+						data.billingCycle ||
+						data.startDate ||
+						data.dueDateDay ||
+						data.targetDueDate
+					) {
+						let newEndDate = data.targetDueDate || activeContract.endDate;
+						if (data.billingCycle && !data.targetDueDate) {
 							let cycleMonths = 1;
 							if (data.billingCycle === "QUARTERLY") cycleMonths = 3;
 							else if (data.billingCycle === "SEMI_ANNUAL") cycleMonths = 6;
@@ -767,32 +779,42 @@ export class TenantRepository {
 							data: {
 								...(data.billingCycle && {
 									billingCycle: data.billingCycle,
-									endDate: newEndDate,
 								}),
+								...(newEndDate && { endDate: newEndDate }),
 								...(data.startDate && { startDate: data.startDate }),
 								...(data.dueDateDay && { dueDateDay: data.dueDateDay }),
 							},
 						});
 					}
 
-					// Jika dueDateDay atau startDate diperbarui, sesuaikan juga tanggal jatuh tempo seluruh tagihan PENDING
-					if (data.dueDateDay || data.startDate) {
+					// Jika dueDateDay, targetDueDate, atau startDate diperbarui, sesuaikan juga tanggal jatuh tempo seluruh tagihan PENDING & OVERDUE
+					if (data.dueDateDay || data.startDate || data.targetDueDate) {
 						const newDueDay =
 							data.dueDateDay ||
-							(data.startDate ? new Date(data.startDate).getDate() : undefined);
+							(data.targetDueDate
+								? data.targetDueDate.getDate()
+								: undefined) ||
+							(data.startDate
+								? new Date(data.startDate).getDate()
+								: undefined);
 						if (newDueDay) {
-							const pendingInvoices = await tx.invoice.findMany({
+							const unpaidInvoices = await tx.invoice.findMany({
 								where: {
 									contractId: activeContract.id,
-									status: "PENDING",
+									status: { in: ["PENDING", "OVERDUE"] },
 								},
+								orderBy: { dueDate: "asc" },
 							});
-							for (const inv of pendingInvoices) {
+							for (let idx = 0; idx < unpaidInvoices.length; idx++) {
+								const inv = unpaidInvoices[idx];
 								const invYear = inv.periodYear || inv.dueDate.getFullYear();
 								const invMonth = inv.periodMonth
 									? inv.periodMonth - 1
 									: inv.dueDate.getMonth();
-								const updatedDueDate = new Date(invYear, invMonth, newDueDay);
+								const updatedDueDate =
+									idx === 0 && data.targetDueDate
+										? data.targetDueDate
+										: new Date(invYear, invMonth, newDueDay);
 								await tx.invoice.update({
 									where: { id: inv.id },
 									data: { dueDate: updatedDueDate },

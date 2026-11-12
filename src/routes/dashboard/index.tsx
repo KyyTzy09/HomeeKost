@@ -48,9 +48,16 @@ export const Route = createFileRoute("/dashboard/")({
 	}),
 	loader: async ({ context }) => {
 		const activePropertyId = context.dashboard?.activeProperty?.id;
-		await context.queryClient.ensureQueryData(
-			dashboardOverviewQueryOptions(activePropertyId),
-		);
+		const queryOpts = dashboardOverviewQueryOptions(activePropertyId);
+		const queryState = context.queryClient.getQueryState(queryOpts.queryKey);
+		if (queryState?.isInvalidated) {
+			await context.queryClient.refetchQueries({
+				queryKey: queryOpts.queryKey,
+				exact: true,
+			});
+		} else {
+			await context.queryClient.ensureQueryData(queryOpts);
+		}
 	},
 	component: DashboardHomePage,
 });
@@ -102,20 +109,11 @@ export function DashboardHomePage() {
 	const recentActivities = dashboardData?.recentActivities || [];
 
 	const handlePaymentAction = (item: UpcomingPaymentItem) => {
-		if (item.phone) {
-			const cleanPhone = item.phone.replace(/[^0-9]/g, "");
-			const waTarget = cleanPhone.startsWith("0")
-				? `62${cleanPhone.slice(1)}`
-				: cleanPhone;
-			const msg = encodeURIComponent(
-				`Halo ${item.tenant}, pengingat tagihan sewa kamar ${item.room} sebesar ${item.amount} jatuh tempo pada ${item.dueDate}. Mohon konfirmasi jika telah melakukan pembayaran. Terima kasih.`,
-			);
-			window.open(`https://wa.me/${waTarget}?text=${msg}`, "_blank");
-			showToast(`Membuka WhatsApp untuk mengirim pengingat ke ${item.tenant}`);
-		} else {
-			navigate({ to: "/dashboard/invoices" });
-			showToast(`Membuka halaman invoice untuk ${item.tenant}`);
-		}
+		navigate({
+			to: "/dashboard/payments",
+			search: { search: item.tenant, filter: item.tenant },
+		});
+		showToast(`Membuka data pembayaran untuk ${item.tenant}`);
 	};
 
 	const getAttentionIcon = (type: string) => {

@@ -122,8 +122,10 @@ export class ReportRepository {
 			else vacantRooms++;
 		}
 
+		// Net Occupancy: Kamar maintenance tidak dihitung sebagai beban kapasitas sewa aktif
+		const operableRooms = totalRooms - maintenanceRooms;
 		const occupancyRate =
-			totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
+			operableRooms > 0 ? (occupiedRooms / operableRooms) * 100 : 0;
 
 		// 2. Agregasi Invoices (Penagihan Sewa)
 		const invoiceWhere: Prisma.InvoiceWhereInput = {

@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { cleanRoomNumber, formatRoomTitle } from "../common/helpers/index.ts";
 import { formatRupiah } from "./currency.ts";
 
 export interface InvoicePdfData {
@@ -206,7 +207,7 @@ export async function generateInvoicePdf(
 		color: charcoal,
 	});
 	page.drawText(
-		`Kamar: ${data.roomNumber} ${data.tenantPhone ? ` | Telp: ${data.tenantPhone}` : ""}`,
+		`Kamar: ${cleanRoomNumber(data.roomNumber)} ${data.tenantPhone ? ` | Telp: ${data.tenantPhone}` : ""}`,
 		{
 			x: margin + 14,
 			y: currentY - 48,
@@ -290,7 +291,7 @@ export async function generateInvoicePdf(
 		borderWidth: 1,
 	});
 	page.drawText(
-		data.description || `Biaya Sewa Kamar ${data.roomNumber} (${data.period})`,
+		data.description || `Biaya Sewa ${formatRoomTitle(data.roomNumber)} (${data.period})`,
 		{
 			x: margin + 12,
 			y: currentY - 18,

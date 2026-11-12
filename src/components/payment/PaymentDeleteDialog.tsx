@@ -8,6 +8,7 @@ import {
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
 import type { PaymentItem } from "../../common/types/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 
 interface PaymentDeleteDialogProps {
 	open: boolean;
@@ -40,7 +41,7 @@ export function PaymentDeleteDialog({
 					>
 						Apakah Anda yakin ingin menghapus data tagihan{" "}
 						<b className="text-[#252925]">
-							{payment?.tenantName} · {payment?.roomNumber}
+							{payment?.tenantName} · {formatRoomTitle(payment?.roomNumber)}
 						</b>{" "}
 						periode {payment?.period}? Tindakan ini tidak dapat dibatalkan.
 						{payment?.status === "PAID" && (

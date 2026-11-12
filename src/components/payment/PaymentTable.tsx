@@ -38,6 +38,7 @@ import {
 	TableRow,
 } from "../../common/shadcn/table.tsx";
 import type { PaymentItem, PaymentStatus } from "../../common/types/index.ts";
+import { cleanRoomNumber } from "../../common/helpers/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 
 export interface PaymentFilterOption {
@@ -145,7 +146,7 @@ export function PaymentTable({
 								{info.getValue()}
 							</span>
 							<span className="text-[11px] text-[#737873] block mt-0.5">
-								Kamar <b className="text-[#4f6958]">{item.roomNumber}</b> ·{" "}
+								Kamar <b className="text-[#4f6958]">{cleanRoomNumber(item.roomNumber)}</b> ·{" "}
 								{item.propertyName}
 							</span>
 						</div>

@@ -9,6 +9,7 @@ import {
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
 import type { RoomItem } from "../../common/types/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 
 interface RoomDeleteDialogProps {
 	open: boolean;
@@ -35,7 +36,7 @@ export function RoomDeleteDialog({
 						</div>
 						<div>
 							<DialogTitle className="text-[17px] font-bold text-[#29382e]">
-								Hapus Kamar {room.roomNo}?
+								Hapus {formatRoomTitle(room.roomNo)}?
 							</DialogTitle>
 							<DialogDescription className="text-[11.5px] text-[#8a958d]">
 								Tindakan ini tidak dapat dibatalkan.
@@ -46,7 +47,7 @@ export function RoomDeleteDialog({
 
 				<div className="text-[12px] text-[#556358] bg-[#fdfaf7] border border-[#f2e6dc] rounded-[11px] p-3 my-2 leading-relaxed">
 					Apakah Anda yakin ingin menghapus data{" "}
-					<strong>Kamar {room.roomNo}</strong> ({room.type})? Seluruh riwayat
+					<strong>{formatRoomTitle(room.roomNo)}</strong> ({room.type})? Seluruh riwayat
 					penghuni dan data terkait kamar ini akan dihapus.
 				</div>
 

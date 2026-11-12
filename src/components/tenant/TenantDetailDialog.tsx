@@ -9,6 +9,7 @@ import {
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
+import { cleanRoomNumber, formatRoomTitle } from "../../common/helpers/index.ts";
 import { formatDate, formatShortDueDate } from "../../lib/date-utils.ts";
 import { formatDisplayPhone } from "../../lib/phone-utils.ts";
 
@@ -47,7 +48,7 @@ export function TenantDetailDialog({
 								{tenant.name}
 							</DialogTitle>
 							<DialogDescription className="text-[11px] text-[#8a958d]">
-								Penghuni Kamar {tenant.roomNo} · {propertyName}
+								Penghuni {formatRoomTitle(tenant.roomNo)} · {propertyName}
 							</DialogDescription>
 						</div>
 					</div>
@@ -165,7 +166,7 @@ export function TenantDetailDialog({
 								<span className="block text-[9.5px] text-[#8a958d] font-semibold mb-0.5">
 									Kamar
 								</span>
-								<b className="text-[12px] text-[#34443a]">{tenant.roomNo}</b>
+								<b className="text-[12px] text-[#34443a]">{cleanRoomNumber(tenant.roomNo)}</b>
 							</div>
 
 							<div className="bg-[#fcfdfc] border border-[#e7ece7] rounded-[10px] p-2.5">

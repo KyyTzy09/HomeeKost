@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { prisma } from "../../../../db.ts";
+import { cleanRoomNumber, formatRoomTitle } from "../../../../common/helpers/index.ts";
 import { formatRupiah } from "../../../../lib/currency.ts";
 import { formatDate, formatRentalPeriod } from "../../../../lib/date-utils.ts";
 
@@ -74,7 +75,9 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
 						? escapeHtml(invoice.contract.room.property.bankAccountInfo.trim())
 						: null;
 				const tenantName = escapeHtml(invoice.contract.tenant.name);
-				const roomNumber = escapeHtml(invoice.contract.room.roomNumber);
+				const rawRoomNumber = invoice.contract.room.roomNumber;
+				const roomNumber = escapeHtml(cleanRoomNumber(rawRoomNumber));
+				const roomTitle = escapeHtml(formatRoomTitle(rawRoomNumber));
 				const tenantPhone = escapeHtml(
 					invoice.contract.tenant.whatsappNumber ||
 						invoice.contract.tenant.phoneNumber ||
@@ -385,7 +388,7 @@ export const Route = createFileRoute("/api/invoices/$invoiceId/document")({
         <tbody>
           <tr>
             <td>
-              <div style="font-weight: 700;">Biaya Sewa Kamar ${roomNumber} (${period})</div>
+              <div style="font-weight: 700;">Biaya Sewa ${roomTitle} (${period})</div>
               <div style="font-size: 11px; color: #737873; margin-top: 2px;">Fasilitas: Wi-Fi, Air Bersih, Listrik & Keamanan 24 Jam</div>
             </td>
             <td style="text-align: right; font-weight: 700; font-size: 14px;">${formatRupiah(amount)}</td>

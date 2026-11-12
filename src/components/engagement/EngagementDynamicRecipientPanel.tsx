@@ -15,6 +15,7 @@ import type {
 	EngagementRecipient,
 	EngagementTemplateItem,
 } from "../../common/types/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import { formatDate } from "../../lib/date-utils.ts";
 import { filterRecipientsByTemplate } from "../../lib/engagement-utils.ts";
 
@@ -177,8 +178,8 @@ export function EngagementDynamicRecipientPanel({
 				recipient,
 				title: "Konfirmasi Kirim Ulang Pesan",
 				description: isPayment
-					? `Penghuni "${recipient.name}" (Kamar ${recipient.roomNumber}) sudah menerima pesan apresiasi pembayaran hari ini. Ingin tetap mengirim pesan apresiasi lagi?`
-					: `Penghuni "${recipient.name}" (Kamar ${recipient.roomNumber}) sudah menerima pesan hari ini. Ingin tetap mengirimkan pesan lagi?`,
+					? `Penghuni "${recipient.name}" (${formatRoomTitle(recipient.roomNumber)}) sudah menerima pesan apresiasi pembayaran hari ini. Ingin tetap mengirim pesan apresiasi lagi?`
+					: `Penghuni "${recipient.name}" (${formatRoomTitle(recipient.roomNumber)}) sudah menerima pesan hari ini. Ingin tetap mengirimkan pesan lagi?`,
 			});
 			return;
 		}
@@ -262,9 +263,6 @@ export function EngagementDynamicRecipientPanel({
 						>
 							Pilih Semua
 						</label>
-						<span className="text-xs text-[#737873] ml-1">
-							({selectedCount} dari {filtered.length} dipilih)
-						</span>
 					</div>
 
 					<Button
@@ -340,7 +338,7 @@ export function EngagementDynamicRecipientPanel({
 													)}
 												</div>
 												<p className="text-[11px] text-[#737873] mt-0.5 truncate">
-													Kamar {recipient.roomNumber} ·{" "}
+													{formatRoomTitle(recipient.roomNumber)} ·{" "}
 													{recipient.propertyName} · {contextInfo}
 												</p>
 											</div>

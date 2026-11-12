@@ -9,6 +9,7 @@ import {
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
 import type { InvoiceItem } from "../../common/types/index.ts";
+import { cleanRoomNumber, formatRoomTitle } from "../../common/helpers/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 import { formatDate } from "../../lib/date-utils.ts";
 
@@ -174,7 +175,7 @@ export function InvoiceDocPreview({
 						</div>
 						<div className="text-xs text-[#737873] mt-1 space-y-0.5">
 							<p>
-								Kamar: <b className="text-[#4f6958]">{invoice.roomNumber}</b>
+								Kamar: <b className="text-[#4f6958]">{cleanRoomNumber(invoice.roomNumber)}</b>
 							</p>
 							{invoice.tenantPhone && (
 								<p>
@@ -223,7 +224,7 @@ export function InvoiceDocPreview({
 								<td className="py-3.5 px-4">
 									<div className="font-bold text-[#252925]">
 										{invoice.description ||
-											`Biaya Sewa Kamar ${invoice.roomNumber}`}
+											`Biaya Sewa ${formatRoomTitle(invoice.roomNumber)}`}
 									</div>
 									<div className="text-[11px] text-[#737873] mt-0.5">
 										Fasilitas: Wi-Fi, Air Bersih, Listrik & Keamanan 24 Jam
