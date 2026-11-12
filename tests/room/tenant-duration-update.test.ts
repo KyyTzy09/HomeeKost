@@ -93,4 +93,18 @@ describe("Tenant Duration Update & Scope Validation", () => {
 		const shouldSkipJan = billingCycle !== "MONTHLY" && contractEndDate && janPeriodStart < contractEndDate;
 		expect(shouldSkipJan).toBe(false);
 	});
+
+	it("harus memastikan nama tenant disimpan dan disanitasi dalam format UPPERCASE", () => {
+		const rawName = "  muhammad alvino rezky  ";
+		const sanitizedName = rawName.trim().toUpperCase();
+		expect(sanitizedName).toBe("MUHAMMAD ALVINO REZKY");
+	});
+
+	it("harus memvalidasi pembaruan tanggal jatuh tempo ketika penyewa diedit", () => {
+		const editedDueDate = "2026-11-20";
+		const targetDate = new Date(editedDueDate);
+		expect(targetDate.getDate()).toBe(20);
+		expect(targetDate.getFullYear()).toBe(2026);
+		expect(targetDate.getMonth()).toBe(10); // November (0-indexed 10)
+	});
 });

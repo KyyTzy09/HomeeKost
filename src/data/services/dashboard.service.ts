@@ -115,8 +115,10 @@ export class DashboardService {
 			else vacantRooms++;
 		}
 
+		// Net Occupancy: Kamar maintenance tidak dihitung sebagai beban kapasitas sewa aktif
+		const operableRooms = totalRooms - maintenanceRooms;
 		const occupancyRate =
-			totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
+			operableRooms > 0 ? (occupiedRooms / operableRooms) * 100 : 0;
 
 		// 2. Agregasi Pendapatan Bulan Ini & Bulan Lalu (100% Selaras dengan Halaman Keuangan / Arus Kas Riil)
 		const currentMonthIncomeAgg = await this.db.transaction.aggregate({
@@ -178,6 +180,20 @@ export class DashboardService {
 		const currentMonthExpense = Number(currentMonthExpenseAgg._sum.amount ?? 0);
 
 		// 4. Tagihan Jatuh Tempo & Belum Lunas BULAN INI (Hanya tagihan periode bulan berjalan)
+		const todayDate = new Date();
+		todayDate.setHours(0, 0, 0, 0);
+
+		// Sinkronkan status invoice PENDING yang telah melewati tanggal jatuh tempo menjadi OVERDUE secara otomatis
+		await this.db.invoice.updateMany({
+			where: {
+				status: "PENDING",
+				dueDate: { lt: todayDate },
+			},
+			data: {
+				status: "OVERDUE",
+			},
+		});
+
 		const pendingInvoices = await this.db.invoice.findMany({
 			where: {
 				status: { in: ["PENDING", "OVERDUE"] },
@@ -212,9 +228,6 @@ export class DashboardService {
 			},
 			orderBy: { dueDate: "asc" },
 		});
-
-		const todayDate = new Date();
-		todayDate.setHours(0, 0, 0, 0);
 
 		let dueAmountRaw = 0;
 		const dueRoomsSet = new Set<string>();
@@ -430,7 +443,9 @@ export class DashboardService {
 					},
 				});
 
-				const dueRoomsForProp = new Set<string>();
+				const overdueRoomsForProp = new Set<string>();
+				const approachingRoomsForProp = new Set<string>();
+
 				for (const inv of propInvoices) {
 					if (inv.contract.billingCycle !== "MONTHLY" && inv.contract.endDate) {
 						const contractEnd = new Date(inv.contract.endDate);
@@ -446,20 +461,44 @@ export class DashboardService {
 						inv.transactions,
 					);
 					if (installmentSummary.remainingAmount > 0) {
-						dueRoomsForProp.add(inv.contract.roomId);
+						const roomId = inv.contract.roomId || inv.contractId;
+						const due = new Date(inv.dueDate);
+						due.setHours(0, 0, 0, 0);
+						const diffDays = Math.ceil(
+							(due.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24),
+						);
+
+						if (diffDays < 0 || inv.status === "OVERDUE") {
+							overdueRoomsForProp.add(roomId);
+						} else {
+							approachingRoomsForProp.add(roomId);
+						}
 					}
 				}
-				const propDueCount = dueRoomsForProp.size;
+
+				const overdueCount = overdueRoomsForProp.size;
+				const approachingCount = approachingRoomsForProp.size;
+
+				let dueBadge = "Semua lunas";
+				let badgeColor: "green" | "amber" | "red" = "green";
+
+				if (overdueCount > 0 && approachingCount > 0) {
+					dueBadge = `${overdueCount} terlambat, ${approachingCount} mendekati`;
+					badgeColor = "red";
+				} else if (overdueCount > 0) {
+					dueBadge = `${overdueCount} kamar terlambat`;
+					badgeColor = "red";
+				} else if (approachingCount > 0) {
+					dueBadge = `${approachingCount} kamar mendekati`;
+					badgeColor = "amber";
+				}
 
 				return {
 					id: prop.id,
 					name: prop.name,
 					rooms: `${prop.rooms.length} kamar`,
-					dueBadge:
-						propDueCount > 0
-							? `${propDueCount} kamar mendekati`
-							: "Semua lunas",
-					badgeColor: propDueCount > 0 ? "amber" : "green",
+					dueBadge,
+					badgeColor,
 				};
 			}),
 		);

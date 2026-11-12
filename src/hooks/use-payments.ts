@@ -73,6 +73,9 @@ export function useConfirmPayment() {
 		mutationFn: (data: ConfirmPaymentInput) => confirmPaymentServerFn({ data }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: PAYMENT_STATS_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
 			queryClient.invalidateQueries({ queryKey: ["transactions"] });
 			queryClient.invalidateQueries({ queryKey: ["financial-summary"] });
 			queryClient.invalidateQueries({ queryKey: ["cost-composition"] });
@@ -80,6 +83,8 @@ export function useConfirmPayment() {
 			queryClient.invalidateQueries({ queryKey: ["profit-loss"] });
 			queryClient.invalidateQueries({ queryKey: ["annual-matrix"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 		},
 	});
 }
@@ -96,6 +101,8 @@ export function useCreateManualInvoice() {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_STATS_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["tenants"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 		},
 	});
 }
@@ -109,6 +116,11 @@ export function useGenerateMonthlyInvoices() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: PAYMENT_QUERY_KEY });
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
+			queryClient.invalidateQueries({ queryKey: PAYMENT_STATS_QUERY_KEY });
+			queryClient.invalidateQueries({ queryKey: ["tenants"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 		},
 	});
 }
@@ -142,6 +154,7 @@ export function useDeleteInvoice() {
 			queryClient.invalidateQueries({ queryKey: ["annual-matrix"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard-overview"] });
 			queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 			queryClient.invalidateQueries({ queryKey: ["cashflow-overview"] });
 			queryClient.invalidateQueries({ queryKey: ["tenants"] });
 			queryClient.invalidateQueries({ queryKey: ["reports"] });

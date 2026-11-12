@@ -36,10 +36,24 @@ import {
 } from "../../hooks/index.ts";
 import { getMonthName } from "../../lib/date-utils.ts";
 
+export interface PaymentsSearchParams {
+	status?: string;
+	search?: string;
+	filter?: string;
+}
+
 export const Route = createFileRoute("/dashboard/payments")({
-	validateSearch: (search: Record<string, unknown>): { status?: string } => {
+	validateSearch: (search: Record<string, unknown>): PaymentsSearchParams => {
+		const rawSearch =
+			typeof search.search === "string"
+				? search.search
+				: typeof search.filter === "string"
+					? search.filter
+					: undefined;
 		return {
 			status: typeof search.status === "string" ? search.status : undefined,
+			search: rawSearch,
+			filter: rawSearch,
 		};
 	},
 	head: () => ({
@@ -81,7 +95,10 @@ function PaymentsPage() {
 
 	const now = new Date();
 	const currentPeriodVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-	const [periodFilter, setPeriodFilter] = useState<string>(currentPeriodVal);
+	const search = Route.useSearch();
+	const [periodFilter, setPeriodFilter] = useState<string>(
+		search.search || search.filter ? "ALL" : currentPeriodVal,
+	);
 
 	const periodOptions = useMemo(() => {
 		const curY = now.getFullYear();
@@ -123,7 +140,6 @@ function PaymentsPage() {
 	}, [periodFilter]);
 
 	// Filter and Sort states
-	const search = Route.useSearch();
 	const initialStatus = useMemo(() => {
 		if (!search.status) return DEFAULT_PAYMENT_STATUS_OPTION;
 		return (
@@ -132,7 +148,9 @@ function PaymentsPage() {
 		);
 	}, [search.status]);
 
-	const [searchQuery, setSearchQuery] = useState<string>("");
+	const [searchQuery, setSearchQuery] = useState<string>(
+		search.search || search.filter || "",
+	);
 	const [statusFilter, setStatusFilter] = useState<PaymentFilterOption>(
 		initialStatus,
 	);
@@ -147,6 +165,16 @@ function PaymentsPage() {
 			}
 		}
 	}, [search.status]);
+
+	useEffect(() => {
+		const incomingSearch = search.search || search.filter;
+		if (incomingSearch !== undefined) {
+			setSearchQuery(incomingSearch);
+			if (incomingSearch.trim() !== "") {
+				setPeriodFilter("ALL");
+			}
+		}
+	}, [search.search, search.filter]);
 	const [sortBy, setSortBy] = useState<"dueDate" | "amount" | "createdAt">(
 		"dueDate",
 	);

@@ -1,3 +1,4 @@
+import { cleanRoomNumber, formatRoomTitle } from "../common/helpers/index.ts";
 import { formatRupiah } from "./currency.ts";
 
 export interface InvoiceTemplateParams {
@@ -120,7 +121,7 @@ export const whatsappTemplates = {
 Berikut rincian tagihan sewa kos untuk periode *${p.period}*:
 
 🏠 *${p.propertyName}*
-🚪 *Kamar:* ${p.roomNumber}
+🚪 *Kamar:* ${cleanRoomNumber(p.roomNumber)}
 📄 *No. Invoice:* ${p.invoiceNumber}
 📅 *Jatuh Tempo:* ${p.dueDate}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
@@ -163,7 +164,7 @@ _— Admin Kos ${p.propertyName}_`;
 
 ${statusHeadline}
 
-🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (${formatRoomTitle(p.roomNumber)})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Nominal:* *${formatRupiah(p.amount)}*
 
@@ -192,7 +193,7 @@ _— Admin Kos ${p.propertyName}_`;
 
 		return `Halo Kak *${p.tenantName}*! 👋
 
-Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
+Mengingatkan untuk pembayaran sewa kost di *${p.propertyName}* (${formatRoomTitle(p.roomNumber)}) periode *${p.period}*:
 
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
@@ -224,7 +225,7 @@ _— Admin Kos ${p.propertyName}_`;
 
 ⚠️ *PENGINGAT BATAS AKHIR PEMBAYARAN HARI INI*
 
-Mengingatkan kembali bahwa hari ini (Tanggal 5) adalah batas akhir pembayaran sewa kost di *${p.propertyName}* (Kamar ${p.roomNumber}) periode *${p.period}*:
+Mengingatkan kembali bahwa hari ini (Tanggal 5) adalah batas akhir pembayaran sewa kost di *${p.propertyName}* (${formatRoomTitle(p.roomNumber)}) periode *${p.period}*:
 
 📄 *No. Invoice:* ${p.invoiceNumber}
 💰 *Total Tagihan:* *${formatRupiah(p.amount)}*
@@ -262,7 +263,7 @@ Halo Kak *${p.tenantName}*! 👋
 ${appreciationText}
 
 📄 *No. Kwitansi:* ${p.invoiceNumber}
-🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (${formatRoomTitle(p.roomNumber)})
 💳 *Metode Bayar:* ${p.paymentMethod}
 🗓️ *Tanggal Bayar:* ${p.paidDate}
 💵 *Jumlah Diterima:* *${formatRupiah(p.amount)}* (LUNAS)
@@ -286,7 +287,7 @@ _— Admin Kos ${p.propertyName}_`;
 Halo Kak *${p.tenantName}*! 👋
 Pembayaran sewa kos Anda di *${p.propertyName}* untuk periode *${p.period}* telah kami terima:
 
-🏠 *${p.propertyName}* (Kamar ${p.roomNumber})
+🏠 *${p.propertyName}* (${formatRoomTitle(p.roomNumber)})
 📄 *No. Invoice:* ${p.invoiceNumber}
 💳 *Metode Bayar:* ${p.paymentMethod}
 🗓️ *Tanggal Bayar:* ${p.paidDate}
@@ -320,7 +321,7 @@ _— Admin Kos ${p.propertyName}_`;
 		return `🔔 *PENGINGAT SISA CICILAN SEWA*
 
 Halo Kak *${p.tenantName}*! 👋
-Mengingatkan kembali perihal sisa tagihan sewa kos di *${p.propertyName}* (Kamar ${p.roomNumber}) untuk periode *${p.period}*:
+Mengingatkan kembali perihal sisa tagihan sewa kos di *${p.propertyName}* (${formatRoomTitle(p.roomNumber)}) untuk periode *${p.period}*:
 
 📄 *No. Invoice:* ${p.invoiceNumber}
 💵 *Total Tagihan:* ${formatRupiah(p.totalAmount)}

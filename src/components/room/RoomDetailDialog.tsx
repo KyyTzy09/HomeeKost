@@ -9,6 +9,7 @@ import {
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
 import type { RoomItem } from "../../common/types/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 
 interface RoomDetailDialogProps {
 	open: boolean;
@@ -52,7 +53,7 @@ export function RoomDetailDialog({
 						</div>
 						<div>
 							<DialogTitle className="text-[18px] font-bold text-[#29382e]">
-								Kamar {room.roomNo}
+								{formatRoomTitle(room.roomNo)}
 							</DialogTitle>
 							<DialogDescription className="text-[11px] text-[#8a958d]">
 								Detail kamar · {propertyName}

@@ -22,6 +22,7 @@ import {
 	ExecutiveReportDoc,
 	ReportAiInsightPanel,
 	ReportAnnualMatrixCard,
+	ReportHealthCriteriaGuide,
 	ReportKpiCards,
 	ReportRoomExpenseBreakdown,
 } from "../../components/report/index.ts";
@@ -523,6 +524,11 @@ function ReportsPage() {
 							periodLabel={periodLabel}
 							incomeGrowthPercent={monthlyReport.momGrowth?.incomeGrowthPercent}
 							expenseGrowthPercent={monthlyReport.momGrowth?.expenseGrowthPercent}
+						/>
+
+						{/* Standar & Kriteria Penilaian Kesehatan Finansial */}
+						<ReportHealthCriteriaGuide
+							isClosedPeriod={monthlyReport.isClosedPeriod}
 						/>
 
 						{/* Executive AI Narrative Insight & Strategic Recommendations */}

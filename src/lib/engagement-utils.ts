@@ -1,4 +1,4 @@
-import { compareRoomNumbers } from "../common/helpers/room.helper.ts";
+import { cleanRoomNumber, compareRoomNumbers } from "../common/helpers/room.helper.ts";
 import type { EngagementRecipient } from "../common/types/engagement.types.ts";
 
 /**
@@ -102,7 +102,7 @@ export function personalizeMessage(
 
 	return templateContent
 		.replace(/\{nama\}/gi, () => recipient.name || "")
-		.replace(/\{kamar\}/gi, () => recipient.roomNumber || "")
+		.replace(/\{kamar\}/gi, () => cleanRoomNumber(recipient.roomNumber) || "")
 		.replace(/\{kost?\}/gi, () => recipient.propertyName || "");
 }
 

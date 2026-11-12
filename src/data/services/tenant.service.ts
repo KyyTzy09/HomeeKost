@@ -1,4 +1,5 @@
 import { formatDeterministicInvoiceNumber } from "../../lib/invoice-utils.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import type {
 	OccupationStatus,
 	RentDuration,
@@ -126,8 +127,16 @@ export class TenantService {
 			);
 
 		if (paidInvoices.length > 0) {
-			if (endDate && new Date(endDate) > new Date(paidInvoices[0].dueDate)) {
-				return new Date(endDate);
+			if (endDate) {
+				const end = new Date(endDate);
+				const latestPaidDue = new Date(paidInvoices[0].dueDate);
+				if (
+					end > latestPaidDue ||
+					(end.getFullYear() === latestPaidDue.getFullYear() &&
+						end.getMonth() === latestPaidDue.getMonth())
+				) {
+					return end;
+				}
 			}
 			const latestPaid = paidInvoices[0];
 			const latestDue = new Date(latestPaid.dueDate);
@@ -138,7 +147,10 @@ export class TenantService {
 			);
 		}
 
-		// 3. Fallback: jika belum ada invoice, hitung dari startDate atau bulan berjalan
+		// 3. Fallback: jika belum ada invoice, gunakan endDate jika ada, atau hitung dari startDate atau bulan berjalan
+		if (endDate) {
+			return new Date(endDate);
+		}
 		if (startDate) {
 			const start = new Date(startDate);
 			if (start > now) {
@@ -475,6 +487,7 @@ export class TenantService {
 		input: TenantFormValues,
 		user?: SessionUser,
 	): Promise<TenantItem> {
+		const tenantName = (input.name || "").trim().toUpperCase();
 		const canonicalPhone = sanitizePhone(input.phone);
 		const room = await this.roomRepo.findByRoomNumber(propertyId, input.roomNo);
 
@@ -600,7 +613,7 @@ export class TenantService {
 							classification: "OPERATIONAL",
 							paymentMethod: "TRANSFER",
 							amount: monthlyRent,
-							description: `Pembayaran Sewa Kamar ${room.roomNumber} - ${input.name} (${monthName} ${monthDate.getFullYear()} · Bulan ${m + 1}/${cycleMonths})`,
+							description: `Pembayaran Sewa ${formatRoomTitle(room.roomNumber)} - ${input.name} (${monthName} ${monthDate.getFullYear()} · Bulan ${m + 1}/${cycleMonths})`,
 							transactionDate: monthDate,
 						});
 					}
@@ -646,7 +659,7 @@ export class TenantService {
 					classification: "OPERATIONAL",
 					paymentMethod: "TRANSFER",
 					amount: monthlyRent,
-					description: `Pembayaran Sewa Awal Kamar ${room.roomNumber} - ${input.name} (${monthName} ${monthDate.getFullYear()} · Bulan ${m + 1}/${cycleMonths})`,
+					description: `Pembayaran Sewa Awal ${formatRoomTitle(room.roomNumber)} - ${input.name} (${monthName} ${monthDate.getFullYear()} · Bulan ${m + 1}/${cycleMonths})`,
 					transactionDate: monthDate,
 				});
 			}
@@ -673,7 +686,7 @@ export class TenantService {
 				classification: "OPERATIONAL",
 				paymentMethod: "TRANSFER",
 				amount: initialPayment,
-				description: `Uang Muka (DP) Sewa Kamar ${room.roomNumber} - ${input.name}`,
+				description: `Uang Muka (DP) Sewa ${formatRoomTitle(room.roomNumber)} - ${input.name}`,
 				transactionDate: now,
 			});
 
@@ -717,7 +730,7 @@ export class TenantService {
 		const { tenant, contract } = await this.tenantRepo.createTenantWithContract(
 			{
 				tenantPayload: {
-					name: input.name,
+					name: tenantName,
 					nik: input.nik,
 					phone: canonicalPhone,
 					whatsappNumber: canonicalPhone,
@@ -801,6 +814,7 @@ export class TenantService {
 		propertyId: string,
 		input: UpdateTenantFormValues | TenantFormValues,
 	): Promise<TenantItem> {
+		const tenantName = (input.name || "").trim().toUpperCase();
 		const canonicalPhone = sanitizePhone(input.phone);
 		let roomId: string | undefined;
 
@@ -819,8 +833,9 @@ export class TenantService {
 			: undefined;
 		const startDate = input.startDate ? new Date(input.startDate) : undefined;
 		const birthDate = input.birthDate ? new Date(input.birthDate) : null;
-		const dueDateDay = input.dueDate
-			? new Date(input.dueDate).getDate()
+		const targetDueDate = input.dueDate ? new Date(input.dueDate) : undefined;
+		const dueDateDay = targetDueDate
+			? targetDueDate.getDate()
 			: startDate?.getDate();
 		const depositAmount = input.deposit
 			? parseRupiah(input.deposit)
@@ -845,7 +860,7 @@ export class TenantService {
 				: "CURRENT_ONLY";
 
 		await this.tenantRepo.updateTenantWithContract(id, {
-			name: input.name,
+			name: tenantName,
 			nik: input.nik,
 			phone: canonicalPhone,
 			whatsappNumber: canonicalPhone,
@@ -865,6 +880,7 @@ export class TenantService {
 			billingCycle,
 			startDate,
 			dueDateDay,
+			targetDueDate,
 			roomChangeMode,
 			updatePendingInvoiceAmount,
 			createDifferenceInvoice,
@@ -880,7 +896,7 @@ export class TenantService {
 		return {
 			id,
 			propertyId,
-			name: input.name,
+			name: tenantName,
 			birthDate: birthDate ? birthDate.toISOString().slice(0, 10) : null,
 			nik: input.nik,
 			phone: canonicalPhone,

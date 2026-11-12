@@ -29,6 +29,7 @@ import {
 } from "../../common/shadcn/select.tsx";
 import type { TenantItem } from "../../common/types/index.ts";
 import type { CreateManualInvoiceInput } from "../../common/validations/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import { MONTH_OPTIONS } from "./PaymentGenerateDialog.tsx";
 
@@ -287,7 +288,7 @@ export function PaymentFormDialog({
 	}, [currentYear, periodYear]);
 
 	const selectedTenantLabel = selectedTenant
-		? `${selectedTenant.name} — Kamar ${selectedTenant.roomNo} (${formatRupiah(rentCalculation.monthlyRent)}/bln)`
+		? `${selectedTenant.name} — ${formatRoomTitle(selectedTenant.roomNo)} (${formatRupiah(rentCalculation.monthlyRent)}/bln)`
 		: undefined;
 
 	const selectedMonthOption = MONTH_OPTIONS.find(
@@ -419,7 +420,7 @@ export function PaymentFormDialog({
 															{t.name}
 														</div>
 														<div className="text-[11px] text-[#737873]">
-															Kamar {t.roomNo} · {formatRupiah(tRent.monthlyRent)}/bln
+															{formatRoomTitle(t.roomNo)} · {formatRupiah(tRent.monthlyRent)}/bln
 														</div>
 													</div>
 													{isSelected && (

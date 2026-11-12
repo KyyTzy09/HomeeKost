@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { compareRoomNumbers } from "../../src/common/helpers/room.helper.ts";
+import {
+	cleanRoomNumber,
+	compareRoomNumbers,
+	formatRoomTitle,
+} from "../../src/common/helpers/room.helper.ts";
 
 describe("Natural Room Sorting (compareRoomNumbers)", () => {
 	it("harus mengurutkan nomor kamar numerik murni secara alami (1, 2, 3 ... 10, 11) bukan alfabetis", () => {
@@ -60,3 +64,29 @@ describe("Natural Room Sorting (compareRoomNumbers)", () => {
 		expect(sorted).toEqual(["101", "102", "201", "202"]);
 	});
 });
+
+describe("Room Number Normalization & Title Formatting", () => {
+	it("cleanRoomNumber harus menghapus prefix 'Kamar' atau 'Room' tanpa merusak kode kamar asli", () => {
+		expect(cleanRoomNumber("Kamar 101")).toBe("101");
+		expect(cleanRoomNumber("kamar 101")).toBe("101");
+		expect(cleanRoomNumber("KAMAR A-05")).toBe("A-05");
+		expect(cleanRoomNumber("Room 202")).toBe("202");
+		expect(cleanRoomNumber("101")).toBe("101");
+		expect(cleanRoomNumber("VIP 01")).toBe("VIP 01");
+		expect(cleanRoomNumber("")).toBe("");
+		expect(cleanRoomNumber(null)).toBe("");
+		expect(cleanRoomNumber(undefined)).toBe("");
+	});
+
+	it("formatRoomTitle harus menghasilkan format 'Kamar X' yang konsisten tanpa menduplikasi kata 'Kamar'", () => {
+		expect(formatRoomTitle("101")).toBe("Kamar 101");
+		expect(formatRoomTitle("Kamar 101")).toBe("Kamar 101");
+		expect(formatRoomTitle("kamar 101")).toBe("Kamar 101");
+		expect(formatRoomTitle("Room 101")).toBe("Kamar 101");
+		expect(formatRoomTitle("A-01")).toBe("Kamar A-01");
+		expect(formatRoomTitle("")).toBe("Kamar —");
+		expect(formatRoomTitle("—")).toBe("Kamar —");
+		expect(formatRoomTitle(null)).toBe("Kamar —");
+	});
+});
+

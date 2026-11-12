@@ -10,3 +10,34 @@ export function compareRoomNumbers(a: string, b: string): number {
 		sensitivity: "base",
 	});
 }
+
+/**
+ * Membersihkan awalan "Kamar" atau "Room" dari string nomor kamar agar menjadi nomor murni.
+ * Contoh:
+ * - "Kamar 101" -> "101"
+ * - "kamar 101" -> "101"
+ * - "Room A-01" -> "A-01"
+ * - "101" -> "101"
+ */
+export function cleanRoomNumber(roomNumber?: string | null): string {
+	if (!roomNumber) return "";
+	return roomNumber.replace(/^(kamar|room)\s*/i, "").trim();
+}
+
+/**
+ * Memformat nomor kamar dengan awalan "Kamar " yang rapi dan terstandarisasi.
+ * Menghindari duplikasi teks seperti "Kamar Kamar 101".
+ * Contoh:
+ * - formatRoomTitle("101") -> "Kamar 101"
+ * - formatRoomTitle("Kamar 101") -> "Kamar 101"
+ * - formatRoomTitle("Room 101") -> "Kamar 101"
+ * - formatRoomTitle("") -> "Kamar —"
+ */
+export function formatRoomTitle(roomNumber?: string | null): string {
+	if (!roomNumber || roomNumber.trim() === "" || roomNumber.trim() === "—") {
+		return "Kamar —";
+	}
+	const cleaned = cleanRoomNumber(roomNumber);
+	return cleaned ? `Kamar ${cleaned}` : "Kamar —";
+}
+

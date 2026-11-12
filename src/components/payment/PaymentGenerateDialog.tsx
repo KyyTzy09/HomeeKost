@@ -9,7 +9,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "../../common/shadcn/dialog.tsx";
-import { Input } from "../../common/shadcn/input.tsx";
 import { Label } from "../../common/shadcn/label.tsx";
 import {
 	Select,
@@ -63,7 +62,7 @@ export function PaymentGenerateDialog({
 	);
 	const [periodMonth, setPeriodMonth] = useState<number>(now.getMonth() + 1);
 	const [periodYear, setPeriodYear] = useState<number>(currentYear);
-	const [dueDateDay, setDueDateDay] = useState<number>(5);
+	const dueDateDay = 5;
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -185,24 +184,6 @@ export function PaymentGenerateDialog({
 								</SelectContent>
 							</Select>
 						</div>
-					</div>
-
-					{/* Tanggal Jatuh Tempo Day of Month */}
-					<div>
-						<Label className="text-xs font-semibold text-[#252925] mb-1 block">
-							Tanggal Jatuh Tempo (Tanggal setiap bulan) *
-						</Label>
-						<Input
-							type="number"
-							min="1"
-							max="28"
-							value={dueDateDay}
-							onChange={(e) => setDueDateDay(Number(e.target.value) || 5)}
-							className="h-9.5 text-xs border-[#e4e9e4] bg-[#fbfcfb] focus-visible:ring-[#4f6958]"
-						/>
-						<p className="text-[11px] text-[#737873] mt-1">
-							Standar SOP penagihan kost: tanggal 5 pada bulan berjalan.
-						</p>
 					</div>
 
 					<DialogFooter className="pt-3 border-t border-[#e4e9e4] flex items-center justify-end gap-2">

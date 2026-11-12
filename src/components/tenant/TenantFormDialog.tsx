@@ -36,10 +36,12 @@ import {
 	type UpdateTenantFormValues,
 	updateTenantSchema,
 } from "../../common/validations/index.ts";
+import { cleanRoomNumber, formatRoomTitle } from "../../common/helpers/index.ts";
 import { useScanKtp } from "../../hooks/use-tenants.ts";
 import { formatRupiah, parseRupiah } from "../../lib/currency.ts";
 import {
 	calculateDueDate,
+	formatDate,
 	getDurationMonths,
 	getTodayDateString,
 } from "../../lib/date-utils.ts";
@@ -292,6 +294,7 @@ export function TenantFormDialog({
 				: "");
 		return {
 			...val,
+			name: (val.name || "").trim().toUpperCase(),
 			dueDate: autoDue,
 			phone: sanitizePhone(val.phone || ""),
 			emergencyPhone: val.emergencyPhone
@@ -307,7 +310,7 @@ export function TenantFormDialog({
 
 	const form = useForm({
 		defaultValues: {
-			name: editingTenant?.name ?? "",
+			name: editingTenant?.name ? editingTenant.name.toUpperCase() : "",
 			birthDate: toInputDateFormat(editingTenant?.birthDate) ?? "",
 			nik: editingTenant?.nik ?? "",
 			phone: editingTenant?.phone ?? "",
@@ -401,7 +404,10 @@ export function TenantFormDialog({
 					toInputDateFormat(editingTenant.dueDate) ||
 					calculateDueDate(startDate, duration);
 
-				form.setFieldValue("name", editingTenant.name || "");
+				form.setFieldValue(
+					"name",
+					(editingTenant.name || "").toUpperCase(),
+				);
 				form.setFieldValue(
 					"birthDate",
 					toInputDateFormat(editingTenant.birthDate) || "",
@@ -544,7 +550,8 @@ export function TenantFormDialog({
 					(res.data.nik || res.data.name)
 				) {
 					if (res.data.nik) form.setFieldValue("nik", res.data.nik);
-					if (res.data.name) form.setFieldValue("name", res.data.name);
+					if (res.data.name)
+						form.setFieldValue("name", res.data.name.trim().toUpperCase());
 					if (res.data.birthDate) {
 						form.setFieldValue(
 							"birthDate",
@@ -700,7 +707,7 @@ export function TenantFormDialog({
 					<strong className="text-[#26372c]">{propertyName}</strong>
 					{isEditing && editingTenant?.roomNo && (
 						<span className="ml-2 pl-2 border-l border-[#dce6df] text-[#415648]">
-							Kamar: <strong>{editingTenant.roomNo}</strong>
+							Kamar: <strong>{cleanRoomNumber(editingTenant.roomNo)}</strong>
 						</span>
 					)}
 				</div>
@@ -869,10 +876,10 @@ export function TenantFormDialog({
 												value={field.state.value}
 												onChange={(e) => {
 													clearFieldError("name");
-													field.handleChange(e.target.value);
+													field.handleChange(e.target.value.toUpperCase());
 												}}
 												placeholder="Nama lengkap penghuni"
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+												className={`h-[41px] border rounded-[11px] px-3 text-[12px] uppercase bg-[#fbfcfb] text-[#252925] ${
 													hasError
 														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
 														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
@@ -1212,7 +1219,7 @@ export function TenantFormDialog({
 												<span>
 													{field.state.value ? (
 														<span className="font-semibold text-[#252925]">
-															Kamar {field.state.value}
+															{formatRoomTitle(field.state.value)}
 														</span>
 													) : (
 														<span className="text-[#8a958d]">Pilih Kamar</span>
@@ -1266,7 +1273,7 @@ export function TenantFormDialog({
 																		<div className="flex items-center gap-2">
 																			<span className="w-2 h-2 rounded-full bg-[#4f6958]" />
 																			<span>
-																				<strong>Kamar {room.roomNo}</strong> (
+																				<strong>{formatRoomTitle(room.roomNo)}</strong> (
 																				{room.type})
 																			</span>
 																		</div>
@@ -1319,10 +1326,10 @@ export function TenantFormDialog({
 													<span>Perubahan Kamar Terdeteksi</span>
 												</div>
 												<div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#4f6958] bg-[#eef4ef] px-2.5 py-0.5 rounded-full border border-[#d3e2d6]">
-													<span>Kamar {editingTenant?.roomNo}</span>
+													<span>{formatRoomTitle(editingTenant?.roomNo)}</span>
 													<span>➔</span>
 													<span>
-														Kamar {currentRoomNo}
+														{formatRoomTitle(currentRoomNo)}
 														{targetRoom ? ` (${targetRoom.type})` : ""}
 													</span>
 												</div>
@@ -1528,7 +1535,7 @@ export function TenantFormDialog({
 								{(field) => (
 									<div className="space-y-1">
 										<Label className="text-[11px] font-bold text-[#506257]">
-											Total Tarif Sewa
+											Total Tarif Sewa <span className="text-[#b66b68]">*</span>
 										</Label>
 										<div className="h-[41px] border border-[#dfe7e0] rounded-[11px] px-3 bg-[#f8faf8] flex items-center">
 											<span className="text-[12.5px] font-bold text-[#252925] font-mono">
@@ -1701,9 +1708,13 @@ export function TenantFormDialog({
 										field.state.meta.errors[0] || formErrors.startDate;
 									const hasError = Boolean(errorMsg);
 									return (
-										<div className="space-y-1">
+										<div
+											className={`space-y-1 ${
+												!isEditing ? "col-span-1 sm:col-span-2" : ""
+											}`}
+										>
 											<Label className="text-[11px] font-bold text-[#506257]">
-												Tanggal Mulai Sewa *
+												Tanggal Mulai Sewa <span className="text-[#b66b68]">*</span>
 											</Label>
 											<Input
 												type="date"
@@ -1728,46 +1739,75 @@ export function TenantFormDialog({
 								}}
 							</form.Field>
 
-							{/* Tanggal Jatuh Tempo Berikutnya (Editable Date Input with Auto-Calculation) */}
-							<form.Field
-								name="dueDate"
-								validators={{
-									onChange: ({ value }) =>
-										!value ? "Tanggal jatuh tempo wajib diisi" : undefined,
-								}}
-							>
-								{(field) => {
-									const errorMsg =
-										field.state.meta.errors[0] || formErrors.dueDate;
-									const hasError = Boolean(errorMsg);
-									return (
-										<div className="space-y-1">
-											<Label className="text-[11px] font-bold text-[#506257]">
-												Tanggal Jatuh Tempo *
-											</Label>
-											<Input
-												type="date"
-												name={field.name}
-												value={field.state.value}
-												onChange={(e) => {
-													clearFieldError("dueDate");
-													field.handleChange(e.target.value);
-												}}
-												className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
-													hasError
-														? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
-														: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
-												}`}
-											/>
-											{hasError && (
-												<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
-													{errorMsg}
-												</p>
-											)}
+							{/* Tanggal Jatuh Tempo Berikutnya: Hanya Input di Mode Edit */}
+							{isEditing && (
+								<form.Field
+									name="dueDate"
+									validators={{
+										onChange: ({ value }) =>
+											!value ? "Tanggal jatuh tempo wajib diisi" : undefined,
+									}}
+								>
+									{(field) => {
+										const errorMsg =
+											field.state.meta.errors[0] || formErrors.dueDate;
+										const hasError = Boolean(errorMsg);
+										return (
+											<div className="space-y-1">
+												<Label className="text-[11px] font-bold text-[#506257]">
+													Tanggal Jatuh Tempo <span className="text-[#b66b68]">*</span>
+												</Label>
+												<Input
+													type="date"
+													name={field.name}
+													value={field.state.value}
+													onChange={(e) => {
+														clearFieldError("dueDate");
+														field.handleChange(e.target.value);
+													}}
+													className={`h-[41px] border rounded-[11px] px-3 text-[12px] bg-[#fbfcfb] text-[#252925] ${
+														hasError
+															? "border-[#b66b68] focus-visible:ring-[#b66b68]/20"
+															: "border-[#dfe7e0] focus-visible:border-[#8fa594]"
+													}`}
+												/>
+												{hasError && (
+													<p className="text-[10px] text-[#b66b68] font-medium pt-0.5">
+														{errorMsg}
+													</p>
+												)}
+											</div>
+										);
+									}}
+								</form.Field>
+							)}
+
+							{/* Info Estimasi Tanggal Jatuh Tempo (Hanya pada Mode Tambah Tenant) */}
+							{!isEditing && (
+								<form.Subscribe
+									selector={(state) => [
+										state.values.dueDate,
+										state.values.duration,
+									]}
+								>
+									{([dueDateVal, durationVal]) => (
+										<div className="col-span-1 sm:col-span-2 bg-[#f4f7f5] border border-[#d3dfd5] rounded-[11px] p-2.5 flex items-center gap-2.5 text-[11.5px] text-[#34443a]">
+											<Info className="w-4 h-4 text-[#4f6958] shrink-0" />
+											<div className="flex-1">
+												<span className="font-semibold text-[#252925]">
+													Estimasi Tanggal Jatuh Tempo Pertama:{" "}
+												</span>
+												<span className="font-bold text-[#4f6958]">
+													{dueDateVal ? formatDate(dueDateVal) : "—"}
+												</span>
+												<span className="text-[10px] text-[#63756a] block">
+													(Dihitung otomatis per {durationVal || "Bulanan"} dari tanggal mulai sewa)
+												</span>
+											</div>
 										</div>
-									);
-								}}
-							</form.Field>
+									)}
+								</form.Subscribe>
+							)}
 
 							{/* Multi-Period or Initial Period Settlement Option (Hanya Pendaftaran Baru) */}
 							{!isEditing && (

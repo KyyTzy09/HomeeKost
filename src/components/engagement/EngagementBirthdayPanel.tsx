@@ -1,6 +1,7 @@
 import { Cake, MessageCircle } from "lucide-react";
 import { Button } from "../../common/shadcn/button.tsx";
 import { Card } from "../../common/shadcn/card.tsx";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import type { UpcomingBirthdayItem } from "../../common/types/index.ts";
 
 interface EngagementBirthdayPanelProps {
@@ -62,7 +63,7 @@ export function EngagementBirthdayPanel({
 											</span>
 										</div>
 										<p className="text-[11px] text-[#737873] mt-0.5">
-											Kamar {item.room} · {item.property} · {item.birthDate}
+											{formatRoomTitle(item.room)} · {item.property} · {item.birthDate}
 										</p>
 									</div>
 								</div>

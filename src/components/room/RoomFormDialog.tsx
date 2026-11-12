@@ -28,6 +28,7 @@ import {
 	type RoomFormValues,
 	roomSchema,
 } from "../../common/validations/index.ts";
+import { formatRoomTitle } from "../../common/helpers/index.ts";
 import { formatRupiah } from "../../lib/currency.ts";
 
 interface RoomFormDialogProps {
@@ -405,7 +406,7 @@ export function RoomFormDialog({
 
 					<div className="bg-[#fdf8f7] border border-[#f5d5d3] rounded-[12px] p-3.5 text-[12px] text-[#4a3533] leading-relaxed space-y-1.5">
 						<p className="m-0">
-							Kamar <strong>{editingRoom?.roomNo}</strong> saat ini masih berstatus{" "}
+							<strong>{formatRoomTitle(editingRoom?.roomNo)}</strong> saat ini masih berstatus{" "}
 							<strong>Terisi</strong>
 							{editingRoom?.tenantName ? (
 								<>

@@ -6,7 +6,7 @@ import {
 	Plus,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { compareRoomNumbers } from "../../common/helpers/index.ts";
+import { compareRoomNumbers, formatRoomTitle } from "../../common/helpers/index.ts";
 import { Button } from "../../common/shadcn/button.tsx";
 import type { RoomItem, RoomStatusType } from "../../common/types/index.ts";
 import type { RoomFormValues } from "../../common/validations/index.ts";
@@ -144,7 +144,7 @@ function RoomsPage() {
 				},
 				{
 					onSuccess: (updated: RoomItem) => {
-						showToast(`Kamar ${updated.roomNo} berhasil diperbarui`);
+						showToast(`${formatRoomTitle(updated.roomNo)} berhasil diperbarui`);
 						setIsFormOpen(false);
 						setEditingRoom(null);
 					},
@@ -163,7 +163,7 @@ function RoomsPage() {
 				},
 				{
 					onSuccess: (created: RoomItem) => {
-						showToast(`Kamar ${created.roomNo} berhasil ditambahkan`);
+						showToast(`${formatRoomTitle(created.roomNo)} berhasil ditambahkan`);
 						setIsFormOpen(false);
 					},
 					onError: (err: Error) => {
@@ -186,7 +186,7 @@ function RoomsPage() {
 			},
 			{
 				onSuccess: () => {
-					showToast(`Kamar ${roomToDelete.roomNo} telah dihapus`);
+					showToast(`${formatRoomTitle(roomToDelete.roomNo)} telah dihapus`);
 					setIsDeleteOpen(false);
 					setRoomToDelete(null);
 				},
